@@ -107,7 +107,7 @@ bnf "'a list"
            apply(auto simp add: infinite_regular_card_order_natLeq[unfolded infinite_regular_card_order_def] 
       list.set_bd list.rel_compp)
   apply (intro ext list.in_rel[unfolded mem_Collect_eq])
-  done  
+  oops
 
 thm list.rel_compp
 
@@ -220,116 +220,86 @@ linearize_mrbnf 'a::var lin_list = "'a::var list" on 'a
     apply (rule pair_list_eqI[THEN sym]; assumption)
     done
   *)
-  apply (rule exI[of _ "[]"])
-  apply auto
   done
 
-local_setup \<open>
-fn ctxt => 
-  let
-    val ((mrbnf,_), (_,ctxt)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
-      (I) flat [] [] [] @{typ "('k \<times> 'v) list"}
-      ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), ctxt) |> @{print};
-  in                                                 
-    MRBNF_Def.register_mrbnf Plugin_Name.default_filter "pre_alist" mrbnf ctxt
-  end
-\<close>
+typedef ('k, 'v) pre_alist = "UNIV :: ('k \<times> 'v) list set" by auto
 
-print_mrbnfs
+setup_lifting type_definition_pre_alist
+
+copy_bnf (keys: 'k, vals: 'v) pre_alist for map: map_pre_alist rel: rel_pre_alist
+print_theorems
 
 
-(*linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k*)
-
-(*
-mrbnf pre_alist: "('k \<times> 'v) list"
+mrbnf pre_alist: "('k, 'v) pre_alist"
   map: map_pre_alist
-    sets: live: keys live: vals
+  sets:
+    live: keys live: vals
   bd: "natLeq"
-         apply (auto simp add: map_prod_compose map_pre_alist_def)
-         apply (unfold keys_def vals_def)[]
-  apply (simp)
-  apply (metis fst_conv image_eqI)
-         apply (unfold keys_def vals_def)[]
-  apply (simp)
-        apply (metis snd_conv image_eqI)
-  subgoal sorry
-  subgoal sorry
-     apply (simp add: infinite_regular_card_order_natLeq)
-  sorry
-print_theorems*)
- 
-definition keys :: "('k \<times> 'v) list \<Rightarrow> 'k set" where
-  "keys l \<equiv> set (map fst l)"
+  rel: rel_pre_alist
+  pred: pred_pre_alist
+  apply (auto simp add: pre_alist.map_id pre_alist.map_comp pre_alist.set_map pre_alist.set_bd
+  pre_alist.bd_card_order pre_alist.bd_cinfinite pre_alist.bd_regularCard infinite_regular_card_order_def
+  pre_alist.rel_compp pre_alist.in_rel pre_alist.pred_set)
+  using pre_alist.map_cong0
+   apply blast
+  done
 
-definition vals :: "('k \<times> 'v) list \<Rightarrow> 'v set" where
-  "vals l \<equiv> set (map snd l)"
-
-definition map_pre_alist :: "('k \<Rightarrow> 'k') \<Rightarrow> ('v \<Rightarrow> 'v') \<Rightarrow> ('k \<times> 'v) list \<Rightarrow> ('k' \<times> 'v') list" where
-  "map_pre_alist f g l \<equiv> map (map_prod f g) l"
+print_theorems
 
 
-definition rrel_pre_alist :: "('k \<Rightarrow> 'k' \<Rightarrow> bool) \<Rightarrow> ('v \<Rightarrow> 'v' \<Rightarrow> bool) 
-  \<Rightarrow> ('k \<times> 'v) list \<Rightarrow> ('k' \<times> 'v') list \<Rightarrow> bool" where
-  "rrel_pre_alist R S l l' \<equiv> mr_rel_list (\<lambda> x x'. R (fst x) (fst x') \<and>  S (snd x) (snd x')) l l'"
+
+linearize_mrbnf ('k::var,'v) alist = "('k::var, 'v) pre_alist" on 'k
+  oops
+
+print_theorems
+
 
 axiomatization where
   (* The next property assumes preservation of pullbacks on the third position. 
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
-  F_rel_map_set2_strong: 
-  "\<And> R S (x :: (('k \<times> 'v) list)) y.
-    rrel_pre_alist R S x y =
+  pre_alist_rel_map_set2_strong: 
+  "\<And> R S (x :: (('k, 'v) pre_alist)) y.
+    rel_pre_alist R S x y =
       (\<exists>!z. keys z \<subseteq> {(x, y). R x y} \<and>
             vals z \<subseteq> {(x, y). S x y} \<and> map_pre_alist fst fst z = x \<and> map_pre_alist snd snd z = y)"
   and
   (* The next property assumes that nonrepetitive elements exist: *)
-  ex_nonrep: "\<exists>x. \<forall>x'. rrel_pre_alist top (=) x x' \<longrightarrow> (\<exists> f. x' = map_pre_alist f id x)"
+  ex_nonrep: "\<exists>x. \<forall>x'. rel_pre_alist top (=) x x' \<longrightarrow> (\<exists> f. x' = map_pre_alist f id x)"
 
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
 
 lemma pre_alist_strong:
-  "rrel_pre_alist R3 R4 x y \<Longrightarrow> rrel_pre_alist Q3 Q4 x y \<Longrightarrow> rrel_pre_alist (inf R3 Q3) (inf R4 Q4) x y"
-  thm list.mr_rel_mono_strong0
-  apply (unfold rrel_pre_alist_def)
-  apply (frule list.mr_rel_mono_strong0)
-   apply (intro ballI impI)
-  apply (rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])
-  apply(rotate_tac 2)
-  apply (unfold F.map_id mr_rel_F_def eq_True)
-  thm F_rel_map_set2_strong
-  apply (drule F_rel_map_set2_strong[THEN iffD1])
+  "mr_rel_pre_alist R3 R4 x y \<Longrightarrow> mr_rel_pre_alist Q3 Q4 x y \<Longrightarrow> mr_rel_pre_alist (inf R3 Q3) (inf R4 Q4) x y"
+  apply (frule pre_alist.mr_rel_mono_strong0;
+      ((rule ballI, rule ballI refl)?, 
+        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?))
+  apply (unfold pre_alist.map_id mr_rel_pre_alist_def eq_True)
+  apply (rotate_tac 2)
+  apply (drule pre_alist_rel_map_set2_strong[THEN iffD1])
   apply (unfold top_apply top_bool_def Collect_const_case_prod if_True eqTrueI[OF subset_UNIV] simp_thms(22))
-  apply (unfold F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded id_apply F.map_id OO_Grp_alt]
+  apply (unfold pre_alist.in_rel[unfolded id_apply pre_alist.map_id OO_Grp_alt]
       id_def[symmetric] mem_Collect_eq)
-  apply (elim exE alt_ex1E)
-  apply (erule conjE)
-  apply (erule conjE)
-  apply (erule conjE)
-  apply (erule conjE)
-  apply (erule conjE)
-  apply (erule conjE)
-  apply (erule conjE)
-  subgoal premises subprems for z l r
-    thm subprems
-    apply (insert spec2[OF subprems(1), of r z]
-        spec2[OF subprems(1), of l z]; (erule impE); (erule impE))
-       apply (rule conjI; rule conjI; rule subprems)
-       apply (rule conjI; rule conjI; rule subprems)
-       apply (rule conjI; rule conjI; rule subprems)
+  apply (elim exE alt_ex1E conjE)
+  subgoal premises prems for z l r
+    apply (insert spec2[OF prems(1), of r z])
+    apply (insert spec2[OF prems(1), of l z])
+    apply (erule impE, intro conjI prems)
+    apply (erule impE, intro conjI prems)
+
     apply (rule exI)
     apply (unfold inf_fun_def inf_bool_def)
     apply (rule conjI)
-     apply (insert subprems) []
+     apply (insert prems) []
      apply (hypsubst_thin)
-    apply ((rule conjI)?,
+     apply ((rule conjI)?,
         rule subrelI, 
         rule CollectI, 
         rule case_prodI, 
         (rule conjI; erule rev_subsetD[THEN iffD1[OF prod_in_Collect_iff]]),
         assumption, assumption)+
-    apply (rule conjI)
-    apply (rule subprems)+
+    apply (rule conjI; rule prems)
     done
   done
 

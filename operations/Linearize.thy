@@ -81,14 +81,23 @@ axiomatization where
   (* The next property assumes preservation of pullbacks on the third position. 
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
-  F_rel_map_set_live_strong: 
-  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
-    rrel_F R S x y =
-      (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
-            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
+  F_pullback_unique: 
+  "\<And>R S z l r.
+      set3_F z \<subseteq> {(x, y). R x y} \<Longrightarrow> set4_F z \<subseteq> {(x, y). S x y} \<Longrightarrow>
+      map_F id id fst fst l = map_F id id fst fst z \<Longrightarrow> map_F id id snd snd l = map_F id id snd snd z \<Longrightarrow>
+      map_F id id fst fst r = map_F id id fst fst z \<Longrightarrow> map_F id id snd snd r = map_F id id snd snd z \<Longrightarrow>
+      l = r"
   and
   (* The next property assumes that nonrepetitive elements exist: *)
   ex_nonrep: "\<exists>x. \<forall>x'. rrel_F top (=) x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
+
+lemma F_rel_map_set_live_strong:  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
+    rrel_F R S x y =
+      (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
+            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
+  apply (auto simp add: F_pullback_unique F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id])
+  done
+
 
 abbreviation "rel_F \<equiv> mr_rel_F"
 

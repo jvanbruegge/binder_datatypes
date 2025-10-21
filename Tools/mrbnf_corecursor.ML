@@ -1163,10 +1163,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         (map fst suitables) picks;
 
         val f_FVarsD_inner =
-             @{map 4} ((* fn d => *)  fn UFVarss =>  fn is_frees => fn is_free_induct  => fn nbfrees =>
+             @{map 4} (fn UFVarss =>  fn is_frees => fn is_free_induct  => fn nbfrees =>
           let
-            (* val n_free = length (filter (fn ty => ty = (HOLogic.dest_setT (body_type (fastype_of (hd UFVarss))))) frees);
-*)
             val mk_inner_prem = fn a => fn is_free => fn valid => fn f => fn ufvars => fn t' => fn d =>
               let
                 val zz = HOLogic.mk_imp (HOLogic.mk_eq (t', Term.list_comb (fst f, picks @ [d])),
@@ -1185,18 +1183,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
  
             val prems_conjed = fold_rev Logic.all (a :: ts)
                   (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj inner_prems));
-            (* val _ = @{print} (Thm.cterm_of lthy prems_conjed); *)
 
             val subgoalN = nrecs + nbfrees;
-            val _ = @{print} subgoalN;
 
-          in Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems prems_conjed (fn {context=ctxt, prems} => EVERY1 ([DETERM o rtac ctxt is_free_induct] @ flat (@{map 5} (fn ufvars => fn suitable_prem' => fn suitable_FVarsD'' => fn mrbnf' => fn valid_pick_set' =>
+          in Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems prems_conjed (fn {context=ctxt, prems} => EVERY1 ([DETERM o rtac ctxt is_free_induct] @ flat (@{map 5} (
+            fn ufvars => fn suitable_prem' => fn suitable_FVarsD'' => fn mrbnf' => fn valid_pick_set' =>
             let val n_free = length (filter (fn ty => ty = (HOLogic.dest_setT (body_type (fastype_of ufvars)))) frees);
-                (* val _ = @{print} n_free;
-                val _ = @{print} valid_pick_set'; *)
-                val vps = @{print} (map (fn thm => thm OF [suitable_prem']) (flat valid_pick_set'));
-             in ([
-              K (print_tac ctxt "start")] @ (map (fn _ =>
+                val vps = (map (fn thm => thm OF [suitable_prem']) (flat valid_pick_set'));
+             in ((map (fn _ =>
               EVERY' [
                 rtac ctxt allI,
                 REPEAT_DETERM o rtac ctxt impI,
@@ -1210,14 +1204,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                    end) suitable_FVarsD''),
                 dresolve_tac ctxt f_ctor,
                 hyp_subst_tac ctxt,
-                (* K (print_tac ctxt "mid"), *)
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf'),
                   REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
                 ],
                 SELECT_GOAL (Local_Defs.unfold_tac ctxt @{thms image_id Un_assoc[symmetric]}),
                 REPEAT_DETERM o (eresolve_tac ctxt [UnI1, UnI2] ORELSE' rtac ctxt UnI1)
-              ]) (1 upto n_free)) @ [ K (print_tac ctxt "ch1") ] @ flat (map (fn goalN => [
+              ]) (1 upto n_free)) @ flat (map (fn goalN => [
 
                 rtac ctxt allI,
                 REPEAT_DETERM o rtac ctxt impI,
@@ -1244,7 +1237,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 K (Local_Defs.unfold0_tac ctxt @{thms Un_assoc}),
                 rtac ctxt UnI2,
                 TRY o K (Local_Defs.unfold0_tac ctxt @{thms Un_assoc[symmetric]}),
-                K (print_tac ctxt "foo"),
                 resolve_tac ctxt [BNF_Util.mk_UnIN (subgoalN) (goalN + nbfrees)],
                 TRY o EVERY' [
                   rtac ctxt @{thm DiffI[rotated]},
@@ -1254,19 +1246,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 REPEAT_DETERM o assume_tac ctxt,
                 resolve_tac ctxt prems,
                 dresolve_tac ctxt vps,
-                K (print_tac ctxt "mid2"),
                 REPEAT_DETERM o assume_tac ctxt
               ]
-              (* K (print_tac ctxt "after") *)
-          ) (1 upto nrecs)) @ [K (print_tac ctxt "final")]) end) UFVarss prems suitable_FVarsD mrbnfs valid_pick_set))) end                                                                                                                          
-        ) (transpose UFVarsss) is_freess is_free_inducts (@{print} nbfrees);
+          ) (1 upto nrecs))) end) UFVarss prems suitable_FVarsD mrbnfs valid_pick_set))) end                                                                                                                          
+        ) (transpose UFVarsss) is_freess is_free_inducts nbfrees;
 
-         val f_FVarsD = @{map 6} ((* fn d => *) fn t => fn td => (* fn fFun => *) fn FVarss =>
-                                     fn FVars_raw_defs => fn UFVarss => (* fn validU => *) fn is_frees =>
-          let
-              
-            
-            val goals = @{map 6} (fn FVars => fn UFVars => fn is_free => fn fFun => fn d => fn validU =>
+         val f_FVarsD = @{map 4} (fn FVarss => fn FVars_raw_defs => fn UFVarss => fn f_FVarsD_inner' =>
+          let       
+            val goals = @{map 5} (fn FVars => fn UFVars => fn fFun => fn d => fn validU =>
               let
               val lhs = FVars $ Term.list_comb (fst fFun, picks @ [d]);
 
@@ -1278,14 +1265,23 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               in
                 goal
               end)               
-              FVarss UFVarss is_frees fDefns ds validUs;
+              FVarss UFVarss fDefns ds validUs;
 
-          in map (fn goal => Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems goal (fn {context=ctxt, prems} =>
-            let val inner = f_FVarsD_inner; in EVERY1 [
-              K (print_tac ctxt "foo")
-          ] end)) goals end
-        )  (* ds *) ts tds  (* fDefns *) (transpose (map #FVarss (#raw_fps fp_res))) FVars_raw_defss (transpose UFVarsss) (* validUs *) (transpose is_freess);
+              val split_conj = split_conj (length UFVarss);
+              val inners = split_conj (f_FVarsD_inner');
 
+          in map2 (fn goal => fn inner => Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems goal (fn {context=ctxt, prems} =>
+            let val inner' = Drule.rotate_prems 1 ((inner OF prems) RS mp RS spec RS mp RS mp);
+            in EVERY1 [
+              rtac ctxt subsetI,
+              etac ctxt inner',
+              rtac ctxt refl,
+              K (Local_Defs.unfold0_tac ctxt (@{thm mem_Collect_eq} :: FVars_raw_defs)),
+              assume_tac ctxt
+          ] end)) goals inners end
+        ) (transpose (map #FVarss (#raw_fps fp_res))) (transpose FVars_raw_defss) (transpose UFVarsss) f_FVarsD_inner;
+
+        val _ = @{print} f_FVarsD;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

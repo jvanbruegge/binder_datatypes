@@ -2,8 +2,8 @@ theory MRBNF_Composition
   imports "Prelim.Prelim" "Classes"
   keywords
     "print_mrbnfs" :: diag and
-    "mrbnf" :: thy_goal and
-    "linearize_mrbnf" :: thy_goal
+    "mrbnf" :: thy_goal (*and
+    "linearize_mrbnf" :: thy_goal*)
 begin
 
 ML_file \<open>../Tools/mrbnf_def_tactics.ML\<close>
@@ -56,7 +56,7 @@ ML_file \<open>../Tools/mrbnf_comp.ML\<close>
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
-ML_file "../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../Tools/mrbnf_linearize.ML"
+(*ML_file "../Tools/mrbnf_linearize_tactics.ML"
+ML_file "../Tools/mrbnf_linearize.ML"*)
 
 end

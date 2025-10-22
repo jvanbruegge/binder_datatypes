@@ -3,13 +3,10 @@ theory Linearize2
   keywords "linearize_mrbnf" :: thy_goal
 begin
 
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
-linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct sameShape: same_length morphisms to_alist of_alist
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct eq_shape: length_eq morphisms to_alist of_alist
   unfolding list.in_rel
   subgoal for S R l r
     apply safe

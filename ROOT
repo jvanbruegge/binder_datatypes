@@ -29,7 +29,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Least_Fixpoint
     Least_Fixpoint2
     Greatest_Fixpoint
-    Linearize
+    Linearize_rail
     Recursor
     Corecursor
     Corecursor2

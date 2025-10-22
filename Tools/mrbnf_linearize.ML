@@ -48,7 +48,7 @@ fun mk_asSS f = let val typ_f = fastype_of f; in
   Const (@{const_name asSS}, typ_f --> typ_f) $ f end;
 
 (** linearize **)
-fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs opts lthy =
+fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morphs opts lthy =
   let
     val tfrees = map (TFree o snd) specs |> @{print};
 
@@ -342,23 +342,23 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
         val F_mr_rel_maps = MRBNF_Def.mr_rel_map_of_mrbnf mrbnf;
         val F_mr_rel_mono_strong0 = MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf;
 
-        (* sameShape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
+        (* eq_shape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf;
         val mr_rel_args = MRBNF_Def.interlace top_eqs (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) var_types;
         val mr_rel_F_top_x_x' = Term.list_comb (mr_rel_F, mr_rel_args @ [var_x, var_x2]);
-        val ss_rhs = mr_rel_F_top_x_x' |> absfree (dest_Free var_x2) |>
+        val eq_shp_rhs = mr_rel_F_top_x_x' |> absfree (dest_Free var_x2) |>
           absfree (dest_Free var_x);
-        val ss_binding = if Binding.is_empty ss_b then
-          Binding.prefix_name "sameShape_" (MRBNF_Def.name_of_mrbnf mrbnf) else ss_b;
-        val ((_, ss_term, ss_def_thm), lthy) = MRBNF_Util.new_definition ss_binding ss_rhs lthy;
+        val eq_shp_binding = if Binding.is_empty eq_shp_b then
+          Binding.prefix_name "eq_shape_" (MRBNF_Def.name_of_mrbnf mrbnf) else eq_shp_b;
+        val ((_, eq_shp_term, eq_shp_def_thm), lthy) = MRBNF_Util.new_definition eq_shp_binding eq_shp_rhs lthy;
 
         val x_atomics = dest_Type_atomic typ_x;
-        val ss_arg_atomics = fastype_of ss_term |> domain_type |> dest_Type_atomic;
-        val ss_TFree = subst_atomic_types (ss_arg_atomics ~~ x_atomics) ss_term;
+        val eq_shp_arg_atomics = fastype_of eq_shp_term |> domain_type |> dest_Type_atomic;
+        val eq_shp_TFree = subst_atomic_types (eq_shp_arg_atomics ~~ x_atomics) eq_shp_term;
 
         (* nonrep *)
         val forall_x' = HOLogic.mk_all (dest_Free var_x2 |> fst, dest_Free var_x2 |> snd,
-          HOLogic.mk_imp (ss_TFree $ var_x $ var_x2, ex_fs));
+          HOLogic.mk_imp (eq_shp_TFree $ var_x $ var_x2, ex_fs));
         val nrp_rhs = absfree (dest_Free var_x) forall_x';
         val nrp_binding = if Binding.is_empty nrp_b then
           Binding.prefix_name "nonrep_" (MRBNF_Def.name_of_mrbnf mrbnf) else nrp_b;
@@ -385,11 +385,11 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
         fun prove_nonrep_wit_F ((prop, args), wit_thms) = 
           Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
             (fn {context = ctxt, ...} => mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nrp_def_thm 
-              ss_def_thm mr_rel_F_def F_map_id F_in_rel F_map_cong F_set_maps wit_thms);
+              eq_shp_def_thm mr_rel_F_def F_map_id F_in_rel F_map_cong F_set_maps wit_thms);
 
         fun prove_nonrep_wit_new ((prop, args), raw_nonrep_thm) = 
           Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
-            (fn {context = ctxt, ...} => mk_nonrep_wit_new_tac ctxt nrp_def_thm ss_def_thm mr_rel_F_def F_map_id raw_nonrep_thm)
+            (fn {context = ctxt, ...} => mk_nonrep_wit_new_tac ctxt nrp_def_thm eq_shp_def_thm mr_rel_F_def F_map_id raw_nonrep_thm)
 
         val nonrep_wit_F_thms = map (prove_nonrep_wit_F o (apfst mk_nonrep_wit_prop_args)) (Iwits_F ~~ wits_F_thmss);
         val nonrep_wit_new_thms = map (prove_nonrep_wit_new o (apfst mk_nonrep_wit_prop_args)) (Iwits_new ~~ raw_nonrep_thms);
@@ -398,7 +398,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
           Goal.prove_sorry lthy [] [] Tp_ex_nonrep
             (fn {context = ctxt, ...} => 
               HEADGOAL (rtac ctxt exI) THEN
-              HEADGOAL (resolve_tac ctxt (map (unfold_thms ctxt [nrp_def_thm, ss_def_thm, mr_rel_F_def, F_map_id]) 
+              HEADGOAL (resolve_tac ctxt (map (unfold_thms ctxt [nrp_def_thm, eq_shp_def_thm, mr_rel_F_def, F_map_id]) 
                 (nonrep_wit_F_thms @ nonrep_wit_new_thms))));
 
         (* typedef F'*)
@@ -406,7 +406,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
         val td_term = HOLogic.mk_Collect (dest_Free var_x |> fst, dest_Free var_x |> snd, nrp_x)
 
         fun mk_typedef_tac ctxt = 
-          unfold_thms_tac ctxt [nrp_def_thm, ss_def_thm, @{thm mem_Collect_eq}, mr_rel_F_def, F_map_id] THEN
+          unfold_thms_tac ctxt [nrp_def_thm, eq_shp_def_thm, @{thm mem_Collect_eq}, mr_rel_F_def, F_map_id] THEN
           HEADGOAL (rtac ctxt ex_nonrep_thm)
 
         val ((_, (td_info1, td_info2)), lthy) = typedef (b, map (snd) specs, 
@@ -511,7 +511,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
           (map (fst o dest_Free) (var_x :: var_u_Bs @ var_v_Fs @ (nths_drop lin_live_poses var_f'_As))) 
           (uv_props @ [nrp_x_prop]) nonrep_map_uv_prop
           (fn {context = ctxt, prems} => mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As (map top_rel on_tfrees)
-            nrp_def_thm ss_def_thm mr_rel_F_def F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong);
+            nrp_def_thm eq_shp_def_thm mr_rel_F_def F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong);
         
         (* nonrep_map_F_rev *)
         val inst_ids = (map_index (fn (i, A) => if member (op=) lin_live_poses i then SOME (HOLogic.id_const A) else NONE) As)
@@ -520,7 +520,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
         val nonrep_map_F_rev_thm = Goal.prove_sorry lthy 
           (map (fst o dest_Free) (var_x :: var_u_Bs @ (nths_drop lin_live_poses var_f'_As))) 
           ((flat u_props_raw) @ [nonrep_map_u_prop]) nrp_x_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids nrp_def_thm ss_def_thm
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids nrp_def_thm eq_shp_def_thm
             F_mr_rel_maps F_map_comp F_rel_eq F_mr_rel_id F_mr_rel_flip F_mr_rel_mono_strong0 F_mr_rel_Grp mr_rel_F_exchange_thm);
 
         (* nonrep_map_F_bij *)
@@ -531,7 +531,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
         val nonrep_map_f_prop = nrp_TFree $ (map_f $ var_x) |> HOLogic.mk_Trueprop;
         val nonrep_map_F_bij_thm = Goal.prove_sorry lthy 
           (map (fst o dest_Free) ([var_x] @ l_f_As)) (bij_f_props @ [nrp_x_prop]) nonrep_map_f_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_bij_tac ctxt prems nr_lin l_f_As nrp_def_thm ss_def_thm F_mr_rel_maps F_map_comp);
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_bij_tac ctxt prems nr_lin l_f_As nrp_def_thm eq_shp_def_thm F_mr_rel_maps F_map_comp);
 
         (* nonrep2_mapF_bij_2 *)
         val ff'_As = select_n var_f'_As var_f_As lin_live_poses;
@@ -636,13 +636,13 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs op
 local
 
 fun prepare_common prepare_sort prepare_typ prepare_term
-    (((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, ss_b, nrp_b)), morphs) lthy =
+    (((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, eq_shp_b, nrp_b)), morphs) lthy =
   let
     val repT = prepare_typ lthy raw_repT
     val wits = (Option.map o map) (prepare_term lthy) raw_wits;
     val specs = map (apsnd (apsnd (the_default @{sort type} o Option.map (prepare_sort lthy)))) raw_specs;
   in
-    linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs plugins lthy
+    linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morphs plugins lthy
   end;
 
 fun prepare_linearize_mrbnf prepare_sort prepare_typ prepare_term =
@@ -693,12 +693,12 @@ val parse_lift_opts = Parse.reserved "no_warn_wits" >> K No_Warn_Wits |> parse_c
 
 val parse_on_clause = apfst (fn (h, t) => h::t) o Parse.reserved "on" |-- Parse.type_ident -- Scan.repeat (@{keyword "and"} |-- Parse.type_ident);
 
-fun extract_map_rel_pred_suff ("map", m) = (fn (_, r, p, ss, n) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff ("rel", r) = (fn (m, _, p, ss, n) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff ("pred", p) = (fn (m, r, _, ss, n) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff ("sameShape", ss) = (fn (m, r, p , _, n) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff ("nonrep", n) = (fn (m, r, p , ss, _) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"map\", \"rel\", \"pred\", \"sameShape\" or \"nonrep\")");
+fun extract_map_rel_pred_suff ("map", m) = (fn (_, r, p, es, n) => (m, r, p, es, n))
+  | extract_map_rel_pred_suff ("rel", r) = (fn (m, _, p, es, n) => (m, r, p, es, n))
+  | extract_map_rel_pred_suff ("pred", p) = (fn (m, r, _, es, n) => (m, r, p, es, n))
+  | extract_map_rel_pred_suff ("eq_shape", es) = (fn (m, r, p , _, n) => (m, r, p, es, n))
+  | extract_map_rel_pred_suff ("nonrep", n) = (fn (m, r, p , es, _) => (m, r, p, es, n))
+  | extract_map_rel_pred_suff (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"map\", \"rel\", \"pred\", \"eq_shape\" or \"nonrep\")");
 
 val binding_empty_5 = (Binding.empty, Binding.empty, Binding.empty, Binding.empty, Binding.empty);
 

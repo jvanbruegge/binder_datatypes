@@ -27,22 +27,22 @@ abbreviation "rel_F \<equiv> mr_rel_F"
 
 
 (* Then notion of two items having the same shape (w.r.t. the 3rd position): *)
-definition sameShape1 :: "('a1::var,'a2::var,'a3) F \<Rightarrow> ('a1,'a2,'a3) F \<Rightarrow> bool" where 
-  "sameShape1 x x' \<equiv> \<exists> R. rel_F id id R x x'"
+definition eq_shape :: "('a1::var,'a2::var,'a3) F \<Rightarrow> ('a1,'a2,'a3) F \<Rightarrow> bool" where 
+  "eq_shape x x' \<equiv> \<exists> R. rel_F id id R x x'"
 
-definition nonrep2 :: "('a1::var,'a2::var,'a3) F \<Rightarrow> bool" where 
-  "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f. x' = map_F id id f x)"
+definition nonrep :: "('a1::var,'a2::var,'a3) F \<Rightarrow> bool" where 
+  "nonrep x \<equiv> \<forall> x'. eq_shape x x' \<longrightarrow> (\<exists> f. x' = map_F id id f x)"
 
 lemma op_eq_triv_sym: "(\<lambda>x. (=) (g x)) = (\<lambda>x z. z = g x)"
   by force
 
-lemma nonrep2_map_F:
+lemma nonrep_map_F:
   fixes x :: "('a1::var,'a2::var,'a3) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2"
   assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
-  assumes "nonrep2 x"
-  shows "nonrep2 (map_F v u id x)"
-unfolding nonrep2_def sameShape1_def proof safe
+  assumes "nonrep x"
+  shows "nonrep (map_F v u id x)"
+unfolding nonrep_def eq_shape_def proof safe
   fix y' :: "('a1,'a2,'a3) F" and R
   let ?y = "map_F v u id x"
   assume r: "rel_F id id R ?y y'"
@@ -60,7 +60,7 @@ unfolding nonrep2_def sameShape1_def proof safe
       done
     done
   obtain f where x': "x' = map_F id id f x" 
-    using assms xx' unfolding nonrep2_def sameShape1_def by auto
+    using assms xx' unfolding nonrep_def eq_shape_def by auto
   show "\<exists>f. y' = map_F id id f ?y"
     apply(rule exI[of _ f])
     apply (auto simp: x' y' F.map_comp supp_id_bound u v)
@@ -68,12 +68,12 @@ unfolding nonrep2_def sameShape1_def proof safe
 qed
 
 (* Here we would need pullback preservation if there were lives left *)
-lemma nonrep2_map_F_rev:
+lemma nonrep_map_F_rev:
   fixes x :: "('a1::var,'a2::var,'a3) F" and u :: "'a2\<Rightarrow>'a2"
   assumes u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
-  assumes "nonrep2 (map_F id u id x)"
-  shows "nonrep2 x"
-  unfolding nonrep2_def sameShape1_def proof safe
+  assumes "nonrep (map_F id u id x)"
+  shows "nonrep x"
+  unfolding nonrep_def eq_shape_def proof safe
   fix x' :: "('a1,'a2,'a3) F" and R 
   let ?y = "map_F id u id x"  let ?y' = "map_F id u id x'"
   assume r: "rel_F id id R x x'"
@@ -82,7 +82,7 @@ lemma nonrep2_map_F_rev:
     using F.mr_rel_map(2)[OF supp_id_bound bij_id supp_id_bound supp_id_bound u, of R x x' id]
     by (simp add: OO_def Grp_def)
   then obtain f where "?y' = map_F id id f ?y" 
-    using assms unfolding nonrep2_def sameShape1_def by auto
+    using assms unfolding nonrep_def eq_shape_def by auto
   hence y':"?y' = map_F id u f x"
     by (simp add: F.map_comp supp_id_bound u)
   hence "rel_F id u (Grp id) x' (map_F id u f x)"
@@ -96,11 +96,11 @@ lemma nonrep2_map_F_rev:
     apply(intro exI[of _ f])  unfolding eq_alt F.mr_rel_Grp[OF supp_id_bound bij_id supp_id_bound] by (simp add: Grp_def)
 qed
 
-lemma nonrep2_mapF_bij:
+lemma nonrep_mapF_bij:
   fixes x :: "('a1::var,'a2::var,'a3) F" and g::"'a3\<Rightarrow>'a3"
-  assumes g: "bij g" and x: "nonrep2 x"
-  shows "nonrep2 (map_F id id g x)" (is "nonrep2 ?x'")
-  unfolding nonrep2_def sameShape1_def proof safe
+  assumes g: "bij g" and x: "nonrep x"
+  shows "nonrep (map_F id id g x)" (is "nonrep ?x'")
+  unfolding nonrep_def eq_shape_def proof safe
   fix y' :: "('a1,'a2,'a3)F" and R'
   let ?y = "map_F id id (inv g) y'" 
   let ?R = "Grp g OO R' OO conversep (Grp g)"
@@ -110,7 +110,7 @@ lemma nonrep2_mapF_bij:
       F.mr_rel_map(3)[OF supp_id_bound bij_id supp_id_bound bij_id supp_id_bound bij_id supp_id_bound] 
     by (simp add: g Grp_def OO_def o_def id_def)
   with x obtain f where "?y = map_F id id f x" 
-    unfolding nonrep2_def sameShape1_def by auto
+    unfolding nonrep_def eq_shape_def by auto
   thus "\<exists>f'. y' = map_F id id f' ?x'"
     apply(intro exI[of _ "g o f o inv g"])
     apply(auto simp add: g F.map_comp o_assoc[symmetric] supp_id_bound F.map_id
@@ -118,21 +118,21 @@ lemma nonrep2_mapF_bij:
     done
 qed
 
-lemma nonrep2_mapF_bij_2:
+lemma nonrep_mapF_bij_2:
   fixes x :: "('a1::var,'a2::var,'a3) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g::"'a3\<Rightarrow>'a3"
   assumes v: "|supp v| <o |UNIV :: 'a1 set|" and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|"
-    and g: "bij g" and x: "nonrep2 x"
-  shows "nonrep2 (map_F v u g x)" 
+    and g: "bij g" and x: "nonrep x"
+  shows "nonrep (map_F v u g x)" 
 proof-
-  have "nonrep2 (map_F v u id x)" (is "nonrep2 ?x'") by (simp add: nonrep2_map_F v u x)
-  hence "nonrep2 (map_F id id g ?x')" using g nonrep2_mapF_bij u by blast
+  have "nonrep (map_F v u id x)" (is "nonrep ?x'") by (simp add: nonrep_map_F v u x)
+  hence "nonrep (map_F id id g ?x')" using g nonrep_mapF_bij u by blast
   thus ?thesis
     by (simp add: F.map_comp supp_id_bound u v)
 qed
 
-typedef ('a1::var,'a2::var,'a3::var) F' = "{x :: ('a1,'a2,'a3) F. nonrep2 x}"
-  unfolding mem_Collect_eq nonrep2_def sameShape1_def mr_rel_F_def F.map_id id_apply
+typedef ('a1::var,'a2::var,'a3::var) F' = "{x :: ('a1,'a2,'a3) F. nonrep x}"
+  unfolding mem_Collect_eq nonrep_def eq_shape_def mr_rel_F_def F.map_id id_apply
   unfolding id_def[symmetric]
   by (rule ex_nonrep)
 
@@ -142,13 +142,10 @@ lift_definition set1_F' :: "('a1::var,'a2::var,'a3::var) F' \<Rightarrow> 'a1 se
 lift_definition set2_F' :: "('a1::var,'a2::var,'a3::var) F' \<Rightarrow> 'a2 set" is set2_F .
 lift_definition set3_F' :: "('a1::var,'a2::var,'a3::var) F' \<Rightarrow> 'a3 set" is set3_F .
 
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
 lift_definition map_F' :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) 
   \<Rightarrow> ('a1,'a2,'a3) F' \<Rightarrow> ('a1,'a2,'a3) F'"
   is "\<lambda>v u f. map_F (asSS v) (asSS (asBij u)) (asBij f)" 
-  unfolding asBij_def asSS_def by (auto simp: supp_id_bound intro: nonrep2_mapF_bij_2)
+  unfolding asBij_def asSS_def by (auto simp: supp_id_bound intro: nonrep_mapF_bij_2)
 
 lift_definition rrel_F' :: "('a1::var,'a2::var,'a3::var) F' \<Rightarrow> ('a1,'a2,'a3) F' \<Rightarrow> bool"
   is "rrel_F (=)" .
@@ -248,7 +245,7 @@ lemma F'_in_rel:
   subgoal for z
     apply (rule exI[of _ "map_F id id fst z"])
     apply (auto simp: F.set_map supp_id_bound F.map_comp Grp_def
-      intro!: F.map_cong nonrep2_map_F_rev[OF bij_id supp_id_bound])
+      intro!: F.map_cong nonrep_map_F_rev[OF bij_id supp_id_bound])
     done
   subgoal for z
     apply (rule exI[of _ "map_F id id (\<lambda>x. (x, u3 x)) z"])

@@ -167,22 +167,22 @@ lemma rel_F_exchange:
 
 (* Then notion of two items having the same shape (w.r.t. the 3rd position): *)
 (* these definitions are lin_pos dependent *)
-definition sameShape1 :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> ('a1,'a2,'a3,'a4,'a5) F \<Rightarrow> bool" where 
-  "sameShape1 x x' \<equiv> mr_rel_F id id top (=) top x x'"
+definition eq_shape :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> ('a1,'a2,'a3,'a4,'a5) F \<Rightarrow> bool" where 
+  "eq_shape x x' \<equiv> mr_rel_F id id top (=) top x x'"
 
-definition nonrep2 :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> bool" where 
-  "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f1 f2. x' = map_F id id f1 id f2 x)"
+definition nonrep :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> bool" where 
+  "nonrep x \<equiv> \<forall> x'. eq_shape x x' \<longrightarrow> (\<exists> f1 f2. x' = map_F id id f1 id f2 x)"
 
 (* lin_pos dependent *)
-lemma nonrep2_map_F:
+lemma nonrep_map_F:
   fixes x :: "('a1::var,'a2::var,'a3,'a4,'a5) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'b4"
   assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
-  assumes "nonrep2 x"
-  shows "nonrep2 (map_F v u id g id x)"
+  assumes "nonrep x"
+  shows "nonrep (map_F v u id g id x)"
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep2_def sameShape1_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
     apply (subst F.map_comp; (rule prems bij_id supp_id_bound)?)
@@ -201,7 +201,7 @@ lemma nonrep2_map_F:
     apply (erule exE)
     apply (erule conjE)
     apply (drule F.in_rel[THEN iffD1, rotated -1]; (rule prems)?)
-    apply (insert prems(4)[unfolded nonrep2_def sameShape1_def mr_rel_F_def F.map_id])
+    apply (insert prems(4)[unfolded nonrep_def eq_shape_def mr_rel_F_def F.map_id])
     apply (erule exE)
     apply (erule conjE)
     apply (erule CollectE)
@@ -234,14 +234,14 @@ lemma nonrep2_map_F:
   done
 
 (* Here we need pullback preservation: *)
-lemma nonrep2_map_F_rev:
+lemma nonrep_map_F_rev:
   fixes x :: "('a1::var,'a2::var,'a3,'a4,'a5) F" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'a4'"
   assumes u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
-  assumes "nonrep2 (map_F id u id g id x)"
-  shows "nonrep2 x"
+  assumes "nonrep (map_F id u id g id x)"
+  shows "nonrep x"
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep2_def sameShape1_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
     apply (frule F.mr_rel_map(2)[rotated -1]; (rule prems supp_id_bound bij_id)?)
@@ -252,7 +252,7 @@ lemma nonrep2_map_F_rev:
     apply (subst (asm) (1 3) trans[OF OO_eq eq_OO[symmetric]]) (*lin_live_pos*)
     apply (subst (asm) (1 3) eq_alt) (*lin_live_pos*)
     apply (subst (asm) F.mr_rel_map(1)[symmetric]; (rule prems supp_id_bound bij_id)?)
-    apply (insert prems(3)[unfolded nonrep2_def sameShape1_def]) (*lastprem*)
+    apply (insert prems(3)[unfolded nonrep_def eq_shape_def]) (*lastprem*)
     apply (elim allE impE)
      apply (assumption)
 
@@ -291,13 +291,13 @@ lemma nonrep2_map_F_rev:
     done
   done
 
-lemma nonrep2_mapF_bij:
+lemma nonrep_mapF_bij:
   fixes x :: "('a1::var,'a2::var,'a3,'a4,'a5) F" and g1 :: "'a3\<Rightarrow>'a3" and g2 :: "'a5\<Rightarrow>'a5" 
-  assumes "bij g1" "bij g2" and x: "nonrep2 x"
-  shows "nonrep2 (map_F id id g1 id g2 x)" (is "nonrep2 ?x'")
+  assumes "bij g1" "bij g2" and x: "nonrep x"
+  shows "nonrep (map_F id id g1 id g2 x)" (is "nonrep ?x'")
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep2_def sameShape1_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
     apply (drule F.mr_rel_map(1)[THEN iffD1, rotated -1]; (rule supp_id_bound bij_id)?)
@@ -323,7 +323,7 @@ lemma nonrep2_mapF_bij:
      apply (rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def], THEN iffD2])
      apply (rule TrueI)
 
-    apply (drule prems(3)[unfolded nonrep2_def sameShape1_def mr_rel_F_def, rule_format])
+    apply (drule prems(3)[unfolded nonrep_def eq_shape_def mr_rel_F_def, rule_format])
     apply (erule exE)
     apply (erule exE) (*repeat for each lin_pos*)
     subgoal premises subprems for y' f1 f2
@@ -343,22 +343,22 @@ lemma nonrep2_mapF_bij:
     done
   done
 
-lemma nonrep2_mapF_bij_2:
+lemma nonrep_mapF_bij_2:
   fixes x :: "('a1::var,'a2::var,'a3,'a4,'a5) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g1::"'a3\<Rightarrow>'a3" and f::"'a4\<Rightarrow>'a4'" and g2::"'a5\<Rightarrow>'a5" 
   assumes v: "|supp v| <o |UNIV :: 'a1 set|" and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|"
-    and "bij g1" "bij g2" and x: "nonrep2 x"
-  shows "nonrep2 (map_F v u g1 f g2 x)" 
+    and "bij g1" "bij g2" and x: "nonrep x"
+  shows "nonrep (map_F v u g1 f g2 x)" 
   using assms apply -
   subgoal premises prems
-    apply (rule nonrep2_mapF_bij[OF prems(4,5) nonrep2_map_F[OF prems(1,2,3,6)], 
+    apply (rule nonrep_mapF_bij[OF prems(4,5) nonrep_map_F[OF prems(1,2,3,6)], 
           unfolded F.map_comp[OF prems(1,2,3) supp_id_bound bij_id supp_id_bound] id_o o_id])
     done
   done
 
 
-typedef ('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' = "{x :: ('a1,'a2,'a3,'a4,'a5) F. nonrep2 x}"
-  apply (unfold mem_Collect_eq nonrep2_def sameShape1_def mr_rel_F_def F.map_id)
+typedef ('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' = "{x :: ('a1,'a2,'a3,'a4,'a5) F. nonrep x}"
+  apply (unfold mem_Collect_eq nonrep_def eq_shape_def mr_rel_F_def F.map_id)
   by (rule ex_nonrep)
 
 definition set1_F' :: "('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
@@ -366,9 +366,6 @@ definition set2_F' :: "('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' \<Rightarrow
 definition set3_F' :: "('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' \<Rightarrow> 'a3 set" where "set3_F' = set3_F o Rep_F'"
 definition set4_F' :: "('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' \<Rightarrow> 'a4 set" where "set4_F' = set4_F o Rep_F'"
 definition set5_F' :: "('a1::var,'a2::var,'a3::var,'a4,'a5::var) F' \<Rightarrow> 'a5 set" where "set5_F' = set5_F o Rep_F'"
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 definition map_F' :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) \<Rightarrow> ('a4 \<Rightarrow> 'a4') 
   \<Rightarrow> ('a5::var \<Rightarrow> 'a5)  
@@ -403,7 +400,7 @@ lemma F'_map_id: "map_F' id id id id id = id"
 ML \<open>
 open BNF_Util BNF_Tactics
 
-fun mk_map_comp_tac mrbnf map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_map_comp0 ctxt =
+fun mk_map_comp_tac mrbnf map_F'_def Abs_F'_inverse Rep_F' nonrep_mapF_bij_2 F_map_comp0 ctxt =
 
   (* For this only the second "apply" needs to be adjusted: (length lin_poses instead of "1")*)
   HEADGOAL (Subgoal.FOCUS
@@ -425,7 +422,7 @@ fun mk_map_comp_tac mrbnf map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_
         TRY o resolve_tac ctxt prems) THEN
       unfold_thms_tac ctxt [o_apply] THEN
       HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-        rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+        rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
         rtac ctxt refl])
     end) ctxt)
 \<close>
@@ -443,7 +440,7 @@ lemma F'_map_comp1_:
   shows "map_F' (v1 o u1) (v2 o u2) (v3 o u3) (g o f) (v5 o u5) = map_F' v1 v2 v3 g v5 o map_F' u1 u2 u3 f u5"
   using assms apply -
   apply (tactic \<open>mk_map_comp_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.map_comp0} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.map_comp0} @{context} 
     THEN print_tac @{context} "done" THEN no_tac\<close>)
   subgoal premises prems
     apply (unfold map_F'_def asBij_def asSS_def)
@@ -461,8 +458,8 @@ lemma F'_map_comp1_:
     apply (subst F.map_comp0; (rule prems)?)
     apply (unfold o_apply)
     apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
-      (*apply (rule  nonrep2_mapF_bij_2[OF assms(1,3,4,7)])*)
-     apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
+      (*apply (rule  nonrep_mapF_bij_2[OF assms(1,3,4,7)])*)
+     apply (rule nonrep_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
     apply (rule refl)
     done
   done
@@ -472,13 +469,13 @@ lemma F'_map_comp1_:
 ML \<open>
 open BNF_Util BNF_Tactics
 
-fun mk_set_map_tac set_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_set_map ctxt =
+fun mk_set_map_tac set_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep_mapF_bij_2 F_set_map ctxt =
   HEADGOAL (Subgoal.FOCUS
     (fn {prems = prems, context = ctxt, ...} =>
       unfold_thms_tac ctxt ([set_F'_def, map_F'_def] @ map (fn thm => thm RS eqTrueI) prems @
         @{thms asSS_def asBij_def if_True o_apply}) THEN
       HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-        rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+        rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
         rtac ctxt F_set_map THEN_ALL_NEW
           resolve_tac ctxt prems])
     ) ctxt)
@@ -496,7 +493,7 @@ lemma F'_set1_map_:
   shows "set1_F' (map_F' u1 u2 u3 f u5 b) = u1 ` set1_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set1_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(1)} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(1)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 lemma F'_set2_map_:
@@ -511,7 +508,7 @@ lemma F'_set2_map_:
   shows "set2_F' (map_F' u1 u2 u3 f u5 b) = u2 ` set2_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set2_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(2)} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(2)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 lemma F'_set3_map_:
@@ -526,7 +523,7 @@ lemma F'_set3_map_:
   shows "set3_F' (map_F' u1 u2 u3 f u5 b) = u3 ` set3_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set3_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(3)} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(3)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 lemma F'_set4_map_:
@@ -541,7 +538,7 @@ lemma F'_set4_map_:
   shows "set4_F' (map_F' u1 u2 u3 f u5 b) = f ` set4_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set4_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(4)} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(4)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 lemma F'_set5_map_:
@@ -556,7 +553,7 @@ lemma F'_set5_map_:
   shows "set5_F' (map_F' u1 u2 u3 f u5 b) = u5 ` set5_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set5_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(5)} @{context} 
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(5)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 ML \<open>
@@ -678,8 +675,8 @@ lemma asSS: "|supp u| <o |UNIV :: 'a set| \<Longrightarrow> asSS (u :: 'a \<Righ
 ML \<open>
 open BNF_Util BNF_Tactics MRBNF_Def
 
-fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 
-  rrel_F_map_F3 F_in_rel F_map_comp nonrep2_map_F_rev Rep_F'_inverse F_map_cong set_F'_defs F_set_maps cx ctxt =
+fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep_mapF_bij_2 
+  rrel_F_map_F3 F_in_rel F_map_comp nonrep_map_F_rev Rep_F'_inverse F_map_cong set_F'_defs F_set_maps cx ctxt =
   HEADGOAL (Subgoal.FOCUS
     (fn {prems, context = ctxt,...} =>
       let
@@ -690,7 +687,7 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
           map (fn thm => thm RS eqTrueI) (prems @ @{thms supp_id_bound bij_id})) THEN
         HEADGOAL (EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-          rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+          rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
           EqSubst.eqsubst_tac ctxt (map_range (fn i => 7+2*(i+nr_lives)) (length var_types)) [@{thm id_o} RS sym],
           EqSubst.eqsubst_tac ctxt lin_poses [trans OF [@{thm id_o}, @{thm o_id} RS sym]], (*lin_poses*)
           EqSubst.eqsubst_tac ctxt [1] [F_map_comp RS sym] THEN_ALL_NEW
@@ -714,7 +711,7 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
                 EqSubst.eqsubst_asm_tac ctxt lin_poses [trans OF [@{thm o_id}, @{thm id_o} RS sym]],
                 EqSubst.eqsubst_asm_tac ctxt [0] [F_map_comp RS sym] THEN_ALL_NEW
                   TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
-                dtac ctxt (rotate_prems ~1 nonrep2_map_F_rev) THEN_ALL_NEW
+                dtac ctxt (rotate_prems ~1 nonrep_map_F_rev) THEN_ALL_NEW
                   TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
                 assume_tac ctxt
               ]) THEN
@@ -753,14 +750,14 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
             HEADGOAL (EVERY' [
               rtac ctxt exI,
               EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-              rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW
+              rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW
                 TRY o resolve_tac ctxt (Rep_F':: @{thms supp_id_bound bij_id}),
               rtac ctxt conjI THEN_ALL_NEW TRY o rtac ctxt conjI 
             ]) THEN
             prefer_tac 3 THEN
             HEADGOAL (EVERY' [
               EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-              rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW                
+              rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW                
                 TRY o resolve_tac ctxt (Rep_F':: prems),
               EqSubst.eqsubst_tac ctxt [0] [F_map_comp] THEN_ALL_NEW
                 TRY o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems),
@@ -817,7 +814,7 @@ lemma F'_in_rel:
         eqTrueI[OF prems(5)] eqTrueI[OF prems(6)] eqTrueI[OF prems(7)]
         eqTrueI[OF supp_id_bound] eqTrueI[OF bij_id] o_apply)
     apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
-     apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
+     apply (rule nonrep_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
 
     apply (subst (13 15 17 19 21) id_o[THEN sym]) (* 2*nr_lives + 7*)
     apply (subst (3 5) trans[OF id_o o_id[THEN sym]])
@@ -841,7 +838,7 @@ lemma F'_in_rel:
        apply (subst (asm) (4 6 8 10 12) o_id[symmetric]) (*add o_id on all right sides*)
        apply (subst (asm) (3 5) trans[OF o_id id_o[symmetric]])  (*move lin_poses to the left*)
        apply (subst (asm) F.map_comp[symmetric]; (rule bij_id supp_id_bound)?)
-       apply (drule nonrep2_map_F_rev[rotated -1]; (rule bij_id supp_id_bound)?)
+       apply (drule nonrep_map_F_rev[rotated -1]; (rule bij_id supp_id_bound)?)
        apply (assumption)
       apply (subst (1 2) F.map_comp; (rule supp_id_bound bij_id prems)?)
       apply (unfold o_id id_o)
@@ -875,13 +872,13 @@ lemma F'_in_rel:
     subgoal premises subprems for z
       apply (rule exI)
       apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
-       apply (rule nonrep2_mapF_bij_2; (rule supp_id_bound bij_id Rep_F'[unfolded mem_Collect_eq])?)
+       apply (rule nonrep_mapF_bij_2; (rule supp_id_bound bij_id Rep_F'[unfolded mem_Collect_eq])?)
       apply (rule conjI; (rule conjI)?)
 
         prefer 3(* subgoal 3 is solvable without the exI instantiation and it transforms "?z" 
           so that the other 2 subgoals are solvable as well*)
         apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
-         apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
+         apply (rule nonrep_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
         apply (subst F.map_comp; (rule bij_id supp_id_bound prems)?) (*having the id prems before the actual prems is important!*)
         apply (unfold o_id)
         apply (unfold o_def)

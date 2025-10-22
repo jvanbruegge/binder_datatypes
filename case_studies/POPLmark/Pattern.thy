@@ -3,10 +3,6 @@ theory Pattern
   keywords "linearize_mrbnf" :: thy_goal
 begin
 
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
 ML_file "../../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../../Tools/mrbnf_linearize.ML"
 

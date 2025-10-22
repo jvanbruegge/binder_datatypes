@@ -129,14 +129,14 @@ fun mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_
         rtac ctxt impI THEN'
         eresolve_tac ctxt [conjunct1, conjunct2]));
 
-fun mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As inst_tops nonrep_def sameShape_def mr_rel_F_def 
+fun mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As inst_tops nonrep_def eq_shape_def mr_rel_F_def 
   F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong =
   let
     val switch = (fn thm1 => (fn thm2 => trans OF [thm1, thm2 RS sym]));
     val o_id = @{thm o_id};
     val id_o = @{thm id_o};
   in
-    unfold_thms_tac ctxt [nonrep_def, sameShape_def] THEN
+    unfold_thms_tac ctxt [nonrep_def, eq_shape_def] THEN
     HEADGOAL (EVERY' [
       rtac ctxt allI,
       rtac ctxt impI,
@@ -159,7 +159,7 @@ fun mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As inst_tops nonrep_def sa
       etac ctxt conjE,
       dtac ctxt (rotate_prems ~1 (F_in_rel RS iffD1)) THEN_ALL_NEW
         TRY o resolve_tac ctxt prems,
-      Method.insert_tac ctxt [unfold_thms ctxt [nonrep_def, sameShape_def, mr_rel_F_def, F_map_id] 
+      Method.insert_tac ctxt [unfold_thms ctxt [nonrep_def, eq_shape_def, mr_rel_F_def, F_map_id] 
         (nth prems (length prems -1))],
       etac ctxt exE,
       etac ctxt conjE,
@@ -204,17 +204,17 @@ fun mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As inst_tops nonrep_def sa
       ) ctxt)
   end;
 
-fun mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids nonrep_def sameShape_def F_mr_rel_maps F_map_comp 
+fun mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids nonrep_def eq_shape_def F_mr_rel_maps F_map_comp 
   F_rel_eq F_mr_rel_id F_mr_rel_flip F_mr_rel_mono_strong0 F_mr_rel_Grp mr_rel_F_exchange = 
   let
     val nr_ABFs = nr_As + nr_Bs + nr_Fs;
     val inst_ids = replicate (2*nr_Bs + 2*nr_Fs + nr_As + 2) NONE @ inst_ids
   in
-    unfold_thms_tac ctxt [nonrep_def, sameShape_def] THEN
+    unfold_thms_tac ctxt [nonrep_def, eq_shape_def] THEN
     HEADGOAL (EVERY' [
       rtac ctxt allI,
       rtac ctxt impI,
-      Method.insert_tac ctxt [unfold_thms ctxt [nonrep_def, sameShape_def] (nth prems (length prems - 1))],
+      Method.insert_tac ctxt [unfold_thms ctxt [nonrep_def, eq_shape_def] (nth prems (length prems - 1))],
       etac ctxt allE,
       etac ctxt impE,
       rtac ctxt (nth F_mr_rel_maps 0 RS iffD2) THEN_ALL_NEW
@@ -279,15 +279,15 @@ fun mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids
     HEADGOAL (assume_tac ctxt)
   end;
 
-fun mk_nonrep_map_F_bij_tac ctxt prems nr_lin gs nonrep_def sameShape_def F_mr_rel_maps F_map_comp = 
-  unfold_thms_tac ctxt [nonrep_def, sameShape_def] THEN
+fun mk_nonrep_map_F_bij_tac ctxt prems nr_lin gs nonrep_def eq_shape_def F_mr_rel_maps F_map_comp = 
+  unfold_thms_tac ctxt [nonrep_def, eq_shape_def] THEN
   HEADGOAL (EVERY' [
     rtac ctxt allI,
     rtac ctxt impI,
     dtac ctxt (rotate_prems ~1 ((nth F_mr_rel_maps 0) RS iffD1)) THEN_ALL_NEW
       TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
     K (unfold_thms_tac ctxt @{thms o_id Grp_UNIV_id eq_OO Grp_OO_top}),
-    dtac ctxt (Object_Logic.rulify ctxt (unfold_thms ctxt [nonrep_def, sameShape_def] (nth prems (nr_lin))))
+    dtac ctxt (Object_Logic.rulify ctxt (unfold_thms ctxt [nonrep_def, eq_shape_def] (nth prems (nr_lin))))
   ]) THEN
   REPEAT_DETERM_N nr_lin (HEADGOAL (etac ctxt exE)) THEN
   HEADGOAL (hyp_subst_tac_thin true ctxt) THEN
@@ -328,9 +328,9 @@ fun mk_rrel_F_map_onVar_tac ctxt F_rel_maps F_rel_mono_strong =
   ALLGOALS (etac ctxt F_rel_mono_strong THEN_ALL_NEW
      (assume_tac ctxt ORELSE' etac ctxt sym));
 
-fun mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nonrep_def sameShape_def mr_rel_F_def F_map_id F_in_rel F_map_cong 
+fun mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nonrep_def eq_shape_def mr_rel_F_def F_map_id F_in_rel F_map_cong 
   F_set_maps wit_thms = 
-  unfold_thms_tac ctxt [nonrep_def, sameShape_def, mr_rel_F_def, F_in_rel, @{thm mem_Collect_eq}] THEN
+  unfold_thms_tac ctxt [nonrep_def, eq_shape_def, mr_rel_F_def, F_in_rel, @{thm mem_Collect_eq}] THEN
   HEADGOAL (EVERY' ([
     rtac ctxt allI,
     rtac ctxt impI,
@@ -373,8 +373,8 @@ fun mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nonrep_def 
     ])
   ) inst_sets);
 
-fun mk_nonrep_wit_new_tac ctxt nonrep_def sameShape_def mr_rel_F_def F_map_id raw_nonrep_thm =
-  unfold_thms_tac ctxt [nonrep_def, sameShape_def, mr_rel_F_def, F_map_id] THEN
+fun mk_nonrep_wit_new_tac ctxt nonrep_def eq_shape_def mr_rel_F_def F_map_id raw_nonrep_thm =
+  unfold_thms_tac ctxt [nonrep_def, eq_shape_def, mr_rel_F_def, F_map_id] THEN
   HEADGOAL (rtac ctxt raw_nonrep_thm);
 
 (* pre MRBNF tacs *)

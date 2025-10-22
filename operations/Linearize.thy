@@ -12,33 +12,6 @@ to be pullback-preserving), we transform it into an MRBNF F' that has the same c
 as F except that the 3rd position becomes map-constrained to small-support endobijections.  
 *)
 
-ML_file \<open>~~/src/Doc/antiquote_setup.ML\<close>
-
-text \<open>
-
-\<^rail>\<open>
-  @@{command linearize_mrbnf} @{syntax spec} name '=' term @{syntax wits}? \<newline>
-    @'on' @{syntax on_vars} @{syntax bindings}? @{syntax "morphisms"}?
-  ;
-  @{syntax_def spec}: @{syntax tfree} | '(' (((name ':')? @{syntax tfree}) + ',') ')'
-  ;
-  @{syntax_def tfree}: typefree ('::' sort)
-  ;
-  @{syntax_def wits}: '[' 'wits' ':' (term + ',') ']'
-  ;
-  @{syntax_def on_vars}: (typefree + @'and')
-  ;
-  @{syntax_def bindings}: @'for' ((('map' | 'rel' | 'pred' | 'nonrep' | 'sameShape') ':' name) +)
-  ;
-  @{syntax_def "morphisms"}: @'morphisms' name name
-\<close>
-
-\<close>
-
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
 typedecl ('a, 'b, 'c, 'd) F
 consts map_F :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
   ('c \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('a, 'b, 'c, 'd) F \<Rightarrow> ('a, 'b, 'c', 'd') F"
@@ -47,7 +20,7 @@ consts set2_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'b set"
 consts set3_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'c set"
 consts set4_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'd set"
 consts rrel_F :: "('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> ('a, 'b, 'c', 'd') F \<Rightarrow> bool"
-(*
+
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a :: var, 'b :: var, 'c, 'd) F"
@@ -57,9 +30,6 @@ mrbnf "('a :: var, 'b :: var, 'c, 'd) F"
   rel: rrel_F
   var_class: var
   sorry
-
-(* we linearize this MRBNF on position 3*)
-ML \<open>val lin_pos = 3\<close>
 
 print_mrbnfs
 declare [[ML_print_depth=10000]]
@@ -94,13 +64,13 @@ axiomatization where
   (* The next property assumes that nonrepetitive elements exist: *)
   ex_nonrep: "\<exists>x. \<forall>x'. rrel_F top (=) x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
 
+
 lemma F_rel_map_set_live_strong:  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
     rrel_F R S x y =
       (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
             set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
   apply (auto simp add: F_pullback_unique F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id])
   done
-
 
 abbreviation "rel_F \<equiv> mr_rel_F"
 
@@ -323,7 +293,8 @@ lemma nonrep_map_F_rev:
     apply (insert prems(3)[unfolded nonrep_def sameShape_def])
     apply (elim allE impE)
      apply (rule F.mr_rel_map(1)[THEN iffD2]; (rule prems supp_id_bound bij_id)?)
-   apply (drule F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]; (rule prems supp_id_bound bij_id)?)
+     apply (drule F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]; (rule prems supp_id_bound bij_id)?)
+    thm F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]
      apply (unfold o_id id_o Grp_UNIV_id eq_OO OO_eq)
      apply (assumption)
     apply (erule exE)
@@ -447,23 +418,6 @@ lemma F'_map_comp1_:
     done
   done
 
-
-(* This tactic is applicable to all 4 of the following <F'_setx_map_> lemmas*)
-ML \<open>
-open BNF_Util BNF_Tactics
-
-fun mk_set_map_tac set_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep_mapF_bij_2 F_set_map ctxt =
-  HEADGOAL (Subgoal.FOCUS
-    (fn {prems = prems, context = ctxt, ...} =>
-      unfold_thms_tac ctxt ([set_F'_def, map_F'_def] @ map (fn thm => thm RS eqTrueI) prems @
-        @{thms asSS_def asBij_def if_True o_apply}) THEN
-      HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-        rtac ctxt nonrep_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
-        rtac ctxt F_set_map THEN_ALL_NEW
-          resolve_tac ctxt prems])
-    ) ctxt)
-\<close>
-
 lemma F'_set1_map_:
   fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
@@ -472,17 +426,11 @@ lemma F'_set1_map_:
   assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
   assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
   shows "set1_F' (map_F' u1 u2 u3 f b) = u1 ` set1_F' b"
-  using assms apply -
- (* apply (tactic \<open>mk_set_map_tac @{thm set1_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(1)} @{context} 
-    THEN print_tac @{context} "done" THEN no_tac\<close>)*)
-  subgoal premises prems
-    apply (unfold set1_F'_def map_F'_def asSS_def asBij_def
-        eqTrueI[OF prems(1)] eqTrueI[OF prems(2)] eqTrueI[OF prems(3)] eqTrueI[OF prems(4)] eqTrueI[OF prems(5)] o_apply if_True)
-    apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
-     apply (rule nonrep_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
-    apply (rule F.set_map(1); (rule prems))
-    done
+  apply (unfold set1_F'_def map_F'_def asSS_def asBij_def
+      eqTrueI[OF assms(1)] eqTrueI[OF assms(2)] eqTrueI[OF assms(3)] eqTrueI[OF assms(4)] eqTrueI[OF assms(5)] o_apply if_True)
+  apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+   apply (rule nonrep_mapF_bij_2; (rule assms Rep_F'[unfolded mem_Collect_eq])?)
+  apply (rule F.set_map(1); (rule assms))
   done
 
 lemma F'_set2_map_:
@@ -493,9 +441,11 @@ lemma F'_set2_map_:
   assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
   assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
   shows "set2_F' (map_F' u1 u2 u3 f b) = u2 ` set2_F' b"
-  using assms apply -
-  apply (tactic \<open>mk_set_map_tac @{thm set2_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(2)} @{context}\<close>)
+  apply (unfold set2_F'_def map_F'_def asSS_def asBij_def
+      eqTrueI[OF assms(1)] eqTrueI[OF assms(2)] eqTrueI[OF assms(3)] eqTrueI[OF assms(4)] eqTrueI[OF assms(5)] o_apply if_True)
+  apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+   apply (rule nonrep_mapF_bij_2; (rule assms Rep_F'[unfolded mem_Collect_eq])?)
+  apply (rule F.set_map(2); (rule assms))
   done
 
 lemma F'_set3_map_:
@@ -506,9 +456,11 @@ lemma F'_set3_map_:
   assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
   assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
   shows "set3_F' (map_F' u1 u2 u3 f b) = u3 ` set3_F' b"
-  using assms apply -
-  apply (tactic \<open>mk_set_map_tac @{thm set3_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(3)} @{context}\<close>)
+  apply (unfold set3_F'_def map_F'_def asSS_def asBij_def
+      eqTrueI[OF assms(1)] eqTrueI[OF assms(2)] eqTrueI[OF assms(3)] eqTrueI[OF assms(4)] eqTrueI[OF assms(5)] o_apply if_True)
+  apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+   apply (rule nonrep_mapF_bij_2; (rule assms Rep_F'[unfolded mem_Collect_eq])?)
+  apply (rule F.set_map(3); (rule assms))
   done
 
 lemma F'_set4_map_:
@@ -519,9 +471,11 @@ lemma F'_set4_map_:
   assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
   assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
   shows "set4_F' (map_F' u1 u2 u3 f b) = f ` set4_F' b"
-  using assms apply -
-  apply (tactic \<open>mk_set_map_tac @{thm set4_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep_mapF_bij_2} @{thm F.set_map(4)} @{context}\<close>)
+  apply (unfold set4_F'_def map_F'_def asSS_def asBij_def
+      eqTrueI[OF assms(1)] eqTrueI[OF assms(2)] eqTrueI[OF assms(3)] eqTrueI[OF assms(4)] eqTrueI[OF assms(5)] o_apply if_True)
+  apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+   apply (rule nonrep_mapF_bij_2; (rule assms Rep_F'[unfolded mem_Collect_eq])?)
+  apply (rule F.set_map(4); (rule assms))
   done
 
 lemma F'_map_cong_[fundef_cong]:
@@ -692,14 +646,13 @@ lemma F'_in_rel:
     done
   done
 
-(*
+(* this is not part of the linearization itself, 
+  but it shows that linearization preserves strongness *)
 lemma F'_strong:
   assumes "rrel_F' R x x'" 
     and "rrel_F' Q x x'"
   shows "rrel_F' (inf R Q) x x'" 
   using assms apply -
-  apply (tactic \<open>mk_strong_tac @{thm rrel_F'_def} @{thm mr_rel_F_def} @{thm F_strong} @{thm F.map_id} @{context} 
-    THEN print_tac @{context} "done" THEN no_tac\<close>)
   subgoal premises prems
     apply (unfold rrel_F'_def)
     apply (rule F_strong[unfolded mr_rel_F_def F.map_id, 
@@ -707,7 +660,7 @@ lemma F'_strong:
           unfolded inf.idem])
     done
   done
-*)
+
 mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   map: map_F'
   sets: free: set1_F' bound: set2_F' bound: set3_F' live: set4_F'
@@ -744,5 +697,5 @@ mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   subgoal by (rule F'_rel_comp_leq_)
   subgoal premises prems by (rule F'_in_rel[OF prems])
   done        
-*)
+
 end

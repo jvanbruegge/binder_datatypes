@@ -134,7 +134,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val ((((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), tds), un_ctors), names_lthy) = names_lthy
+    val (((((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), picks'), rawXs), rawXs') , ts), ts'), tds), un_ctors), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "d'" uTs
       ||>> mk_Frees "f" fTs
@@ -143,6 +143,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "a" vars
       ||>> mk_Frees "pick" raw_pre_Ts
+      ||>> mk_Frees "pick'" raw_pre_Ts
       ||>> mk_Frees "rawX" (map body_type raw_pre_Ts)
       ||>> mk_Frees "rawX'" (map body_type raw_pre_Ts)
       ||>> mk_Frees "t" rawTs
@@ -150,6 +151,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "td" raw_or_uTs
       ||>> mk_Frees "x" un_ctor_Ts;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
+    val bfree_gs = map (nth gs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
 
@@ -1162,6 +1164,10 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val suitable_prems = map2 (fn suitable => fn pick => HOLogic.mk_Trueprop (suitable $ pick))
         (map fst suitables) picks;
 
+        val suitable_prems_all = @{map 3} (fn suitable => fn pick => fn pick' =>
+          [HOLogic.mk_Trueprop (suitable $ pick), HOLogic.mk_Trueprop (suitable $ pick')])
+        (map fst suitables) picks picks';
+
         val f_FVarsD_inner =
              @{map 4} (fn UFVarss =>  fn is_frees => fn is_free_induct  => fn nbfrees =>
           let
@@ -1281,7 +1287,196 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ] end)) goals inners end
         ) (transpose (map #FVarss (#raw_fps fp_res))) (transpose FVars_raw_defss) (transpose UFVarsss) f_FVarsD_inner;
 
-        val _ = @{print} f_FVarsD;
+        val valid_tac = fn ctxt => fn valid_prem => fn suitable_prems => EVERY' [
+             dresolve_tac ctxt (map (fn t => (Drule.rotate_prems 1 t) RS @{thm sum.pred_set[THEN fun_cong, THEN iffD1]}) (flat (flat valid_pick_set))),
+             rtac ctxt valid_prem,
+             resolve_tac ctxt suitable_prems,
+             etac ctxt conjE,
+             rotate_tac ~1,
+             etac ctxt ballE,
+             assume_tac ctxt,
+             etac ctxt @{thm cnf.clause2raw_notE[THEN FalseE, rotated]},
+             TRY o K (Local_Defs.unfold0_tac ctxt @{thms o_id}),
+             REPEAT_DETERM o assume_tac ctxt
+             ];
+
+        val rel_F_suitable_mapD = @{map 11} (fn mrbnf => fn suitable => fn DTOR_mapD' => fn raw_pre_sets =>
+                                 fn d => fn pick => fn pick' => fn valid_prem => fn Umap => fn suitable_prems =>
+                                 fn raw_Umap_Utor' =>
+         let
+           val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_pre_sets (pick $ d);
+           val id_ons = map2 (fn f => fn fvar_union =>
+             mk_id_on fvar_union f
+           ) gs raw_UFVarsBDs;
+
+           fun mk_mr_rel deads mrbnf =
+             let
+               val live_Ts = plives @ replicate_rec (map2 (fn uT => fn T => (mk_sumT (T, uT))) uTs rawTs);
+             in
+               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
+           end;
+
+           val comp_f_g = map2 (fn f => fn g => HOLogic.mk_comp (f, g));
+           val f_comp_gs = comp_f_g fs gs;
+           val bfree_f_comp_gs = comp_f_g bfree_fs bfree_gs;
+
+           val rel_sums = @{map 8} (fn rec_bounds => fn alpha => fn t => fn t' => fn d => fn d' => fn raw_permute => fn Umap =>
+             if null rec_bounds then
+             let
+               val (tName, tT) = dest_Free t;
+               val (tName', tT') = dest_Free t';
+               val L = Abs (tName, tT, Abs (tName', tT',
+                 Term.list_comb (alpha, [Term.list_comb (raw_permute, fs @ [Bound 1]), Bound 0])));
+              
+               val (dName, dT) = dest_Free d;
+               val (dName', dT') = dest_Free d';
+               val R = Abs (dName, dT, Abs (dName', dT',
+                 HOLogic.mk_eq
+                   ( Term.list_comb (Umap, fs @ [Bound 1])
+                   , Bound 0
+                   )));
+             in
+               mk_rel_sum (L, R)
+               end
+             else let
+               val fs' = map_index (fn (i, f) => if member (op=) rec_bounds i
+                     then HOLogic.mk_comp (f, nth gs i)
+                     else f
+                   ) fs
+  
+               val (tName, tT) = dest_Free t;
+               val (tName', tT') = dest_Free t';
+               val L = Abs (tName, tT, Abs (tName', tT',
+                 Term.list_comb (alpha, [Term.list_comb (raw_permute, fs' @ [Bound 1]), Bound 0])));
+              
+               val (dName, dT) = dest_Free d;
+               val (dName', dT') = dest_Free d';
+               val R = Abs (dName, dT, Abs (dName', dT',
+                 HOLogic.mk_eq
+                   ( Term.list_comb (Umap, fs' @ [Bound 1])
+                   , Bound 0
+                   )));
+             in
+               mk_rel_sum (L, R)
+             end
+           ) rec_boundss (replicate_rec alphas) (replicate_rec ts) (replicate_rec ts')
+             (replicate_rec ds) (replicate_rec ds') (replicate_rec (map #permute (#raw_fps fp_res)))
+             (replicate_rec Umaps);
+
+           val lives = map HOLogic.eq_const plives @ rel_sums;
+           val bounds' = map HOLogic.id_const pbounds @ f_comp_gs;
+           val frees' = fs @ map HOLogic.id_const pfrees @ bfree_f_comp_gs;
+
+           val mr_rel_term = Term.list_comb (
+               mk_mr_rel (MRBNF_Def.deads_of_mrbnf mrbnf) mrbnf,
+               MRBNF_Def.interlace lives bounds' frees' (MRBNF_Def.var_types_of_mrbnf mrbnf)
+             ) $ (pick $ d) $ (pick' $ Term.list_comb (Umap, (fs @ [d])));
+
+           val goal = HOLogic.mk_Trueprop (fold_rev (mk_ex o dest_Free) gs
+                     (foldr1 HOLogic.mk_conj (alternate 2 1 g_prems' id_ons @ [mr_rel_term])));
+
+           val nargs = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
+
+           val prems = valid_prem :: suitable_prems @ f_prems;
+
+         in Goal.prove_sorry lthy (names ([d, pick, pick'] @ fs)) prems goal (fn {context=ctxt, prems as (valid_prem :: prem_rest)} =>
+           let val (suitable_prems as [suitable_prem1, suitable_prem2], f_prems) = chop (length suitable_prems) prem_rest;
+           val raw_Umap_Utor_inst =
+             let val thm = Local_Defs.unfold0 lthy [@{thm rel_set_def}] (raw_Umap_Utor' OF (f_prems @ [valid_prem]));
+             in thm RS conjunct2 RS bspec RS bexE
+             end;
+           in EVERY1 [
+           rtac ctxt raw_Umap_Utor_inst,
+           rtac ctxt allE,
+           rtac ctxt (Local_Defs.unfold0 lthy [snd suitable] suitable_prem2),
+           etac ctxt impE,
+           K (prefer_tac 2),
+           assume_tac ctxt,
+           EVERY' [
+             resolve_tac ctxt valid_Umaps,
+             REPEAT_DETERM o resolve_tac ctxt (f_prems @ [valid_prem])
+           ],
+           rtac ctxt exE,
+           rtac ctxt (DTOR_mapD' OF [valid_prem]),
+           K (Local_Defs.unfold0_tac ctxt @{thms insert_subset}),
+           rtac ctxt conjI,
+           rtac ctxt ((Local_Defs.unfold0 lthy [snd suitable] suitable_prem1) RS spec RS mp OF [valid_prem]),
+           rtac ctxt conjI,
+           assume_tac ctxt,
+           rtac ctxt @{thm empty_subsetI},
+           etac ctxt exE,
+           REPEAT_DETERM o etac ctxt conjE,
+           REPEAT_DETERM o rtac ctxt exI,
+           REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
+           rotate_tac ~1,
+           dtac ctxt (Drule.rotate_prems ~1 (MRBNF_Def.mr_rel_OO_of_mrbnf mrbnf RS fun_cong RS fun_cong RS iffD2) OF @{thms relcomppI}),
+           assume_tac ctxt,
+           REPEAT_DETERM o (resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems) ORELSE' assume_tac ctxt),
+           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id eq_OO sum.rel_compp[symmetric]}),
+           etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
+           REPEAT_DETERM o EVERY' [
+             REPEAT_DETERM o rtac ctxt ballI,
+             resolve_tac ctxt @{thms refl imp_refl}
+           ],
+           REPEAT_DETERM o (EVERY' [
+             REPEAT_DETERM o rtac ctxt ballI,
+             rtac ctxt impI,
+             etac ctxt @{thm sum.rel_cong[OF refl refl, THEN iffD1, rotated -1]},
+             K (Local_Defs.unfold_tac ctxt @{thms relcompp_apply}),
+             TRY o rtac ctxt iffI,
+             etac ctxt exE,
+             etac ctxt conjE,
+             rotate_tac ~1,
+             dresolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (map (#alpha_trans o #inner) (#raw_fps fp_res))),
+             eresolve_tac ctxt (map (fn t => Drule.rotate_prems ~1 (t RS iffD2)) (map (#alpha_bij_eq o #inner) (#raw_fps fp_res))),
+             REPEAT_DETERM o resolve_tac ctxt prems,
+             assume_tac ctxt,
+             dresolve_tac ctxt (map (fn t => Drule.rotate_prems ~1 (t RS iffD1)) (map (#alpha_bij_eq_inv o #inner) (#raw_fps fp_res))),
+             REPEAT_DETERM o resolve_tac ctxt prems,
+             rtac ctxt exI,
+             rtac ctxt conjI,
+             assume_tac ctxt,
+             EqSubst.eqsubst_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
+             REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
+             REPEAT_DETERM o EVERY' [
+               EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
+               resolve_tac ctxt prems
+             ],
+             K (Local_Defs.unfold0_tac ctxt (map #permute_id (#raw_fps fp_res))),
+             resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+             rtac ctxt refl
+           ] ORELSE' EVERY' [
+             REPEAT_DETERM o rtac ctxt ballI,
+             rtac ctxt impI,
+             etac ctxt @{thm sum.rel_mono_strong},
+             etac ctxt exE,
+             etac ctxt conjE,
+             rotate_tac ~1,
+             dresolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (map (#alpha_trans o #inner) (#raw_fps fp_res))),
+             eresolve_tac ctxt (map (fn t => Drule.rotate_prems ~1 (t RS iffD2)) (map (#alpha_bij_eq o #inner) (#raw_fps fp_res))),
+             REPEAT_DETERM o resolve_tac ctxt prems,
+             EVERY' [
+               EqSubst.eqsubst_asm_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
+               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}))
+             ],
+             TRY o K (Local_Defs.unfold0_tac ctxt @{thms o_id}),
+             TRY o assume_tac ctxt,
+             etac ctxt exE,
+             etac ctxt conjE,
+             hyp_subst_tac ctxt,
+             rtac ctxt sym,
+             rtac ctxt trans,
+             resolve_tac ctxt Umap_comps,
+             TRY o K (Local_Defs.unfold0_tac ctxt @{thms o_id}),
+             valid_tac ctxt valid_prem suitable_prems,
+             REPEAT_DETERM o (resolve_tac ctxt (prems @ @{thms refl supp_id_bound bij_id}) ORELSE' assume_tac ctxt)
+           ]
+           ),
+           REPEAT_DETERM o (resolve_tac ctxt (f_prems @ @{thms bij_comp supp_comp_bound supp_id_bound infinite_UNIV}) ORELSE' assume_tac ctxt)
+         ] end) end
+       ) mrbnfs suitables DTOR_mapD raw_pre_setss ds picks picks' valid_prems Umaps suitable_prems_all raw_Umap_Utor;
+
+      val _ = @{print} rel_F_suitable_mapD;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

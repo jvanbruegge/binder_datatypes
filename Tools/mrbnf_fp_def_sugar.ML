@@ -79,7 +79,8 @@ sig
     corec_def: thm list,
     is_frees: term list list,
     is_free_induct: thm list,
-    FVars_raw_defs: thm list list
+    FVars_raw_defs: thm list list,
+    coinduct: thm
   };
 
   type fp_result = {
@@ -261,17 +262,19 @@ type greatest_fp_thms = {
   corec_def: thm list,
   is_frees: term list list,
   is_free_induct: thm list,
-  FVars_raw_defs: thm list list
+  FVars_raw_defs: thm list list,
+  coinduct: thm
 };
 
-fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param, corec, corec_def, is_frees, is_free_induct, FVars_raw_defs } = {
+fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param, corec, corec_def, is_frees, is_free_induct, FVars_raw_defs, coinduct } = {
   existential_coinduct = Morphism.thm phi existential_coinduct,
   fresh_coinduct_param = Morphism.thm phi fresh_coinduct_param,
-  corec = corec,
-  corec_def = corec_def,
-  is_frees = is_frees,
+  corec = map (Morphism.term phi) corec,
+  corec_def = map (Morphism.thm phi) corec_def,
+  is_frees = map (map (Morphism.term phi)) is_frees,
   is_free_induct = map (Morphism.thm phi) is_free_induct,
-  FVars_raw_defs = FVars_raw_defs
+  FVars_raw_defs = map (map (Morphism.thm phi)) FVars_raw_defs,
+  coinduct = Morphism.thm phi coinduct
 }: greatest_fp_thms;
 
 type fp_result = {

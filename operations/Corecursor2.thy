@@ -2394,6 +2394,8 @@ abbreviation (input) "FVarsB12 X \<equiv> \<Union> (FVars_T1_2_raw ` set9_T1_pre
 abbreviation (input) "FVarsB21 X \<equiv> set7_T2_pre X - set5_T2_pre X \<union> (\<Union> (FVars_T1_1_raw ` set9_T2_pre X) - set5_T2_pre X) \<union> (\<Union> (FVars_T2_1_raw ` set11_T2_pre X) - set5_T2_pre X)"
 abbreviation (input) "FVarsB22 X \<equiv> \<Union> (FVars_T1_2_raw ` set9_T2_pre X) - set6_T2_pre X"
 
+
+thm alpha_T1_alpha_T2.coinduct
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)
 lemma f_swap_alpha:
   assumes p: "suitable1 pick1" "suitable2 pick2" and p': "suitable1 pick1'" "suitable2 pick2'"
@@ -2427,13 +2429,13 @@ lemma f_swap_alpha:
      apply assumption
     apply hypsubst_thin
 
-    apply (unfold0 f1_simps)
-    apply (subst (asm) T1.permute_raw_ctor)
+    apply (unfold0 f_simps)[1]
+    apply (subst (asm) T1.permute_raw_ctor T2.permute_raw_ctor)
     apply assumption+
     apply (drule iffD1[OF raw_T1.inject])+
     apply (subst (asm) T1_pre.map_comp)
              apply (rule supp_id_bound bij_id | assumption)+
-    apply (unfold id_o o_id)
+    apply (unfold id_o o_id)[1]
     apply hypsubst
 
     apply (frule rel_F_suitable_mapD(1)[OF _ p(1) p'(1)])
@@ -2444,9 +2446,9 @@ lemma f_swap_alpha:
     apply (rule conjI[rotated])+
 
           apply (rule T1_pre.mr_rel_map(1)[THEN iffD2, rotated -1])
-                        apply (unfold id_o o_id Grp_UNIV_id eq_OO)
+                        apply (unfold0 id_o o_id Grp_UNIV_id eq_OO)[1]
           apply (rule T1_pre.mr_rel_map(3)[THEN iffD2, rotated -1])
-                        apply (unfold inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq)
+                        apply (unfold0 inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq)[1]
                         apply (erule T1_pre.mr_rel_mono_strong0[rotated -12])
                         apply ((rule ballI)+, rule refl imp_refl)+
                         apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
@@ -2458,9 +2460,9 @@ lemma f_swap_alpha:
               apply assumption
              apply (subst T1_pre.set_map, (assumption | rule supp_id_bound bij_id)+)+
              apply (erule id_on_antimono)
-             apply (unfold0 image_comp[unfolded comp_def] comp_apply)[1]
-    apply (subst T1.FVars_raw_permute, (assumption | rule supp_id_bound bij_id)+)
-             apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric])[1]
+             apply (unfold0 image_comp[unfolded comp_def] comp_apply image_Un)[1]
+    apply (subst T1.FVars_raw_permute T2.FVars_raw_permute, (assumption | rule supp_id_bound bij_id)+)+
+             apply (unfold0 image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric])[1]
     apply (rule Diff_mono[OF _ subset_refl])
              apply (rule subsetI)
              apply ((erule UnE)+)?
@@ -2472,12 +2474,12 @@ lemma f_swap_alpha:
        apply (unfold0 sum.simps id_apply)
        apply (rule subset_refl)
       apply hypsubst_thin
-      apply (unfold sum.simps)
+      apply (unfold0 sum.simps)
       apply (rule f_FVarsD[OF p])
-      apply (drule valid_pick_set9[rotated])
+      apply (drule valid_pick_set[rotated])
          apply assumption
        apply (rule p)
-      apply (unfold pred_sum_inject)
+      apply (unfold0 pred_sum_inject)
       apply assumption
        done
       (* END REPEAT_DETERM *)
@@ -2488,7 +2490,7 @@ lemma f_swap_alpha:
              apply (erule id_on_antimono)
              apply (unfold0 image_comp[unfolded comp_def] comp_apply image_Un)[1]
     apply (subst T1.FVars_raw_permute T2.FVars_raw_permute, (assumption | rule supp_id_bound bij_id)+)+
-             apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric])[1]
+             apply (unfold0 image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric])[1]
              apply (rule Diff_mono[OF _ subset_refl])
              apply (rule subsetI)
              apply ((erule UnE)+)?
@@ -2502,23 +2504,23 @@ lemma f_swap_alpha:
       apply hypsubst_thin
       apply (unfold sum.simps)
        apply (rule f_FVarsD[OF p])
-      apply (drule valid_pick_set9[rotated])
+      apply (drule valid_pick_set[rotated])
          apply assumption
        apply (rule p)
       apply (unfold pred_sum_inject)
       apply assumption
        done
 (* repeated *)
-             apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+             apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1 | assumption)+
      subgoal for u v d _ xa u' v' xb x
        apply (rule sumE[of x])
         apply hypsubst_thin
         apply (unfold0 sum.simps id_apply)
         apply (rule subset_refl)
        apply hypsubst_thin
-       apply (unfold sum.simps)
+       apply (unfold0 sum.simps)
        apply (rule f_FVarsD[OF p])
-       apply (drule valid_pick_set11[rotated])
+       apply (drule valid_pick_set[rotated])
          apply assumption
         apply (rule p)
        apply (unfold pred_sum_inject)
@@ -2529,8 +2531,8 @@ lemma f_swap_alpha:
             apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
 (* REPEAT_DETERM *)
         apply (rule ballI impI)+
-        apply (unfold relcompp_conversep_Grp)[1]
-        apply (unfold Grp_OO)[1]
+        apply (unfold0 relcompp_conversep_Grp)[1]
+        apply (unfold0 Grp_OO)[1]
         apply (rule disjCI)
         apply (erule rel_sum.cases)
          apply hypsubst
@@ -2550,7 +2552,7 @@ lemma f_swap_alpha:
          apply (drule valid_pick_set[rotated])
            apply assumption
           apply (rule p)
-         apply (unfold pred_sum_inject)
+         apply (unfold0 pred_sum_inject)
          apply (rotate_tac -1)
          apply assumption
      apply (rule conjI[rotated])+
@@ -2731,7 +2733,7 @@ lemma f_swap_alpha:
       apply hypsubst_thin
       apply (unfold sum.simps)
       apply (rule f_FVarsD[OF p])
-      apply (drule valid_pick_set9[rotated])
+      apply (drule valid_pick_set[rotated])
          apply assumption
        apply (rule p)
       apply (unfold pred_sum_inject)
@@ -2787,8 +2789,8 @@ lemma f_swap_alpha:
             apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
 (* REPEAT_DETERM *)
         apply (rule ballI impI)+
-        apply (unfold relcompp_conversep_Grp)[1]
-        apply (unfold Grp_OO)[1]
+        apply (unfold0 relcompp_conversep_Grp)[1]
+        apply (unfold0 Grp_OO)[1]
         apply (rule disjCI)
         apply (erule rel_sum.cases)
          apply hypsubst

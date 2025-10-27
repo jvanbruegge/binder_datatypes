@@ -3637,7 +3637,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         corec_def = flat (map #corec_def raw_Ts),
         is_frees = map #preds is_freess,
         is_free_induct = map #induct is_freess,
-        FVars_raw_defs = map (map snd) FVars_rawss
+        FVars_raw_defs = map (map snd) FVars_rawss,
+        coinduct = (#induct alphas)
       } end
 
     val fp_result = {

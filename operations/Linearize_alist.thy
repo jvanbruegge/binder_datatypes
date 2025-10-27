@@ -1,5 +1,5 @@
 theory Linearize_alist
-  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor" "HOL-Library.FSet"
+  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
   keywords "linearize_mrbnf" :: thy_goal
 begin
 
@@ -7,246 +7,34 @@ ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
 declare [[mrbnf_internals]]
-declare [[ML_print_depth=10000]]
 
-
-(* LIST *)
-lemma "\<And> R (x :: 'a list) y. list_all2 R x y = (\<exists>z. set z \<subseteq> {(x, y). R x y} \<and> map fst z = x \<and> map snd z = y)"
-  subgoal for R x y
-    apply (rule list.in_rel[of R x y, unfolded mem_Collect_eq])
+section "command"
+linearize_mrbnf ('k::var,'v) alist' = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct eq_shape: length_eq morphisms to_alist of_alist
+  unfolding list.in_rel
+  subgoal for S R l r
+    apply safe
+    subgoal for z
+      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
+      apply auto
+      done
+    subgoal for z z1 z2
+      apply (auto simp: list_eq_iff_nth_eq map_prod_def split_beta prod_eq_iff)
+      done
+    subgoal for z
+      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
+      apply (auto simp: subset_eq split_beta)
+      done
     done
   done
 
-definition eq_shape_list :: "'a list \<Rightarrow> 'a list \<Rightarrow> bool" where 
-  "eq_shape_list x x' \<equiv> list_all2 top x x'"
+thm of_alist_inverse[unfolded list_distinct_def]
+thm to_alist
 
-definition nonrep_list :: "'a list \<Rightarrow> bool" where 
-  "nonrep_list x \<equiv> \<forall> x'. eq_shape_list x x' \<longrightarrow> (\<exists> f. x' = map f x)"
-
-lemma eq_shape_list_alt: "list_all2 top xs xs' = (length xs = length xs')"
-  by (simp add: list_all2_conv_all_nth)
-
-lemma ex_not: "((\<forall>x. P x) \<longrightarrow> False) = (\<exists>x. \<not>P x)"
-  by simp
-
-lemma "nonrep_list [1::nat, 1, 1] \<longrightarrow> False"
-  apply (unfold nonrep_list_def eq_shape_list_def eq_shape_list_alt)
-  apply (rule ex_not[THEN iffD2])
-  apply (rule exI[of _ "[1, 2, 3]"])
-  apply (auto)
-  done
-
-lemma "nonrep_list [1::nat, 2, 3]"
-  apply (unfold nonrep_list_def eq_shape_list_def eq_shape_list_alt)
-  apply (rule allI)
-  apply (rule impI)
-  subgoal for x
-    apply (rule exI[of _ "(\<lambda> y. (if y = 1 then (hd x) else (if y = 2 then (hd (tl x)) else (hd (tl (tl x))))))"])
-    apply (auto)
-    by (metis (lifting) ext length_0_conv length_Suc_conv list.sel(1,3))
-  done
-
-(* PROD *)
-definition eq_shape_prod_1 :: "('a \<times> 'b) \<Rightarrow> ('a \<times> 'b) \<Rightarrow> bool" where 
-  "eq_shape_prod_1 x x' \<equiv> rel_prod top (=) x x'"
-
-definition nonrep_prod_1 :: "('a \<times> 'b) \<Rightarrow> bool" where 
-  "nonrep_prod_1 x \<equiv> \<forall> x'. eq_shape_prod_1 x x' \<longrightarrow> (\<exists> f. x' = map_prod f id x)"
-
-lemma "nonrep_prod_1 (a, b)"
-  apply (unfold nonrep_prod_1_def eq_shape_prod_1_def)
-  apply (auto)
-  done
-
-typedef 'a nrp_list = "{(xs :: 'a list). nonrep_list xs}"
-  apply (rule exI[of _ "[]"])
-  apply (auto simp add: nonrep_list_def eq_shape_list_def)
-  done
-
-thm fun.set_bd
-(*
-bnf "'a set"
-  map: image
-    sets: "(id :: 'a set \<Rightarrow> 'a set)"
-  bd: "natLeq +c card_suc |UNIV|"
-  rel: rel_set
-           apply (auto simp add: card_order_bd_fun Cinfinite_bd_fun[THEN conjunct1] regularCard_bd_fun)
-  subgoal for f g
-    by fastforce
-  subgoal for x
-    using card_of_UNIV ordLeq_ordLess_trans ordLess_bd_fun by blast
-  subgoal for R S x y z
-    apply (unfold rel_set_def)
-    by (meson relcomppI)
-  apply (intro ext)
-  subgoal for R x y
-    sorry
-  done
-print_theorems
-*)
-
-print_bnfs
-
-definition dom_map :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b)" where
-  "dom_map g f = f o g"
-
-definition fun_map :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b')" where
-  "fun_map d r f = r o f o (inv d)"
-
-definition domain :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set" where
-  "domain _ = UNIV"
+binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
+  | Let "(fs::'a, 'a lc) alist'" u::"'a lc" binds fs in u
 
 
-mrbnf "('a::var) \<Rightarrow> 'b"
-  map: fun_map
-    sets: bound: domain live: range
-  bd: "natLeq"
-  rel: "rel_fun (=)"
-  subgoal
-    apply (unfold fun_map_def o_id id_o inv_id)
-    apply (unfold id_apply)
-    apply (rule refl)
-    done
-  subgoal for f1 g1 f2 g2
-    apply (unfold fun_map_def o_apply)
-    apply (intro ext)
-    oops
-  
-  
-
-mrbnf "'a list"
-  map: map
-    sets: set
-  bd: "natLeq"
-         apply(auto simp add: infinite_regular_card_order_natLeq list.set_bd list.rel_compp)[7]
-   prefer 2
-   apply (unfold list.map_id)
-  apply (rule refl)
-  oops
-
-bnf "'a list"
-  map: map
-    sets: set
-  bd: "natLeq"
-  rel: list_all2
-           apply(auto simp add: infinite_regular_card_order_natLeq[unfolded infinite_regular_card_order_def] 
-      list.set_bd list.rel_compp)
-  apply (intro ext list.in_rel[unfolded mem_Collect_eq])
-  oops
-
-thm list.rel_compp
-
-lemma "\<exists>z. z \<subseteq> {(x, y). top x y} \<and> fst ` z = {1, 2} \<and> snd ` z = {1, 2}"
-  by (rule exI[of _ "{(1, 1), (2, 2)}"]) auto
-
-lemma "\<exists>z. z \<subseteq> {(x, y). top x y} \<and> fst ` z = {1, 2} \<and> snd ` z = {1, 2}"
-  by (rule exI[of _ "{(1, 2), (2, 1)}"]) auto
- (* \<Longrightarrow> NOT \<exists>!z *)
-
-lemma "rel_fset top (Abs_fset {1, 2}) (Abs_fset {1, 2})"
-  unfolding fset.in_rel[unfolded mem_Collect_eq] 
-  apply (rule exI[of _ "(Abs_fset {(1, 2), (2, 1)})"], auto)
-  apply (subst Abs_fset_inverse[unfolded mem_Collect_eq], simp,
-    subst (asm) Abs_fset_inverse[unfolded mem_Collect_eq], auto)+
-  done
-
-
-typedef 'a even_list = "{x :: 'a list. even (length x)}"
-  apply (rule exI[of _ "[]"])
-  apply (unfold mem_Collect_eq list.size(3))
-  apply (rule even_zero)
-  done
-
-
-setup_lifting type_definition_even_list
-
-lift_bnf 'a even_list [wits: "[] :: 'a list"] 
-  subgoal for f x
-    apply (unfold mem_Collect_eq length_map)
-    apply (assumption)
-    done
-  subgoal for z
-    apply (unfold mem_Collect_eq)
-    apply (intro bexI[of _ z] conjI subset_refl refl)
-    apply (unfold mem_Collect_eq length_map)
-    apply (assumption)
-    done
-  subgoal
-  apply (unfold mem_Collect_eq list.size(3))
-  apply (rule even_zero)
-    done
-  subgoal for a
-    apply (unfold list.set(1) empty_iff)
-    apply (assumption)
-    done
-  done
-
-definition length_even_list :: "'a even_list \<Rightarrow> nat" where 
-  "length_even_list xs \<equiv> length (Rep_even_list xs)"
-
-lemma length_map_even_list: "length_even_list (map_even_list f xs) = length_even_list xs"
-  apply (unfold length_even_list_def map_even_list_def o_apply)
-  apply (subst Abs_even_list_inverse[unfolded mem_Collect_eq])
-   apply (unfold length_map)
-   apply (rule Rep_even_list[unfolded mem_Collect_eq])
-  apply (rule refl)
-  done
-
-lemma map_equality_iff_even_list: "(map_even_list f z' = map_even_list g y) = ((length_even_list z' = length_even_list y) \<and>
-  (\<forall>i < length_even_list y. f (Rep_even_list z' ! i) = g (Rep_even_list y ! i)))"
-  apply (unfold length_even_list_def map_even_list_def o_apply)
-  apply (rule iffI)
-
-  apply (rule map_equality_iff[of f "(Rep_even_list z')" g "(Rep_even_list y)", THEN iffD1])
-  apply (subst (1 3) Abs_even_list_inverse[THEN sym])
-    apply (auto simp add: Rep_even_list[unfolded mem_Collect_eq]) [3]
-   apply (rule arg_cong[of _ _ Abs_even_list])
-   apply (rule map_equality_iff[of f "(Rep_even_list z')" g "(Rep_even_list y)", THEN iffD2])
-   apply (assumption)
-  done
-
-linearize_mrbnf 'a::var lin_even_list = "'a::var even_list" on 'a
-  done
-
-
-linearize_mrbnf 'a::var lin_fset = "'a::var fset" on 'a
-(*  subgoal for R x y
-    apply (subst fset.in_rel[unfolded mem_Collect_eq])
-    apply (rule iffI)
-    prefer 2
-     apply (erule ex1_implies_ex)
-    apply (erule ex_ex1I)
-    thm ex_ex1I
-    apply (elim conjE)
-    apply (hypsubst_thin)
-    apply (rule pair_list_eqI[THEN sym]; assumption)
-    done
-  apply (rule exI[of _ "[]"])
-  apply auto*)
-  done
-  
-
-lemma "list_all2 ((<):: nat \<Rightarrow> nat \<Rightarrow> bool) [1, 1, 3] [4, 6, 4]"
-  apply (subst list.in_rel[unfolded mem_Collect_eq])
-  apply (rule exI[of _ "[(1, 4), (1, 6), (3, 4)]"])
-  apply (simp)
-  done
-
-linearize_mrbnf 'a::var lin_list = "'a::var list" on 'a
-(*  subgoal for R x y
-    apply (subst list.in_rel[unfolded mem_Collect_eq])
-    apply (rule iffI)
-    prefer 2
-     apply (erule ex1_implies_ex)
-    apply (erule ex_ex1I)
-    thm ex_ex1I
-    apply (elim conjE)
-    apply (hypsubst_thin)
-    apply (rule pair_list_eqI[THEN sym]; assumption)
-    done
-  *)
-  done
-
+section "manual"
 typedef ('k, 'v) pre_alist = "UNIV :: ('k \<times> 'v) list set" by auto
 
 setup_lifting type_definition_pre_alist
@@ -269,19 +57,14 @@ mrbnf pre_alist: "('k, 'v) pre_alist"
    apply blast
   done
 
-print_theorems
-
 linearize_mrbnf ('k::var,'v) alist = "('k::var, 'v) pre_alist" on 'k
   oops
-
-print_theorems
-
 
 axiomatization where
   (* The next property assumes preservation of pullbacks on the third position. 
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
-  pre_alist_rel_map_set2_strong: 
+  pre_alist_strong_pullback: 
   "\<And> R S (x :: (('k, 'v) pre_alist)) y.
     rel_pre_alist R S x y =
       (\<exists>!z. keys z \<subseteq> {(x, y). R x y} \<and>
@@ -300,7 +83,7 @@ lemma pre_alist_strong:
         (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?))
   apply (unfold pre_alist.map_id mr_rel_pre_alist_def eq_True)
   apply (rotate_tac 2)
-  apply (drule pre_alist_rel_map_set2_strong[THEN iffD1])
+  apply (drule pre_alist_strong_pullback[THEN iffD1])
   apply (unfold top_apply top_bool_def Collect_const_case_prod if_True eqTrueI[OF subset_UNIV] simp_thms(22))
   apply (unfold pre_alist.in_rel[unfolded id_apply pre_alist.map_id OO_Grp_alt]
       id_def[symmetric] mem_Collect_eq)

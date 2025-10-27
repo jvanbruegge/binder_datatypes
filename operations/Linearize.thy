@@ -34,22 +34,6 @@ mrbnf "('a :: var, 'b :: var, 'c, 'd) F"
 print_mrbnfs
 declare [[ML_print_depth=10000]]
 
-thm F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id]
-
-lemma "rrel_F R S x y =
-      (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
-            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
-  apply (rule iffI)
-   prefer 2
-   apply (drule ex1_implies_ex)
-  apply (erule F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id, THEN iffD2, unfolded mem_Collect_eq conj_assoc])
-  apply (rule ex_ex1I)
-   apply (erule F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id, THEN iffD1, unfolded mem_Collect_eq conj_assoc])
-  apply (elim conjE)
-  subgoal for z z'
-    apply (hypsubst_thin)
-    oops
-
 axiomatization where
   (* The next property assumes preservation of pullbacks on the third position. 
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
@@ -65,7 +49,7 @@ axiomatization where
   ex_nonrep: "\<exists>x. \<forall>x'. rrel_F top (=) x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
 
 
-lemma F_rel_map_set_live_strong:  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
+lemma F_pullback_strong:  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
     rrel_F R S x y =
       (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
             set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
@@ -83,7 +67,7 @@ lemma F_strong:
         (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?)) 
   apply (unfold F.map_id mr_rel_F_def eq_True)
   apply (rotate_tac 2)
-  apply (drule F_rel_map_set_live_strong[THEN iffD1])
+  apply (drule F_pullback_strong[THEN iffD1])
   apply (unfold top_apply top_bool_def Collect_const_case_prod if_True eqTrueI[OF subset_UNIV] simp_thms(22))
   apply (unfold F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded id_apply F.map_id OO_Grp_alt]
       id_def[symmetric] mem_Collect_eq)

@@ -63,7 +63,7 @@ fun eqsubst_all_tac ctxt thm =
             (Thm.nprems_of st) st;
     in REPEAT_DETERM apply_occ_tac #> Seq.maps distinct_subgoals_tac end;
 
-fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 F_map_id F_in_rel F_rel_map_set_live_strong = 
+fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 F_map_id F_in_rel F_pullback_strong = 
   HEADGOAL (EVERY' [
   Method.insert_tac ctxt prems,
   forward_tac ctxt [F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems)] THEN_ALL_NEW (
@@ -73,7 +73,7 @@ fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0
       rtac ctxt (trans OF [@{thm top_apply} RS fun_cong, trans OF @{thms top_apply top_bool_def}]))),
   K (unfold_thms_tac ctxt [F_map_id, mr_rel_F_def, @{thm eq_True}]),
   rotate_tac 2,
-  dtac ctxt (iffD1 OF [F_rel_map_set_live_strong]),
+  dtac ctxt (iffD1 OF [F_pullback_strong]),
   K (unfold_thms_tac ctxt ([eqTrueI OF [subset_UNIV]] @ @{thms top_apply top_bool_def 
     Collect_const_case_prod if_True simp_thms(22)})),
   K (unfold_thms_tac ctxt ([unfold_thms ctxt [id_apply, F_map_id, @{thm OO_Grp_alt}] 

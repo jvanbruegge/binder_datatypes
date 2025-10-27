@@ -265,7 +265,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
 
     val nonrep_wit_goals = map (mk_nonrep_wit) Iwits_new;
 
-    (*F_pullback_perservation *)
+    (* F_pullback_strong *)
     val map_fst_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.fst_const As_pair) 
       (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
     val map_eq_x = HOLogic.mk_eq (map_fst_z, var_x);
@@ -301,9 +301,9 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     val rrel_R_x_x' = Term.list_comb (rrel_F_R, var_R'_As @ [var_x, var_x']);
     val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
     val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
-    val F_pullback_perservation = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
+    val F_pullback_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
 
-    val goals = if null l_As then [] else [F_pullback_perservation];
+    val goals = if null l_As then [] else [F_pullback_strong];
 
     val goals = 
       if null (Iwits_new @ Iwits_F) then
@@ -314,7 +314,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     fun after_qed thmss lthy = 
       let
         (* prepare thms *)
-        val (F_pullback_perservation_thm_opt, thmss) = if null l_As then (NONE, thmss) else
+        val (F_pullback_strong_thm_opt, thmss) = if null l_As then (NONE, thmss) else
           chop 1 thmss |> apfst (SOME o the_single o the_single);
         val (ex_nonrep_opt, wit_new_thmss) = if null (Iwits_new @ Iwits_F) then chop 1 thmss |> apfst (SOME o the_single o the_single) else (NONE, thmss);
         val wits_new_thms = map the_single wit_new_thmss;
@@ -486,7 +486,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
           Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
           [mr_rel_R, mr_rel_Q] mr_rel_inf
           (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 
-            F_map_id F_in_rel (the F_pullback_perservation_thm_opt)));
+            F_map_id F_in_rel (the F_pullback_strong_thm_opt)));
 
         (* mr_rel_F_exchange *)
         val RQ_args = select_n Q_args R_args lin_poses;

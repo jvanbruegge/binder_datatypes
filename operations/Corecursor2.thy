@@ -10,6 +10,16 @@ lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightar
 lemma pred_sumE: "(\<And>a. x = Inl a \<Longrightarrow> P1 a) \<Longrightarrow> (\<And>b. x = Inr b \<Longrightarrow> P2 b) \<Longrightarrow> pred_sum P1 P2 x"
   by (metis pred_sum.simps sum.collapse(1,2))
 
+lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>y. Q y) \<Longrightarrow> P x \<and> Q y"
+  by simp
+lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
+  by simp
+lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
+  by auto
+
+lemma id_on_f_inv_f: "bij f \<Longrightarrow> id_on (inv f ` A) g \<Longrightarrow> id_on A (f \<circ> g \<circ> inv f)"
+  unfolding id_on_def by simp
+
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
@@ -51,10 +61,6 @@ typ "('var, 'tyvar, 'a, 'b) T2"
 term "T1_ctor"
 
 (* Definitions *)
-
-thm alpha_T1_alpha_T2.intros
-
-thm T1.FVars_ctor
 
 locale COREC =
   fixes Udtor1 :: "'u1 \<Rightarrow> ('a::covar, 'b::covar, 'c::covar, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre set"
@@ -2388,16 +2394,6 @@ abbreviation (input) "FVarsB12 X \<equiv> \<Union> (FVars_T1_2_raw ` set9_T1_pre
 abbreviation (input) "FVarsB21 X \<equiv> set7_T2_pre X - set5_T2_pre X \<union> (\<Union> (FVars_T1_1_raw ` set9_T2_pre X) - set5_T2_pre X) \<union> (\<Union> (FVars_T2_1_raw ` set11_T2_pre X) - set5_T2_pre X)"
 abbreviation (input) "FVarsB22 X \<equiv> \<Union> (FVars_T1_2_raw ` set9_T2_pre X) - set6_T2_pre X"
 
-lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>y. Q y) \<Longrightarrow> P x \<and> Q y"
-  by simp
-lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
-  by simp
-lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
-  by auto
-
-lemma id_on_f_inv_f: "bij f \<Longrightarrow> id_on (inv f ` A) g \<Longrightarrow> id_on A (f \<circ> g \<circ> inv f)"
-  unfolding id_on_def by simp
-
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)
 lemma f_swap_alpha:
   assumes p: "suitable1 pick1" "suitable2 pick2" and p': "suitable1 pick1'" "suitable2 pick2'"
@@ -2408,17 +2404,6 @@ lemma f_swap_alpha:
     \<and> alpha_T2 (permute_T2_raw u v (f2 pick1 pick2 d2)) (f2 pick1' pick2' (Umap2 u v d2))
   "
   
-  thm alpha_T1_alpha_T2.coinduct[of
-    "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
-     bij v \<and> |supp v| <o |UNIV::'b set| \<and>
-     tL = permute_T1_raw u v (f1 pick1 pick2 d) \<and>
-     tR = f1 pick1' pick2' (Umap1 u v d)"
-
-    "\<lambda> tL tR. \<exists> u v d. valid_U2 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
-     bij v \<and> |supp v| <o |UNIV::'b set| \<and>
-     tL = permute_T2_raw u v (f2 pick1 pick2 d) \<and>
-     tR = f2 pick1' pick2' (Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
-]
   apply (rule alpha_T1_alpha_T2.coinduct[of
     "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>

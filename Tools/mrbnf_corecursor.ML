@@ -1476,7 +1476,25 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          ] end) end
        ) mrbnfs suitables DTOR_mapD raw_pre_setss ds picks picks' valid_prems Umaps suitable_prems_all raw_Umap_Utor;
 
-      val _ = @{print} rel_F_suitable_mapD;
+        val f_swap_alpha =
+         let
+           
+           val alpha_subgoals = @{map 5} (fn alpha => fn d => fn raw_permute => fn fDefn => fn Umap =>
+             alpha
+               $ (Term.list_comb (raw_permute, fs @ [Term.list_comb (fDefn, picks @ [d])]))
+               $ (Term.list_comb (fDefn, picks' @ [Term.list_comb (Umap, fs @ [d])]))
+             ) alphas ds (map #permute (#raw_fps fp_res)) (map fst fDefns) Umaps;
+
+           val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj alpha_subgoals);
+
+           val prems = flat (transpose suitable_prems_all) @ valid_prems @ f_prems;
+
+         in Goal.prove_sorry lthy (names (picks @ picks' @ ds @ fs)) prems goal (fn {context=ctxt, prems} =>
+           EVERY1 [
+             K (print_tac ctxt "foo")
+           ])
+         end
+       ;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

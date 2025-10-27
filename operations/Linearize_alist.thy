@@ -31,8 +31,7 @@ thm of_alist_inverse[unfolded list_distinct_def]
 thm to_alist
 
 binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
-  | Let "(fs::'a, 'a lc) alist'" u::"'a lc" binds fs in u
-
+  | Let "(fs::'a, t::'a lc) alist'" u::"'a lc" binds fs in t u
 
 section "manual"
 typedef ('k, 'v) pre_alist = "UNIV :: ('k \<times> 'v) list set" by auto

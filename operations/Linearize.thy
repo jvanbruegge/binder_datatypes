@@ -39,10 +39,8 @@ axiomatization where
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
   F_pullback_unique: 
-  "\<And>R S z l r.
-      set3_F z \<subseteq> {(x, y). R x y} \<Longrightarrow> set4_F z \<subseteq> {(x, y). S x y} \<Longrightarrow>
-      map_F id id fst fst l = map_F id id fst fst z \<Longrightarrow> map_F id id snd snd l = map_F id id snd snd z \<Longrightarrow>
-      map_F id id fst fst r = map_F id id fst fst z \<Longrightarrow> map_F id id snd snd r = map_F id id snd snd z \<Longrightarrow>
+  "\<And>l r.
+      map_F id id fst fst l = map_F id id fst fst r \<Longrightarrow> map_F id id snd snd l =  map_F id id snd snd r \<Longrightarrow>
       l = r"
   and
   (* The next property assumes that nonrepetitive elements exist: *)

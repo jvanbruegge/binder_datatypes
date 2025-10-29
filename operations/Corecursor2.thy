@@ -2983,7 +2983,7 @@ lemma f0_Utor_aux1:
                        (raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X))"
     apply(subst f_simps)
   apply (subst if_P[OF refl])
-    apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound id_on_id)+)
+    apply(rule alpha_T1_alpha_T2.intros, (rule bij_id supp_id_bound id_on_id)+)
     apply (unfold T1_pre.mr_rel_id[symmetric] T1_pre.rel_map)
   apply(rule T1_pre.rel_refl_strong)
   apply (rule refl)
@@ -2994,16 +2994,16 @@ lemma f0_Utor_aux1:
       apply hypsubst
       apply (unfold sum.simps)
       apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)[1]
-      apply (rule T1.alpha_refl)
+      apply (rule T1.alpha_refl T2.alpha_refl)
   apply hypsubst
      apply (unfold sum.simps)
-     apply (unfold f0_1_def)?
+     apply (unfold f0_1_def f0_2_def)?
      apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
 
 (* BLOCK: SUITABLE *)
 
 (* REPEAT_DETERM *)
-     apply (unfold suitable1_def)
+     apply (unfold suitable1_def suitable2_def)[1]
     apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3011,9 +3011,9 @@ lemma f0_Utor_aux1:
       apply (rule impI)
       apply hypsubst
      apply (rule assms)
-    apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+        apply (rule impI)
+        apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* repeated *)
      apply (unfold suitable2_def)
     apply (rule allI)
@@ -3024,26 +3024,26 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* END REPEAT_DETERM *)
-
-   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+apply (rule assms)?
+   apply (rule assms(1-2)[unfolded Utor1_def Utor2_def, THEN imageE])
        apply (rotate_tac -1)
    apply (erule valid_Udtor'[rotated])
      prefer 2
-     apply (rule Basic_BNFs.setr.intros)
+     apply (rule setr.intros)
      apply (rule refl)
      apply hypsubst_thin
     apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
-    apply (rule UnI1)
+    
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
-    apply (unfold sum.set_map image_id setr.simps)
+    apply (unfold0 sum.set_map image_id setr.simps)
     apply (erule exE)
     apply (erule conjE)
-    apply (hypsubst_thin)
-  apply assumption
+       apply (hypsubst_thin)
+apply (erule UnI1 UnI2)
       apply (rule assms)+
 
 (* END BLOCK *)
@@ -3057,13 +3057,13 @@ lemma f0_Utor_aux1:
       apply (rule T1.alpha_refl)
   apply hypsubst
      apply (unfold sum.simps)
-     apply (unfold f0_1_def)?
+     apply (unfold f0_1_def f0_2_def)?
      apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
 
 (* BLOCK: SUITABLE *)
 
 (* REPEAT_DETERM *)
-     apply (unfold suitable1_def)
+     apply (unfold0 suitable1_def suitable2_def)[1]
     apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3072,10 +3072,10 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* repeated *)
-     apply (unfold suitable2_def)
+     apply (unfold0 suitable1_def suitable2_def)[1]
     apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3084,26 +3084,25 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* END REPEAT_DETERM *)
-
-   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+apply (rule assms)?
+   apply (rule assms(1-2)[unfolded Utor1_def Utor2_def, THEN imageE])
        apply (rotate_tac -1)
    apply (erule valid_Udtor'[rotated])
      prefer 2
      apply (rule Basic_BNFs.setr.intros)
      apply (rule refl)
      apply hypsubst_thin
-    apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
-    apply (rule UnI2)
+      apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
-    apply (unfold sum.set_map image_id setr.simps)
+    apply (unfold0 sum.set_map image_id setr.simps)
     apply (erule exE)
     apply (erule conjE)
     apply (hypsubst_thin)
-  apply assumption
+  apply (erule UnI1 UnI2)
       apply (rule assms)+
 
 (* END BLOCK *)
@@ -3134,8 +3133,8 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* repeated *)
      apply (unfold suitable2_def)
     apply (rule allI)
@@ -3146,11 +3145,11 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* END REPEAT_DETERM *)
 
-  apply (rule assms)
+  apply (rule assms)?
    apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
     apply (rotate_tac -1)
    apply (erule valid_Udtor'[rotated])
@@ -3159,14 +3158,13 @@ lemma f0_Utor_aux1:
      apply (rule refl)
      apply hypsubst_thin
     apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
-    apply (rule UnI1)
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
     apply (unfold sum.set_map image_id setr.simps)
     apply (erule exE)
     apply (erule conjE)
     apply (hypsubst_thin)
-  apply assumption
+  apply (erule UnI1 UnI2)
       apply (rule assms)+
 
 (* END BLOCK *)
@@ -3195,8 +3193,8 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* repeated *)
      apply (unfold suitable2_def)
     apply (rule allI)
@@ -3207,8 +3205,8 @@ lemma f0_Utor_aux1:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
-        apply assumption
+    apply (rule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
+  apply assumption
 (* END REPEAT_DETERM *)
 
   apply (rule assms)
@@ -3220,14 +3218,13 @@ lemma f0_Utor_aux1:
      apply (rule refl)
      apply hypsubst_thin
     apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
-    apply (rule UnI2)
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
     apply (unfold sum.set_map image_id setr.simps)
     apply (erule exE)
     apply (erule conjE)
     apply (hypsubst_thin)
-  apply assumption
+  apply (erule UnI1 UnI2)
       apply (rule assms)+
 
 (* END BLOCK *)

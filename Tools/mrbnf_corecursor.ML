@@ -1716,6 +1716,108 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          end
        ;
 
+       val suitable_pick0 = map2 (fn exists_suitable' => fn pick0 =>
+         Local_Defs.fold lthy [pick0] (@{thm someI_ex} OF [exists_suitable']))
+         exists_suitable (map snd pick0s);
+
+      val f0_Utor_aux = @{map 6} (fn alpha => fn d => fn rawX => fn fFun => fn raw_ctor => fn mrbnf =>
+          let
+            val utor_prems = @{map 3} (fn rawX => fn d => fn Utor =>
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (rawX, Utor $ d))) rawXs ds (map fst Utors);
+
+            val prems = utor_prems @ valid_prems;
+
+            val split_prems = fn ps => chop (length utor_prems) ps;
+
+            val alphaL_lambdas = @{map 4} (fn d => fn d' => fn rawX => fn pick0 =>
+              (Term.absfree (dest_Free d') (BNF_FP_Util.mk_If (
+                HOLogic.eq_const (fastype_of d) $ (Bound 0) $ d) rawX (pick0 $ Bound 0)))
+              ) ds ds' rawXs (map fst pick0s);
+
+            val alphaL = Term.list_comb (fst fFun, alphaL_lambdas @ [d]);
+
+            val case_sum_args = map2 (fn rawT => fn f =>
+              BNF_FP_Util.mk_case_sum ((HOLogic.id_const rawT), f))
+              (replicate_rec rawTs) (replicate_rec (map fst f0Defns));
+
+            val case_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ case_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val alphaR = raw_ctor $ (case_fun $ rawX);
+            
+            val goal = HOLogic.mk_Trueprop (alpha $ alphaL $ alphaR);
+
+            val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
+
+            val suitable_pick0_unfolded = map (fn t => (Local_Defs.unfold0 lthy (map snd suitables) t) RS spec RS mp) suitable_pick0;
+
+            val split_conj = split_conj (length alphas);
+            val f_alpha_inst = split_conj (f_alpha OF ([@{thm _}, @{thm _}] @ suitable_pick0));
+
+          in Goal.prove_sorry lthy (names (ds @ rawXs)) prems goal (fn {context=ctxt, prems} =>
+            let val (utor_prems, valid_prems) = split_prems prems;
+             in EVERY1 [
+            EqSubst.eqsubst_tac ctxt [0] f_simps,
+            EqSubst.eqsubst_tac ctxt [0] @{thms if_P[OF refl]},
+            EVERY' [
+              resolve_tac ctxt alpha_intros,
+              REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound id_on_id}
+            ],
+            K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: MRBNF_Def.rel_map_of_mrbnf mrbnf)),
+            rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
+            rtac ctxt refl,
+            REPEAT_DETERM o EVERY' [
+              rtac ctxt @{thm sumE},
+              forward_tac ctxt @{thms arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1]},
+              assume_tac ctxt,
+              hyp_subst_tac ctxt,
+              K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
+              TRY o K (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map #permute_id (#raw_fps fp_res))),
+              resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+              hyp_subst_tac ctxt,
+              K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
+              TRY o K (Local_Defs.unfold0_tac ctxt (map snd f0Defns)),
+              resolve_tac ctxt f_alpha_inst,
+              REPEAT_DETERM_N (length suitables) o EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map snd suitables)),
+                rtac ctxt allI,
+                rtac ctxt impI,
+                rtac ctxt @{thm if_split[THEN iffD2]},
+                rtac ctxt conjI,
+                rtac ctxt impI,
+                hyp_subst_tac ctxt,
+                resolve_tac ctxt prems,
+                rtac ctxt impI,
+                resolve_tac ctxt suitable_pick0_unfolded,  
+                assume_tac ctxt
+              ],
+              TRY o resolve_tac ctxt prems,
+              resolve_tac ctxt (map (fn t => (Local_Defs.unfold0 lthy (map snd Utors) t) RS imageE) utor_prems),
+              rotate_tac ~1,
+              eresolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (flat valid_Udtor')),
+              K (prefer_tac 2),
+              rtac ctxt @{thm setr.intros},
+              rtac ctxt refl,
+              hyp_subst_tac_thin true ctxt,
+              EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
+              ],
+              etac ctxt imageE,
+              dresolve_tac ctxt @{thms setr.intros[OF sym]},
+              K (Local_Defs.unfold0_tac ctxt @{thms sum.set_map image_id setr.simps}),
+              etac ctxt exE,
+              etac ctxt conjE,
+              hyp_subst_tac_thin true ctxt,
+              eresolve_tac ctxt [UnI1, UnI2],
+              REPEAT_DETERM o resolve_tac ctxt prems
+            ]
+          ] end) end
+        ) alphas ds rawXs fDefns (map #ctor (#raw_fps fp_res)) mrbnfs;
+
+        val _ = @{print} f0_Utor_aux;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

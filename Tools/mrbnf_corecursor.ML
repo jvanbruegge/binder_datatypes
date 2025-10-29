@@ -1689,7 +1689,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              in (transpose (chop_groups (length suitable_prems_all) suitables), valids, f_prems)
              end;
 
-         in Goal.prove_sorry lthy (names (picks @ picks' @ ds @ fs)) prems goal (fn {context=ctxt, prems} =>
+         in Goal.prove_sorry lthy (names (picks @ picks' @ ds)) prems goal (fn {context=ctxt, prems} =>
            let
              val (_, valid_prems, _) = split_prems prems;
              val f_swap_alpha_inst = f_swap_alpha OF (prems @ @{thms bij_id supp_id_bound bij_id supp_id_bound});
@@ -1699,7 +1699,23 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          end
        ;
 
-       val _ = @{print} f_alpha;
+       val exists_suitable =
+         let
+           val goals = map2 (fn s => fn pick => HOLogic.mk_Trueprop (mk_ex (dest_Free pick) (s $ pick))) (map fst suitables) picks;
+
+         in map (fn goal => Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} =>
+            EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt (map snd suitables)),
+              rtac ctxt @{thm choice},
+              rtac ctxt allI,
+              EqSubst.eqsubst_tac ctxt [0] @{thms ex_simps},
+              rtac ctxt impI,
+              (* TODO: fix this *)
+              Skip_Proof.cheat_tac ctxt
+            ])) goals
+         end
+       ;
+
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

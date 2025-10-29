@@ -2961,15 +2961,15 @@ lemma exists_suitable:
   apply (rule choice)
   apply (rule allI)
   apply (subst ex_simps)
-  apply (rule impI)
-   apply (erule ex_in_conv[THEN iffD2, OF Utor_ne(1)])
+   apply (rule impI)
+   apply (erule Utor_ne[THEN ex_in_conv[THEN iffD2]])
 (* repeated *)
   apply (unfold suitable2_def)
   apply (rule choice)
   apply (rule allI)
   apply (subst ex_simps)
   apply (rule impI)
-  apply (erule ex_in_conv[THEN iffD2, OF Utor_ne(2)])
+  apply (erule Utor_ne[THEN ex_in_conv[THEN iffD2]])
   done
 
 lemmas suitable_pick0 = someI_ex[OF exists_suitable(1), unfolded pick0_1_def[symmetric]]

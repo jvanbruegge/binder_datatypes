@@ -1671,7 +1671,35 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          end
        ;
 
-       val _ = @{print} f_swap_alpha;
+      val f_alpha =
+         let          
+           val alpha_subgoals = @{map 3} (fn alpha => fn d => fn fDefn =>
+             alpha
+               $ (Term.list_comb (fDefn, picks @ [d]))
+               $ (Term.list_comb (fDefn, picks' @ [d]))
+             ) alphas ds (map fst fDefns);
+
+           val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj alpha_subgoals);
+
+           val prems = flat (transpose suitable_prems_all) @ valid_prems;
+
+           val split_prems = fn ps =>
+             let val (suitables, ps') = chop (length (flat suitable_prems_all)) ps;
+                 val (valids, f_prems) = chop (length valid_prems) ps'
+             in (transpose (chop_groups (length suitable_prems_all) suitables), valids, f_prems)
+             end;
+
+         in Goal.prove_sorry lthy (names (picks @ picks' @ ds @ fs)) prems goal (fn {context=ctxt, prems} =>
+           let
+             val (_, valid_prems, _) = split_prems prems;
+             val f_swap_alpha_inst = f_swap_alpha OF (prems @ @{thms bij_id supp_id_bound bij_id supp_id_bound});
+             val Umap_id_inst = map2 (fn t => fn valid => t OF [valid]) Umap_ids valid_prems;
+             val f_swap_alpha' = Local_Defs.unfold0 lthy ((map #permute_id (#raw_fps fp_res)) @ Umap_id_inst) f_swap_alpha_inst
+            in rtac ctxt f_swap_alpha' 1 end)
+         end
+       ;
+
+       val _ = @{print} f_alpha;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

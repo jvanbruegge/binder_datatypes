@@ -3596,7 +3596,7 @@ theorem COREC_DDTOR1:
   apply (unfold o_case_sum)
   apply (unfold id_comp comp_id)
   apply (rule T1.alpha_trans)
-   apply (rule arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1])
+   apply (rule arg_cong[THEN iffD1])
     prefer 2
     apply (rule f0_Utor)
     apply (unfold Utor1_def Utor2_def)
@@ -3608,7 +3608,7 @@ theorem COREC_DDTOR1:
    apply (unfold case_sum_o_map_sum)
    apply (unfold id_comp comp_id)
    apply (rule refl)
-  apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound)+)
+  apply(rule alpha_T1_alpha_T2.intros, (rule bij_id supp_id_bound)+)
    apply (rule id_on_id)+
   apply (unfold T1_pre.mr_rel_id[symmetric] T1_pre.rel_map)
   apply(rule T1_pre.rel_refl_strong)
@@ -3618,21 +3618,23 @@ theorem COREC_DDTOR1:
     apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
      apply assumption
     apply hypsubst
-    apply (unfold sum.simps)
+      apply (unfold sum.simps)
+apply (unfold T1.permute_raw_id)?
     apply (rule T1.alpha_refl)
    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
    apply hypsubst
    apply (unfold sum.simps)
-   apply (unfold comp_apply)[1]
-   apply (rule T1.rep_abs_sym)
+     apply (unfold0 comp_apply)[1]
+  thm T1.rep_abs_sym
+   apply (rule T1.rep_abs_sym T2.rep_abs_sym)
 
   apply (rule sumE)
    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
    apply hypsubst
    apply (unfold sum.simps)
-   apply (unfold T1.permute_raw_id)
+   apply (unfold T1.permute_raw_id)?
    apply (rule T1.alpha_refl)
   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
    apply assumption
@@ -3646,6 +3648,7 @@ theorem COREC_DDTOR1:
      apply assumption
     apply hypsubst
     apply (unfold sum.simps)
+apply (unfold T1.permute_raw_id)?
     apply (rule T2.alpha_refl)
    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
@@ -3659,7 +3662,7 @@ theorem COREC_DDTOR1:
     apply assumption
    apply hypsubst
    apply (unfold sum.simps)
-   apply (unfold T2.permute_raw_id)
+   apply (unfold T2.permute_raw_id)?
    apply (rule T2.alpha_refl)
   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
    apply assumption

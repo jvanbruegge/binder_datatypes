@@ -1841,8 +1841,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             
             val goal = HOLogic.mk_Trueprop (alpha $ alphaL $ alphaR);
 
-            val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
-
             val suitable_pick0_unfolded = map (fn t => (Local_Defs.unfold0 lthy (map snd suitables) t) RS spec RS mp) suitable_pick0;
 
             val split_conj = split_conj (length alphas);
@@ -1879,6 +1877,86 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            end;
 
         val f0_FVarsD = map (fn t => Local_Defs.fold lthy (map snd f0Defns) (t OF suitable_pick0)) (flat f_FVarsD);
+
+        val COREC_DDTOR = @{map 5} (fn COREC => fn d => fn X => fn ctor => fn mrbnf =>
+          let
+            val udtor_prems = @{map 3} (fn X => fn d => fn Udtor =>
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (X, Udtor $ d))) Xs ds Udtors;
+
+            val prems = udtor_prems @ valid_prems;
+
+            val eqL = fst COREC $ d;
+
+            val case_sum_args = map2 (fn T => fn f =>
+              BNF_FP_Util.mk_case_sum ((HOLogic.id_const T), f))
+              (replicate_rec qTs) (replicate_rec (map fst corecDefns));
+
+            val case_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ case_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val eqR = ctor $ (case_fun $ X);
+            
+            val goal = mk_Trueprop_eq (eqL, eqR);
+
+            val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
+
+          in Goal.prove_sorry lthy (names (ds @ Xs)) prems goal (fn {context=ctxt, prems} =>
+            EVERY1 [
+               K (Local_Defs.unfold_tac ctxt (map snd corecDefns @ map (#ctor_def o #inner) (#quotient_fps fp_res))),
+               K (Local_Defs.unfold0_tac ctxt @{thms o_def[symmetric]}),
+               EVERY' [
+                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+                 REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id})
+               ],
+               K (Local_Defs.unfold0_tac ctxt total_abs_eq_iffs),
+               K (Local_Defs.unfold0_tac ctxt @{thms o_case_sum}),
+               K (Local_Defs.unfold0_tac ctxt @{thms id_comp comp_id}),
+               resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
+               rtac ctxt @{thm arg_cong[THEN iffD1]},
+               K (prefer_tac 2),
+               resolve_tac ctxt f0_Utor,
+               K (Local_Defs.unfold0_tac ctxt (map snd Utors)),
+               rtac ctxt imageI,
+               REPEAT_DETERM o resolve_tac ctxt prems,
+               rtac ctxt imageI,
+               REPEAT_DETERM o resolve_tac ctxt prems,
+               EVERY' [
+                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+                 REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id})
+               ],
+               K (Local_Defs.unfold0_tac ctxt @{thms case_sum_o_map_sum}),
+               K (Local_Defs.unfold0_tac ctxt @{thms id_comp comp_id}),
+               rtac ctxt refl,
+               EVERY' [
+                 resolve_tac ctxt alpha_intros,
+                 REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id})
+               ],
+               REPEAT_DETERM o rtac ctxt @{thm id_on_id},
+               K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: MRBNF_Def.rel_map_of_mrbnf mrbnf)),
+               rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
+               TRY o rtac ctxt refl,
+               REPEAT_DETERM o EVERY' [
+                 rtac ctxt @{thm sumE},
+                 forward_tac ctxt @{thms arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1]},
+                 assume_tac ctxt,
+                 hyp_subst_tac ctxt,
+                 
+                 K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
+                 TRY o K (Local_Defs.unfold0_tac ctxt (map #permute_id (#raw_fps fp_res))),
+                 resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+                 forward_tac ctxt @{thms arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1]},
+                 assume_tac ctxt,
+                 hyp_subst_tac ctxt,
+                 K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
+                 SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_apply}),
+                 resolve_tac ctxt (map (#rep_abs_sym o #inner) (#quotient_fps fp_res))
+               ]
+          ]) end
+        ) corecDefns ds Xs (map #ctor (#quotient_fps fp_res)) mrbnfs;
+
+        val _ = @{print} COREC_DDTOR;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

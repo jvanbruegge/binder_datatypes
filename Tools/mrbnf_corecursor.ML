@@ -1817,7 +1817,60 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ] end) end
         ) alphas ds rawXs fDefns (map #ctor (#raw_fps fp_res)) mrbnfs;
 
-        val _ = @{print} f0_Utor_aux;
+      val f0_Utor = @{map 6} (fn alpha => fn d => fn rawX => fn f0Fun => fn raw_ctor => fn mrbnf =>
+          let
+            val utor_prems = @{map 3} (fn rawX => fn d => fn Utor =>
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (rawX, Utor $ d))) rawXs ds (map fst Utors);
+
+            val prems = utor_prems @ valid_prems;
+
+            val split_prems = fn ps => chop (length utor_prems) ps;
+
+            val alphaL = fst f0Fun $ d;
+
+            val case_sum_args = map2 (fn rawT => fn f =>
+              BNF_FP_Util.mk_case_sum ((HOLogic.id_const rawT), f))
+              (replicate_rec rawTs) (replicate_rec (map fst f0Defns));
+
+            val case_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ case_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val alphaR = raw_ctor $ (case_fun $ rawX);
+            
+            val goal = HOLogic.mk_Trueprop (alpha $ alphaL $ alphaR);
+
+            val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
+
+            val suitable_pick0_unfolded = map (fn t => (Local_Defs.unfold0 lthy (map snd suitables) t) RS spec RS mp) suitable_pick0;
+
+            val split_conj = split_conj (length alphas);
+
+          in Goal.prove_sorry lthy (names (ds @ rawXs)) prems goal (fn {context=ctxt, prems} =>
+            let val (utor_prems, valid_prems) = split_prems prems;
+                val f_alpha_inst' = Local_Defs.fold lthy (map snd f0Defns) (f_alpha OF (suitable_pick0 @ [@{thm _}, @{thm _}] @ valid_prems));
+                val f_alpha_inst = split_conj f_alpha_inst';
+             in EVERY1 [
+               resolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (map (#alpha_trans o #inner) (#raw_fps fp_res))),
+               resolve_tac ctxt (map (fn t => t OF prems) f0_Utor_aux),
+               resolve_tac ctxt f_alpha_inst,
+               REPEAT_DETERM o EVERY' [
+                 SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map snd suitables)),
+                 rtac ctxt allI,
+                 rtac ctxt impI,
+                 rtac ctxt @{thm if_split[THEN iffD2]},
+                 rtac ctxt conjI,
+                 rtac ctxt impI,
+                 hyp_subst_tac ctxt,
+                 resolve_tac ctxt prems,
+                 rtac ctxt impI,
+                 eresolve_tac ctxt suitable_pick0_unfolded
+               ]
+          ] end) end
+        ) alphas ds rawXs f0Defns (map #ctor (#raw_fps fp_res)) mrbnfs;
+
+        val _ = @{print} f0_Utor;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

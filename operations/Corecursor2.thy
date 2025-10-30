@@ -3493,14 +3493,12 @@ lemmas f0_Utor_aux = f0_Utor_aux1 f0_Utor_aux2
 lemma f0_Utor1:
   assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
   shows "alpha_T1 (f0_1 d) (raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X))"
-  apply (rule T1.alpha_trans[rotated])
-  thm f0_Utor_aux[OF assms]
+  apply (rule T1.alpha_trans[rotated] T2.alpha_trans[rotated])
    apply (rule f0_Utor_aux[OF assms])
-  thm f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
     apply (rule f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric], THEN conjunct1])
 
 (* REPEAT_DETERM *)
-     apply (unfold suitable1_def)
+     apply (unfold suitable1_def suitable2_def)[1]
   apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3509,8 +3507,7 @@ lemma f0_Utor1:
       apply hypsubst
      apply (rule assms)
   apply (rule impI)
-    apply (insert suitable_pick0(1)[unfolded suitable1_def, THEN spec, THEN mp])[1]
-   apply assumption
+    apply (erule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
 (* repeated *)
      apply (unfold suitable2_def)
   apply (rule allI)
@@ -3521,8 +3518,7 @@ lemma f0_Utor1:
       apply hypsubst
      apply (rule assms)
   apply (rule impI)
-    apply (insert suitable_pick0(2)[unfolded suitable2_def, THEN spec, THEN mp])[1]
-   apply assumption
+    apply (erule suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])
 (* END REPEAT_DETERM *)
   done
 

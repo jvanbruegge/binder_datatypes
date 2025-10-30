@@ -1870,7 +1870,15 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ] end) end
         ) alphas ds rawXs f0Defns (map #ctor (#raw_fps fp_res)) mrbnfs;
 
-        val _ = @{print} f0_Utor;
+        val alpha_syms = (map (#alpha_sym o #inner) (#raw_fps fp_res));
+
+        val f0_mapD =
+          let val split_conj = split_conj (length alphas);
+              val splits = split_conj (f_swap_alpha OF (suitable_pick0 @ suitable_pick0));
+           in @{map 3} (fn t => fn alpha_sym => fn f0Defn => Local_Defs.fold lthy [f0Defn] (t RS alpha_sym)) splits alpha_syms (map snd f0Defns)
+           end;
+
+        val f0_FVarsD = map (fn t => Local_Defs.fold lthy (map snd f0Defns) (t OF suitable_pick0)) (flat f_FVarsD);
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

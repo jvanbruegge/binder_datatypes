@@ -1956,7 +1956,51 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ]) end
         ) corecDefns ds Xs (map #ctor (#quotient_fps fp_res)) mrbnfs;
 
-        val _ = @{print} COREC_DDTOR;
+        val COREC_mmapD = @{map 4} (fn COREC => fn d => fn Umap => fn permute =>
+          let
+            val prems = valid_prems @ f_prems;
+            val split_prems = fn ps => chop (length valid_prems) ps;
+
+            val eqL = fst COREC $ (Term.list_comb (Umap, (fs @ [d])));
+
+            val eqR = Term.list_comb (permute, (fs @ [fst COREC $ d]));
+            
+            val goal = mk_Trueprop_eq (eqL, eqR);
+
+          in Goal.prove_sorry lthy (names (ds @ fs)) prems goal (fn {context=ctxt, prems} =>
+            let val (valid_prems, f_prems) = split_prems prems;
+             in
+            EVERY1 [
+              K (Local_Defs.unfold_tac ctxt (map snd corecDefns @ map (#permute_def o #inner) (#quotient_fps fp_res))),
+              K (Local_Defs.unfold0_tac ctxt total_abs_eq_iffs),
+              resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
+              resolve_tac ctxt (map (fn t => t OF prems) f0_mapD),
+              K (Local_Defs.unfold0_tac ctxt (map ((fn t => t OF f_prems) o #alpha_bij_eq o #inner) (#raw_fps fp_res))),
+              resolve_tac ctxt alpha_syms,
+              resolve_tac ctxt (map (#rep_abs o #inner) (#quotient_fps fp_res))
+          ] end) end
+        ) corecDefns ds Umaps (map #permute (#quotient_fps fp_res));
+
+         val COREC_FFVarsD = @{map 7} (fn COREC => fn d => fn FVarss => fn UFVarss => fn valid_prem => fn rep_abs => fn alpha_FVars =>
+          let
+            val goals = map2 (fn FVars => fn UFVars =>
+              let
+                val lhs = FVars $ (fst COREC $ d);
+                val rhs = UFVars $ d;
+              in
+                Logic.mk_implies (valid_prem, HOLogic.mk_Trueprop (mk_leq lhs rhs))
+              end) FVarss UFVarss;
+
+            val alpha_FVars' = map (fn t => t OF [rep_abs]) alpha_FVars;
+
+          in map (fn goal => Goal.prove_sorry lthy (names ds) [] goal (fn {context=ctxt, prems} =>
+            EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt
+                (snd COREC :: (flat (map (#FVars_defs o #inner) (#quotient_fps fp_res)) @ alpha_FVars'))),
+              eresolve_tac ctxt f0_FVarsD
+          ])) goals end
+        ) corecDefns ds (map #FVarss (#quotient_fps fp_res)) UFVarsss valid_prems
+          (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

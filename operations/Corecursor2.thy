@@ -3763,11 +3763,11 @@ lemma COREC_mmapD1:
     and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
     and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
   shows "COREC1 (Umap1 u v d) = permute_T1 u v (COREC1 d)"
-  apply (unfold COREC1_def permute_T1_def)
-  apply (unfold T1.total_abs_eq_iff)
+  apply (unfold0 COREC1_def permute_T1_def)
+  apply (unfold0 T1.total_abs_eq_iff)
   apply (rule T1.alpha_trans)
    apply (rule f0_mapD[OF assms])
-  apply (unfold T1.alpha_bij_eq[OF u v])
+  apply (unfold0 T1.alpha_bij_eq[OF u v])
   apply (rule T1.alpha_sym)
   apply (rule T1.rep_abs)
   done
@@ -3788,14 +3788,16 @@ lemma COREC_mmapD2:
 
 lemmas COREC_mmapD = COREC_mmapD1 COREC_mmapD2
 
+thm T1.alpha_FVars
+
 theorem COREC_FFVarsD1:
   "valid_U1 d \<Longrightarrow> FVars_T1_1 (COREC1 d) \<subseteq> UFVars11 d"
   "valid_U1 d \<Longrightarrow> FVars_T1_2 (COREC1 d) \<subseteq> UFVars12 d"
 (* REPEAT_DETERM *)
-   apply (unfold COREC1_def FVars_T1_1_def T1.alpha_FVars[OF T1.rep_abs])
+   apply (unfold0 COREC1_def FVars_T1_1_def T1.alpha_FVars[OF T1.rep_abs])
    apply (erule f0_FVarsD)
 (* repeated *)
-  apply (unfold COREC1_def FVars_T1_2_def T1.alpha_FVars[OF T1.rep_abs])
+  apply (unfold0 COREC1_def FVars_T1_2_def T1.alpha_FVars[OF T1.rep_abs])
   apply (erule f0_FVarsD)
 (* END REPEAT_DETERM *)
   done

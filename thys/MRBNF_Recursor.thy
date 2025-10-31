@@ -1,6 +1,7 @@
 theory MRBNF_Recursor
   imports MRBNF_FP
   keywords "binder_datatype" :: thy_defn
+    and "binder_codatatype" :: thy_defn
     and "binder_inductive" :: thy_goal_defn
     and "binds"
 begin
@@ -32,6 +33,7 @@ lemma neq_equiv[equiv]: "bij f \<Longrightarrow> f a \<noteq> f b \<longleftrigh
 
 lemma notin_Un_forward: "x \<notin> A \<union> B \<Longrightarrow> (x \<notin> A \<Longrightarrow> y \<notin> C) \<Longrightarrow> (x \<notin> B \<Longrightarrow> y \<notin> D) \<Longrightarrow> y \<notin> C \<union> D"
   by blast
+
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 

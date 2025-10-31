@@ -1,14 +1,10 @@
 signature MRBNF_CORECURSOR =
 sig
-  type corecursor_result = {
-    COREC: string,
-    QCOREC: string,
-    QCOREC_fixed: string
-  };
+  type corecursor_result = string;
 
   val create_binding_corecursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
-    -> local_theory -> (* corecursor_result * *) local_theory;
-  (*val get_CORECs: bool -> string -> local_theory -> term list;*)
+    -> local_theory -> corecursor_result * local_theory;
+  val get_CORECs: string -> local_theory -> term list;
 
 end
 
@@ -17,11 +13,7 @@ struct
 
 open MRBNF_Util
 
-type corecursor_result = {
-  COREC: string,
-  QCOREC: string,
-  QCOREC_fixed: string
-};
+type corecursor_result = string;
 
 fun mk_names _ [] = []
   | mk_names s [_] = [s]
@@ -64,6 +56,10 @@ fun mk_pred_sum P Q =
     val QT = fastype_of Q;
     val fT = mk_sumT (domain_type PT, domain_type QT);
   in Const (@{const_name pred_sum}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
+
+fun get_CORECs name lthy = map (fst o Term.dest_comb o
+  fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o snd o Logic.strip_horn o Thm.prop_of
+) (Proof_Context.get_thms lthy (name ^ ".COREC_dtor"))
 
 fun create_binding_corecursor qualify fp_res no_defs_lthy =
   let
@@ -823,7 +819,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               ( valid_prem
               , HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_eq (lhs, mk_bot setT)))
               );
-          in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} => EVERY1 [
+          in Goal.prove_sorry lthy (names [d]) [] goal (fn {context=ctxt, prems} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt (snd Utor :: @{thms arg_cong[OF image_is_empty, of Not]})),
             eresolve_tac ctxt Udtor_nes
           ]) end
@@ -967,7 +963,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] @{thms sum.rel_map},
            K (Local_Defs.unfold_tac ctxt (map (#permute_def o #inner) (#quotient_fps fp_res))),
            rtac ctxt (MRBNF_Def.rel_refl_of_mrbnf mrbnf),
-           rtac ctxt refl,
+           REPEAT_DETERM o rtac ctxt refl,
            REPEAT_DETERM o EVERY' [
              rtac ctxt @{thm sum.rel_refl},
              EqSubst.eqsubst_tac ctxt [0] @{thms comp_apply},
@@ -1169,6 +1165,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           [HOLogic.mk_Trueprop (suitable $ pick), HOLogic.mk_Trueprop (suitable $ pick')])
         (map fst suitables) picks picks';
 
+        val mutual = length mrbnfs > 1;
+
         val f_FVarsD_inner =
              @{map 4} (fn UFVarss =>  fn is_frees => fn is_free_induct  => fn nbfrees =>
           let
@@ -1193,7 +1191,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
             val subgoalN = nrecs + nbfrees;
 
-          in Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems prems_conjed (fn {context=ctxt, prems} => EVERY1 ([DETERM o rtac ctxt is_free_induct] @ flat (@{map 5} (
+          in Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems prems_conjed (fn {context=ctxt, prems} => EVERY1 ([
+            DETERM o (if mutual then rtac ctxt is_free_induct else rtac ctxt impI THEN' etac ctxt is_free_induct)
+          ] @ flat (@{map 5} (
             fn ufvars => fn suitable_prem' => fn suitable_FVarsD'' => fn mrbnf' => fn valid_pick_set' =>
             let val n_free = length (filter (fn ty => ty = (HOLogic.dest_setT (body_type (fastype_of ufvars)))) frees);
                 val vps = (map (fn thm => thm OF [suitable_prem']) (flat valid_pick_set'));
@@ -1218,7 +1218,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 SELECT_GOAL (Local_Defs.unfold_tac ctxt @{thms image_id Un_assoc[symmetric]}),
                 REPEAT_DETERM o (eresolve_tac ctxt [UnI1, UnI2] ORELSE' rtac ctxt UnI1)
               ]) (1 upto n_free)) @ flat (map (fn goalN => [
-
                 rtac ctxt allI,
                 REPEAT_DETERM o rtac ctxt impI,
                 forward_tac ctxt f_ctor,
@@ -1702,16 +1701,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
        val exists_suitable =
          let
            val goals = map2 (fn s => fn pick => HOLogic.mk_Trueprop (mk_ex (dest_Free pick) (s $ pick))) (map fst suitables) picks;
-
-         in map (fn goal => Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} =>
+         in map (fn goal => Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} =>
             EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (map snd suitables)),
               rtac ctxt @{thm choice},
               rtac ctxt allI,
               EqSubst.eqsubst_tac ctxt [0] @{thms ex_simps},
               rtac ctxt impI,
-              (* TODO: fix this *)
-              Skip_Proof.cheat_tac ctxt
+              eresolve_tac ctxt (map (fn thm => thm RS @{thm ex_in_conv[THEN iffD2]}) Utor_ne)
             ])) goals
          end
        ;
@@ -1993,7 +1990,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
             val alpha_FVars' = map (fn t => t OF [rep_abs]) alpha_FVars;
 
-          in map (fn goal => Goal.prove_sorry lthy (names ds) [] goal (fn {context=ctxt, prems} =>
+          in map (fn goal => Goal.prove_sorry lthy (names ds) [] goal (fn {context=ctxt, ...} =>
             EVERY1 [
               K (Local_Defs.unfold0_tac ctxt
                 (snd COREC :: (flat (map (#FVars_defs o #inner) (#quotient_fps fp_res)) @ alpha_FVars'))),
@@ -2002,9 +1999,18 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         ) corecDefns ds (map #FVarss (#quotient_fps fp_res)) UFVarsss valid_prems
           (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
 
+        val notes = [
+          ("COREC_dtor", COREC_DDTOR),
+          ("COREC_swap", COREC_mmapD),
+          ("COREC_FVars", flat COREC_FFVarsD)
+        ] |> (map (fn (thmN, thms) =>
+          (((Binding.name thmN), []), [(thms, [])])
+        ))
+        val (_, lthy) = Local_Theory.notes notes lthy
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     
-  in lthy end
+  in (corecursor_result, lthy) end
 
 end

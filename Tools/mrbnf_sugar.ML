@@ -17,7 +17,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -41,7 +41,7 @@ val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theor
 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
-val create_binder_datatype : spec -> local_theory -> binder_sugar * local_theory
+val create_binder_datatype : bool -> spec -> local_theory -> binder_sugar * local_theory
 
 end
 
@@ -71,7 +71,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -86,7 +86,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, 
   strong_induct, distinct, inject, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
-  map_permute = Morphism.thm phi map_permute,
+  map_permute = Option.map (Morphism.thm phi) map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
@@ -248,10 +248,8 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
     end
   ) (mr_bnf_of lthy false C);
 
-fun create_binder_datatype (spec : spec) lthy =
+fun create_binder_datatype_sugar spec res fp_pre_T mrbnf absinfo lthy =
   let
-    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
-
     val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
 
     val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
@@ -1100,7 +1098,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ])),
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (map #map_permute nesting_binder_sugars),
+            EqSubst.eqsubst_tac ctxt [0] (map (the o #map_permute) nesting_binder_sugars),
             REPEAT_DETERM o resolve_tac ctxt prems
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
@@ -1187,7 +1185,7 @@ fun create_binder_datatype (spec : spec) lthy =
       map_simps = map_simps,
       set_simpss = set_simpss,
       permute_simps = permute_simps,
-      map_permute = #vvsubst_permute vvsubst_res,
+      map_permute = SOME (#vvsubst_permute vvsubst_res),
       strong_induct = strong_induct_opt,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
@@ -1217,7 +1215,34 @@ fun create_binder_datatype (spec : spec) lthy =
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
     val (_, lthy) = Local_Theory.notes notes lthy
+  in (sugar, lthy) end;
 
+fun create_binder_datatype co (spec : spec) lthy =
+  let
+    val fp_kind = if co then MRBNF_Util.Greatest_FP else MRBNF_Util.Least_FP;
+    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type fp_kind spec lthy;
+
+    val (sugar, lthy) = if co then
+      let
+        val _ = @{print} "before corecursor"
+        val (locale_name, lthy) = MRBNF_Corecursor.create_binding_corecursor I res lthy;
+        val sugar = {
+          map_simps = [],
+          set_simpss = [],
+          permute_simps = [],
+          map_permute = NONE,
+          strong_induct = NONE,
+          subst_simps = NONE,
+          bsetss = [],
+          bset_bounds = [],
+          mrbnf = mrbnf,
+          distinct = [],
+          inject = [],
+          ctors = []
+        } : binder_sugar;
+        val _ = @{print} ("after corecursor: " ^ locale_name)
+      in (sugar, lthy) end
+    else create_binder_datatype_sugar spec res fp_pre_T mrbnf absinfo lthy
   in (sugar, lthy) end;
 
 end

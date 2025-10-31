@@ -218,7 +218,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     } : MRBNF_Sugar.spec;
   in (spec, lthy) end
 
-fun create_binder_specs specs lthy =
+fun create_binder_specs co specs lthy =
   let
     fun add_fake_type ((((params, b), mixfix), _), _) =
       Typedecl.basic_typedecl {final = true} (b, length params, Mixfix.reset_pos mixfix)
@@ -228,11 +228,16 @@ fun create_binder_specs specs lthy =
       [(@{typ "('a, 'b) var_selector"}, Infix (Input.string "::", 999, Position.no_range))] fake_lthy;
 
     val (specs, fake_lthy) = fold_map (create_binder_spec fake_T_names) specs fake_lthy;
-  in snd (MRBNF_Sugar.create_binder_datatype (hd specs) lthy) end;
+  in snd (MRBNF_Sugar.create_binder_datatype co (hd specs) lthy) end;
 
 val _ =
   Outer_Syntax.local_theory @{command_keyword binder_datatype}
     "create a binding-aware datatype"
-    (parse_binder_datatype >> create_binder_specs)
+    (parse_binder_datatype >> create_binder_specs false)
+
+val _ =
+  Outer_Syntax.local_theory @{command_keyword binder_codatatype}
+    "create a binding-aware codatatype"
+    (parse_binder_datatype >> create_binder_specs true)
 
 end

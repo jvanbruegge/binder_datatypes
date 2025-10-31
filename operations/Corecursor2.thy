@@ -2,27 +2,6 @@ theory Corecursor2
   imports "Binders.MRBNF_FP" "./Composition"
 begin
 
-(* helper lemmas *)
-
-lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
-  by (auto simp: rel_set_def)
-
-lemma pred_sumE: "(\<And>a. x = Inl a \<Longrightarrow> P1 a) \<Longrightarrow> (\<And>b. x = Inr b \<Longrightarrow> P2 b) \<Longrightarrow> pred_sum P1 P2 x"
-  by (metis pred_sum.simps sum.collapse(1,2))
-
-lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>y. Q y) \<Longrightarrow> P x \<and> Q y"
-  by simp
-lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
-  by simp
-lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
-  by auto
-
-lemma id_on_f_inv_f: "bij f \<Longrightarrow> id_on (inv f ` A) g \<Longrightarrow> id_on A (f \<circ> g \<circ> inv f)"
-  unfolding id_on_def by simp
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
-
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let
@@ -2975,8 +2954,6 @@ lemma exists_suitable:
 lemmas suitable_pick0 = someI_ex[OF exists_suitable(1), unfolded pick0_1_def[symmetric]]
   someI_ex[OF exists_suitable(2), unfolded pick0_2_def[symmetric]]
 
-lemmas f0_low_level_simps = f_simps[of pick0_1 pick0_2, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
-
 lemma f0_Utor_aux1:
   assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
   shows "alpha_T1 (f1 (\<lambda> d'. if d' = d then X else pick0_1 d') (\<lambda> d'. if d' = d2 then X' else pick0_2 d') d)
@@ -3822,23 +3799,12 @@ ML \<open>
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Corecursor2.T1");
 \<close>
 
-ML_file \<open>../Tools/mrbnf_corecursor.ML\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
-declare [[ML_print_depth=10000]]
+(* Test of automation, disgarding result *)
 local_setup \<open>fn lthy =>
 let
-  val lthy = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;
+  val (name, lthy') = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;
+  val _ = @{print} name
 in lthy end
 \<close>
-
-print_locale COREC_T1_T2
-
-declare [[goals_limit=20]]
-interpretation COREC_T1_T2
-  apply unfold_locales
 
 end

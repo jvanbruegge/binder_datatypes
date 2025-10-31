@@ -20,7 +20,7 @@ lemma Card_order_dir_image: "Card_order r \<Longrightarrow> type_definition Rep 
 lemma (in infinite) Un_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|"
   using card_of_Un_ordLess_infinite local.infinite_UNIV by blast
 
-lemma (in infinite) single_bound: "|{x}| <o |UNIV::'a set|"
+lemma (in infinite) single_bound[simp]: "|{x}| <o |UNIV::'a set|"
   by (simp add: local.infinite_UNIV)
 
 lemmas [simp] = infinite_UNIV
@@ -94,19 +94,6 @@ ML_file \<open>../Tools/var_classes.ML\<close>
 local_setup \<open>
    Var_Classes.register_class_for_bound @{class var} @{term natLeq}
 #> Var_Classes.register_class_for_bound @{class covar} @{term "card_suc natLeq"}
-\<close>
-
-typedecl bdT
-axiomatization bd :: "(bdT \<times> bdT) set" where
-  Cinf: "Cinfinite bd"
-  and regular: "regularCard bd"
-
-local_setup \<open>fn lthy =>
-let
-  val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_bd} @{term bd} lthy;
-
-  val lthy = Var_Classes.prove_class_theorems true true class @{thm Cinf} @{thm regular} lthy;
-in lthy end
 \<close>
 
 end

@@ -1923,10 +1923,10 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                K (prefer_tac 2),
                resolve_tac ctxt f0_Utor,
                K (Local_Defs.unfold0_tac ctxt (map snd Utors)),
-               rtac ctxt imageI,
-               REPEAT_DETERM o resolve_tac ctxt prems,
-               rtac ctxt imageI,
-               REPEAT_DETERM o resolve_tac ctxt prems,
+               REPEAT_DETERM o EVERY' [
+                 rtac ctxt imageI,
+                 REPEAT_DETERM o resolve_tac ctxt prems
+               ],
                EVERY' [
                  EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
                  REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id})

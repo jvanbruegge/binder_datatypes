@@ -3558,11 +3558,14 @@ theorem COREC_DDTOR1:
    apply (rule arg_cong[THEN iffD1])
     prefer 2
     apply (rule f0_Utor)
-    apply (unfold Utor1_def Utor2_def)
+       apply (unfold Utor1_def Utor2_def)
+   (* REPEAT_DETERM *)
     apply (rule imageI)
        apply (rule assms)+
+   (* repeated *)
     apply (rule imageI)
-     apply (rule assms)+
+      apply (rule assms)+
+   (* END REPEAT_DETERM *)
    apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)
    apply (unfold case_sum_o_map_sum)
    apply (unfold id_comp comp_id)

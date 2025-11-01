@@ -1699,7 +1699,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          in Goal.prove_sorry lthy (names (picks @ picks' @ ds)) prems goal (fn {context=ctxt, prems} =>
            let
              val (_, valid_prems, _) = split_prems prems;
-             val f_swap_alpha_inst = f_swap_alpha OF (prems @ @{thms bij_id supp_id_bound bij_id supp_id_bound});
+             val f_swap_alpha_inst = f_swap_alpha OF (prems @ flat (replicate (length mrbnfs) @{thms bij_id supp_id_bound}));
              val Umap_id_inst = map2 (fn t => fn valid => t OF [valid]) Umap_ids valid_prems;
              val f_swap_alpha' = Local_Defs.unfold0 lthy ((map #permute_id (#raw_fps fp_res)) @ Umap_id_inst) f_swap_alpha_inst
             in rtac ctxt f_swap_alpha' 1 end)

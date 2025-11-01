@@ -1759,7 +1759,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             val suitable_pick0_unfolded = map (fn t => (Local_Defs.unfold0 lthy (map snd suitables) t) RS spec RS mp) suitable_pick0;
 
             val split_conj = split_conj (length alphas);
-            val f_alpha_inst = split_conj (f_alpha OF ([@{thm _}, @{thm _}] @ suitable_pick0));
+            val f_alpha_inst = split_conj (f_alpha OF (replicate (length mrbnfs) @{thm _} @ suitable_pick0));
 
           in Goal.prove_sorry lthy (names (ds @ rawXs)) prems goal (fn {context=ctxt, prems} =>
             let val (utor_prems, valid_prems) = split_prems prems;
@@ -1772,7 +1772,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             ],
             K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: MRBNF_Def.rel_map_of_mrbnf mrbnf)),
             rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
-            rtac ctxt refl,
+            REPEAT_DETERM o rtac ctxt refl,
             REPEAT_DETERM o EVERY' [
               rtac ctxt @{thm sumE},
               forward_tac ctxt @{thms arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1]},

@@ -1852,7 +1852,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
           in Goal.prove_sorry lthy (names (ds @ rawXs)) prems goal (fn {context=ctxt, prems} =>
             let val (utor_prems, valid_prems) = split_prems prems;
-                val f_alpha_inst' = Local_Defs.fold lthy (map snd f0Defns) (f_alpha OF (suitable_pick0 @ [@{thm _}, @{thm _}] @ valid_prems));
+                val f_alpha_inst' = Local_Defs.fold lthy (map snd f0Defns) (f_alpha OF (suitable_pick0 @ replicate (length mrbnfs) @{thm _} @ valid_prems));
                 val f_alpha_inst = split_conj f_alpha_inst';
              in EVERY1 [
                resolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (map (#alpha_trans o #inner) (#raw_fps fp_res))),

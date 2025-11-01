@@ -655,52 +655,78 @@ lemma rel_F_suitable_mapD:
    apply (rule conjI)
     apply assumption
    apply (rule empty_subsetI)
-  apply (erule conjE)+
-  apply(rule exI)
+
+  apply (erule exE conjE)+
+  apply(rule exI)+
   apply (rule conjI[rotated])+
-     apply(rule term_pre.mr_rel_mono_strong0[rotated -5])
-               apply (rule term_pre.mr_rel_OO[THEN fun_cong, THEN fun_cong, THEN iffD2, rotated -1, OF relcomppI])
-                      apply assumption+
-                    apply (rule supp_id_bound)
-                   apply assumption+
-                 apply (rule u)+
-              apply (subst o_id)
-              apply (rule ballI)
-              apply (rule refl)
-             apply (rule ballI)
-             apply (rule refl)
-            apply (rule ballI)+
-            apply (rule impI)
-            apply (unfold sum.rel_compp[symmetric])
-            apply (subst OO_permute[OF u, symmetric])
-              apply assumption+
-            apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
-             apply (rule refl)
-            apply (subst OO_raw_Umap[OF u])
-               apply assumption+
-             apply (erule set3_setr_valid[OF pp'(1) valid_d])
-             apply assumption
-            apply (rule refl)
-            apply (rule ballI)+
-           apply (rule impI)
-           apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
-            apply (subst OO_alpha_permute[OF u])
-  apply (rule refl)
-           apply (subst eq_OO)
-           apply (rule iffI)
-            apply assumption
-           apply assumption
-          apply (subst o_id)
-          apply (rule u)
-         apply (rule bij_comp[OF _ u(1)])
-         apply assumption
-        apply (rule supp_comp_bound[OF _ u(2)])
-        apply assumption
-       apply (rule u)
-      apply (rule bij_comp[OF _ u(1)])
-      apply assumption
-     apply (rule supp_comp_bound[OF _ u(2)])
-     apply assumption+
+
+     apply (rotate_tac -1)
+  thm term_pre.mr_rel_OO[THEN fun_cong, THEN fun_cong, THEN iffD2, rotated -1, OF relcomppI]
+apply (drule term_pre.mr_rel_OO[THEN fun_cong, THEN fun_cong, THEN iffD2, rotated -1, OF relcomppI])
+                      apply assumption
+                      apply (rule supp_id_bound bij_id assms | assumption)+
+  apply (unfold id_o o_id eq_OO sum.rel_compp[symmetric])
+
+
+
+     apply(erule term_pre.mr_rel_mono_strong0[rotated -5])
+              apply ((rule ballI)+, rule refl imp_refl)+
+          apply (unfold relcompp_apply)
+
+          apply (rule ballI)+
+          apply (rule impI)
+          apply (erule sum.rel_mono_strong)
+          apply (erule exE)
+          apply (erule conjE)
+          apply (rotate_tac -1)
+          apply (drule alpha_trans[rotated])
+          apply (erule alpha_bij_eqs[THEN iffD2, rotated -1])
+          apply (rule assms)+
+          apply (subst (asm) permute_raw_comps, (assumption | rule assms supp_id_bound bij_id)+)
+          apply (unfold o_id)?
+          apply assumption?
+          apply (erule exE)
+          apply (erule conjE)
+          apply hypsubst
+          apply (rule sym)
+          apply (rule trans)
+          apply (rule raw_Umap_comp)
+          apply (unfold o_id)?
+            (* valid tac *)
+          apply (drule valid_pick_set3[rotated, THEN sum.pred_set[THEN fun_cong, THEN iffD1]])
+          apply (rule valid_d)
+          apply (rule pp')
+          apply (erule conjE)
+          apply (rotate_tac -1)
+          apply (erule ballE)
+          apply assumption
+          apply (erule cnf.clause2raw_notE[THEN FalseE, rotated])
+          apply (unfold o_id)?
+          apply assumption+
+          (* end valid_tac *)
+                apply (rule assms refl supp_id_bound bij_id | assumption)+
+(* ORELSE *)
+          apply (rule ballI)+
+          apply (rule impI)
+          apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
+          apply (rule iffI)?
+          apply (erule exE)
+          apply (erule conjE)
+          apply (rotate_tac -1)
+          apply (drule alpha_trans[rotated])
+          apply (erule alpha_bij_eqs[THEN iffD2, rotated -1])
+          apply (rule assms)+
+          apply assumption
+          apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1])
+          apply (rule assms exI conjI | assumption)+
+          apply (subst permute_raw_comps)
+          apply (rule assms bij_imp_bij_inv supp_inv_bound)+
+          apply (subst inv_o_simp2, rule assms)+
+          apply (unfold permute_raw_ids)
+          apply (rule alpha_refls)
+          apply (rule refl)
+
+         apply (rule bij_comp supp_comp_bound u supp_id_bound infinite_UNIV | assumption)+
   done
 
 abbreviation (input) "FVarsB x \<equiv> \<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x"

@@ -2065,9 +2065,7 @@ lemma rel_F_suitable_mapD1:
     apply assumption
    apply (rule empty_subsetI)
 
-  apply (erule exE)
-
-  apply (erule conjE)+
+  apply (erule exE conjE)+
   apply(rule exI)+
   apply (rule conjI[rotated])+
   apply (rotate_tac -1)
@@ -2091,13 +2089,9 @@ lemma rel_F_suitable_mapD1:
                       apply (rotate_tac -1)
                       apply (drule T1.alpha_trans[rotated])
                       apply (erule T1.alpha_bij_eq[THEN iffD2, rotated -1])
-                      apply (rule assms)+
-                      apply assumption
+                      apply (rule assms | assumption)+
                       apply (drule T1.alpha_bij_eq_inv[THEN iffD1, rotated -1])
-                      apply (rule assms)+
-                      apply (rule exI)
-                      apply (rule conjI)
-                      apply assumption
+                      apply (rule assms exI conjI | assumption)+
                       apply (subst T1.permute_raw_comps)
                       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
                       apply (subst inv_o_simp2, rule assms)+
@@ -2108,8 +2102,7 @@ lemma rel_F_suitable_mapD1:
                       apply (rule ballI)+
                       apply (rule impI)
                       apply (erule sum.rel_mono_strong)
-                      apply (erule exE)
-                      apply (erule conjE)
+                      apply (erule exE conjE)+
                       apply (rotate_tac -1)
                       apply (drule T1.alpha_trans[rotated] T2.alpha_trans[rotated])
                       apply (erule T1.alpha_bij_eq[THEN iffD2, rotated -1] T2.alpha_bij_eq[THEN iffD2, rotated -1])
@@ -2148,13 +2141,9 @@ lemma rel_F_suitable_mapD1:
                       apply (rotate_tac -1)
                       apply (drule T1.alpha_trans[rotated] T2.alpha_trans[rotated])
                       apply (erule T1.alpha_bij_eq[THEN iffD2, rotated -1] T2.alpha_bij_eq[THEN iffD2, rotated -1])
-                      apply (rule assms)+
-                      apply assumption
+                      apply (rule assms | assumption)+
                       apply (drule T1.alpha_bij_eq_inv[THEN iffD1, rotated -1] T2.alpha_bij_eq_inv[THEN iffD1, rotated -1])
-                      apply (rule assms)+
-                      apply (rule exI)
-                      apply (rule conjI)
-                      apply assumption
+                      apply (rule assms exI conjI | assumption)+
                       apply (subst T2.permute_raw_comps)
                       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
                       apply (subst inv_o_simp2, rule assms)+
@@ -2165,8 +2154,7 @@ lemma rel_F_suitable_mapD1:
                       apply (rule ballI)+
                       apply (rule impI)
                       apply (erule sum.rel_mono_strong)
-                      apply (erule exE)
-                      apply (erule conjE)
+                      apply (erule exE conjE)+
                       apply (rotate_tac -1)
                       apply (drule T1.alpha_trans[rotated] T2.alpha_trans[rotated])
                       apply (erule T1.alpha_bij_eq[THEN iffD2, rotated -1] T2.alpha_bij_eq[THEN iffD2, rotated -1])
@@ -2262,10 +2250,7 @@ lemma rel_F_suitable_mapD2:
                       apply (rule assms)+
                       apply assumption
                       apply (drule T1.alpha_bij_eq_inv[THEN iffD1, rotated -1])
-                      apply (rule assms)+
-                      apply (rule exI)
-                      apply (rule conjI)
-                      apply assumption
+                      apply (rule assms exI conjI | assumption)+
                       apply (subst T1.permute_raw_comps)
                       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
                       apply (subst inv_o_simp2, rule assms)+
@@ -2319,10 +2304,7 @@ lemma rel_F_suitable_mapD2:
                       apply (rule assms)+
                       apply assumption
                       apply (drule T1.alpha_bij_eq_inv[THEN iffD1, rotated -1] T2.alpha_bij_eq_inv[THEN iffD1, rotated -1])
-                      apply (rule assms)+
-                      apply (rule exI)
-                      apply (rule conjI)
-                      apply assumption
+                      apply (rule assms exI conjI | assumption)+
                       apply (subst T2.permute_raw_comps)
                       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
                       apply (subst inv_o_simp2, rule assms)+

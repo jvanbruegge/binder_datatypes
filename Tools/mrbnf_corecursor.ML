@@ -1517,9 +1517,21 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              val (suitable_prems, valid_prems, f_prems) = split_prems prems;
              val [p, p'] = transpose suitable_prems;
              val FVars_raw_permutes = map #FVars_permutes (#raw_fps fp_res);
+
+             val coinduct_inst' =
+               if mutual
+               then coinduct_inst ctxt RS conj_spec RS conj_spec RS conj_mp
+               else coinduct_inst ctxt;
+             val coinduct_inst'' =
+               if mutual
+                 then rtac ctxt coinduct_inst'
+                 else EVERY' [
+                   rtac ctxt coinduct_inst',
+                   defer_tac
+                 ];
             in
              EVERY1 [
-               rtac ctxt (coinduct_inst ctxt RS conj_spec RS conj_spec RS conj_mp),
+               coinduct_inst'',
                EVERY' (@{map 5} (fn mrbnf => fn exhaust => fn inject => fn rel_F_suitable_mapD' =>
                                  fn suitable_prems' =>
                  let val nargs = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;

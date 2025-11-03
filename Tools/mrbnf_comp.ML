@@ -1373,7 +1373,6 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       the_default s (try (unsuffix "_pre") s)
     ) b);
     val (class, lthy) = Var_Classes.mk_class_for_bound class_name mrbnf_bd' lthy;
-    val (coclass, lthy) = Var_Classes.mk_class_for_bound (Binding.prefix_name "co" class_name) (BNF_LFP_Util.mk_cardSuc mrbnf_bd') lthy;
 
     fun subclass_tac ctxt = EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (no_reflexive [mrbnf_bd_def])),

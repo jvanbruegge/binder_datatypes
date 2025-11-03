@@ -96,4 +96,11 @@ local_setup \<open>
 #> Var_Classes.register_class_for_bound @{class covar} @{term "card_suc natLeq"}
 \<close>
 
+(* Theorems *)
+
+lemma supp_comp_bound_var:
+  assumes bound: "|supp f| <o |UNIV::'a::infinite set|" "|supp g| <o |UNIV::'a set|"
+  shows "|supp (g \<circ> f)| <o |UNIV::'a set|"
+  using supp_comp_bound[OF assms] infinite_UNIV by blast
+
 end

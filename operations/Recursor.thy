@@ -2514,17 +2514,6 @@ lemma U2FVars'_alpha:
       erule TT_total_abs_eq_iffs[THEN iffD2])+
   done
 
-lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>x. Q x) \<Longrightarrow> P x1 \<and> Q x2"
-  apply (erule conjE allE)+
-  apply ((rule conjI)?, assumption)+
-  done
-
-lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
-  apply (erule conjE)+
-  apply (erule impE, assumption)+
-  apply ((rule conjI)?, assumption)+
-  done
-
 lemma valid_f:
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
   shows

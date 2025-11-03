@@ -48,6 +48,7 @@ session Tests in "tests" = Case_Studies +
     Case_Study_Regression_Tests
     Fixpoint_Tests
     Binder_Datatype_Tests
+    Binder_Codatatype_Tests
 
 session Case_Studies in "case_studies" = Binders +
   sessions

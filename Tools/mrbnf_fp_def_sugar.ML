@@ -74,7 +74,13 @@ sig
 
   type greatest_fp_thms = {
     existential_coinduct: thm,
-    fresh_coinduct_param: thm
+    fresh_coinduct_param: thm,
+    corec: term list,
+    corec_def: thm list,
+    is_frees: term list list,
+    is_free_induct: thm list,
+    FVars_raw_defs: thm list list,
+    coinduct: thm
   };
 
   type fp_result = {
@@ -251,12 +257,24 @@ fun morph_least_fp_thms phi ({ subshape_rel, subshapess, wf_subshape, set_subsha
 
 type greatest_fp_thms = {
   existential_coinduct: thm,
-  fresh_coinduct_param: thm
+  fresh_coinduct_param: thm,
+  corec: term list,
+  corec_def: thm list,
+  is_frees: term list list,
+  is_free_induct: thm list,
+  FVars_raw_defs: thm list list,
+  coinduct: thm
 };
 
-fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param } = {
+fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param, corec, corec_def, is_frees, is_free_induct, FVars_raw_defs, coinduct } = {
   existential_coinduct = Morphism.thm phi existential_coinduct,
-  fresh_coinduct_param = Morphism.thm phi fresh_coinduct_param
+  fresh_coinduct_param = Morphism.thm phi fresh_coinduct_param,
+  corec = map (Morphism.term phi) corec,
+  corec_def = map (Morphism.thm phi) corec_def,
+  is_frees = map (map (Morphism.term phi)) is_frees,
+  is_free_induct = map (Morphism.thm phi) is_free_induct,
+  FVars_raw_defs = map (map (Morphism.thm phi)) FVars_raw_defs,
+  coinduct = Morphism.thm phi coinduct
 }: greatest_fp_thms;
 
 type fp_result = {
@@ -362,8 +380,10 @@ fun note_fp_result (fp_res : fp_result) lthy =
         ("permute_raw_comp0s", [#permute_comp0 raw]),
         ("permute_raw_comps", [#permute_comp raw]),
         ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
+        ("alpha_bij_eq_inv", [#alpha_bij_eq_inv (#inner raw)]),
         ("alpha_refl", [#alpha_refl (#inner raw)]),
         ("FVars_raw_permute", #FVars_permutes raw),
+        ("permute_raw_simp", [#permute_ctor raw]),
         ("permute_raw_id", [#permute_id raw])
       ] else []);
 

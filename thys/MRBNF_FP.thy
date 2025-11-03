@@ -358,11 +358,36 @@ lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
 lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
   by auto
 
+lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
+  by (auto simp: rel_set_def)
+
+lemma pred_sumE: "(\<And>a. x = Inl a \<Longrightarrow> P1 a) \<Longrightarrow> (\<And>b. x = Inr b \<Longrightarrow> P2 b) \<Longrightarrow> pred_sum P1 P2 x"
+  by (metis pred_sum.simps sum.collapse(1,2))
+
+lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
+  by auto
+
+lemma id_on_f_inv_f: "bij f \<Longrightarrow> id_on (inv f ` A) g \<Longrightarrow> id_on A (f \<circ> g \<circ> inv f)"
+  unfolding id_on_def by simp
+
+lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>x. Q x) \<Longrightarrow> P x1 \<and> Q x2"
+  apply (erule conjE allE)+
+  apply ((rule conjI)?, assumption)+
+  done
+
+lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
+  apply (erule conjE)+
+  apply (erule impE, assumption)+
+  apply ((rule conjI)?, assumption)+
+  done
+
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_corecursor.ML\<close>
 
 lemma extend_fresh:
   fixes A B::"'a set"

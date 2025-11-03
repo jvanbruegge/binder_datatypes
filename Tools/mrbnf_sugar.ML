@@ -17,7 +17,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -41,7 +41,7 @@ val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theor
 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
-val create_binder_datatype : spec -> local_theory -> binder_sugar * local_theory
+val create_binder_datatype : bool -> spec -> local_theory -> binder_sugar * local_theory
 
 end
 
@@ -71,7 +71,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -86,7 +86,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, 
   strong_induct, distinct, inject, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
-  map_permute = Morphism.thm phi map_permute,
+  map_permute = Option.map (Morphism.thm phi) map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
@@ -248,14 +248,22 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
     end
   ) (mr_bnf_of lthy false C);
 
-fun create_binder_datatype (spec : spec) lthy =
+fun create_binder_datatype co (spec : spec) lthy =
   let
-    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
+    val fp_kind = if co then MRBNF_Util.Greatest_FP else MRBNF_Util.Least_FP;
+    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type fp_kind spec lthy;
 
-    val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
+    val (vvsubst_res_opt, lthy) = if co then (NONE, lthy) else (* TODO: Automate renaming for codatatypes *)
+      let
+        val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
 
-    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
-    val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
+        val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
+        val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
+      in (SOME {
+        recursor_result = recursor_result,
+        rec_mrbnf = rec_mrbnf,
+        vvsubst_res = vvsubst_res
+      }, lthy) end
 
     val nrecs = fold (curry (op+)) (#rec_vars res) 0;
     val quotient_ctor = #ctor (hd (#quotient_fps res));
@@ -295,15 +303,15 @@ fun create_binder_datatype (spec : spec) lthy =
     val (vars, passives) = chop (length (#binding_rel spec)) vars;
 
     val ((pfrees, plives), pbounds) = passives
-      |> chop (MRBNF_Def.free_of_mrbnf rec_mrbnf - length vars)
-      ||>> chop (MRBNF_Def.live_of_mrbnf rec_mrbnf);
+      |> chop (MRBNF_Def.free_of_mrbnf mrbnf - length vars)
+      ||>> chop (MRBNF_Def.live_of_mrbnf mrbnf - nrecs);
 
     val (plives', _) = lthy
       |> fold_rev Variable.declare_typ (vars @ passives)
       |> mk_TFrees (length plives);
     val args' = fst (@{fold_map 2} (fn MRBNF_Def.Live_Var => K (fn xs => (hd xs, tl xs))
       | _ => fn x => fn xs => (x, xs)
-    ) (MRBNF_Def.var_types_of_mrbnf rec_mrbnf) (vars @ passives) plives');
+    ) (take (length (vars @ passives)) (MRBNF_Def.var_types_of_mrbnf mrbnf)) (vars @ passives) plives');
 
     val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (*(take (#rec_vars spec) (
       map_filter (fn (x, Live_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
@@ -552,7 +560,7 @@ fun create_binder_datatype (spec : spec) lthy =
         in ((bset_opt, sets), Local_Defs.unfold0 lthy @{thms insert_is_Un[symmetric]} (Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
             set_simp_thms @ map snd ctors @ #FVars_ctors quotient @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
-            @ [#Abs_inverse (snd info) OF @{thms UNIV_I}] @ #pset_ctors vvsubst_res
+            @ [#Abs_inverse (snd info) OF @{thms UNIV_I}] @ the_default [] (Option.map (#pset_ctors o #vvsubst_res) vvsubst_res_opt)
           )),
           REPEAT_DETERM o EVERY' [
             EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
@@ -573,7 +581,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ]
         ]))) end
       ) ctors (#ctors spec))) end
-    ) (#FVarss quotient @ map fst (#psets vvsubst_res))));
+    ) (#FVarss quotient @ map fst (the_default [] (Option.map (#psets o #vvsubst_res) vvsubst_res_opt)))));
 
     val ctors_tys = ctors ~~ map snd (#ctors spec);
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
@@ -596,12 +604,16 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val injects = @{map_filter 2} (fn ((ctor, ctor_def), tys) => fn setss => if null tys then NONE else
       let
+        val class = if co then (* TODO *)
+          [the (Var_Classes.get_class_for_bound (mk_card_suc (MRBNF_Def.bd_of_mrbnf mrbnf)) lthy)]
+          else MRBNF_Def.class_of_mrbnf mrbnf;
+
         val bound_tys = inter (op=) bounds (rev (map TFree (fold Term.add_tfreesT tys [])));
         val bfree_tys = inter (op=) bfrees (rev (map TFree (fold Term.add_tfreesT tys [])));
         val ((bound_tys', bfree_tys'), _) = lthy
           |> fold Variable.declare_typ (map fst replace @ map snd replace)
-          |> mk_TFrees' (replicate (length bound_tys) (MRBNF_Def.class_of_mrbnf mrbnf))
-          ||>> mk_TFrees' (replicate (length bfree_tys) (MRBNF_Def.class_of_mrbnf mrbnf));
+          |> mk_TFrees' (replicate (length bound_tys) class)
+          ||>> mk_TFrees' (replicate (length bfree_tys) class);
 
         val tys' = map (Term.typ_subst_atomic replace) tys;
         val (((xs, ys), fs'), _) = names_lthy
@@ -610,7 +622,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ||>> mk_Frees "f" (map (fn a => a --> a) bound_tys');
 
         val replace = map (fn (a, b) => if member (op=) bfrees a then
-          (a, resort_tfree_or_tvar (MRBNF_Def.class_of_mrbnf mrbnf) (
+          (a, resort_tfree_or_tvar class (
             Term.typ_subst_atomic (bound_tys ~~ bound_tys') (
               Term.typ_subst_atomic (map swap (filter (member (op=) bounds o fst) replace)) b
             )
@@ -788,7 +800,6 @@ fun create_binder_datatype (spec : spec) lthy =
             val goal = mk_Trueprop_eq (
               HOLogic.mk_eq (Term.list_comb (ctor, xs), Term.list_comb (ctor, ys)), rhs
             );
-            val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [MRBNF_Def.UNIV_cinfinite_of_mrbnf rec_mrbnf];
           in SOME (Goal.prove_sorry lthy (names (xs @ ys)) [] goal (fn {context=ctxt, ...} => EVERY1 [
             rtac ctxt trans,
             rtac ctxt inject,
@@ -808,7 +819,7 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o EVERY' [
               TRY o rtac ctxt conjI,
               REPEAT_DETERM1 o FIRST' [
-                resolve_tac ctxt (@{thms refl supp_id_bound bij_id bij_swap supp_swap_bound} @ [infinite_UNIV]),
+                resolve_tac ctxt (@{thms refl supp_id_bound bij_id bij_swap supp_swap_bound infinite_class.infinite_UNIV}),
                 assume_tac ctxt,
                 resolve_tac ctxt (map map_cong0_of_mr_bnf (maps (map snd) mr_bnfs)),
                 EVERY' [
@@ -827,7 +838,7 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             REPEAT_DETERM o FIRST' [
               assume_tac ctxt,
-              resolve_tac ctxt (@{thms swap_simps supp_swap_bound bij_swap} @ [infinite_UNIV]),
+              resolve_tac ctxt (@{thms swap_simps supp_swap_bound bij_swap infinite_class.infinite_UNIV}),
               etac ctxt @{thm id_on_swap}
             ]
           ])) end
@@ -923,7 +934,7 @@ fun create_binder_datatype (spec : spec) lthy =
           | SOME t => SOME (f, map HOLogic.mk_Trueprop (if var_type = MRBNF_Def.Bound_Var then
               [mk_bij f, t] else [t]
             ))
-        ) (take (length fs) (MRBNF_Def.var_types_of_mrbnf rec_mrbnf)) fs);
+        ) (take (length fs) (MRBNF_Def.var_types_of_mrbnf mrbnf)) fs);
 
         fun mk_map (T as Type (n, Ts)) = (case MRBNF_Def.mrbnf_of lthy n of
               SOME mrbnf =>
@@ -1049,8 +1060,11 @@ fun create_binder_datatype (spec : spec) lthy =
         ) end
       ) ctors (#ctors spec) end;
 
-    val map_simps =
+    val map_simps = if co then [] else (* TODO *)
       let
+        val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt)
+        val vvsubst_res = #vvsubst_res (the vvsubst_res_opt)
+
         val (fs, _) = lthy
           |> mk_Frees "f" (map2 (curry (op-->)) (vars @ passives) args');
 
@@ -1100,7 +1114,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ])),
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (map #map_permute nesting_binder_sugars),
+            EqSubst.eqsubst_tac ctxt [0] (map (the o #map_permute) nesting_binder_sugars),
             REPEAT_DETERM o resolve_tac ctxt prems
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
@@ -1117,8 +1131,9 @@ fun create_binder_datatype (spec : spec) lthy =
       REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
     ]);
 
-    val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) then
+    val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
       let
+        val recursor_result = #recursor_result (the vvsubst_res_opt);
         val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] (#QREC_cmin_fixed recursor_result) lthy;
         val tvsubst_res = hd tvsubst_ress;
         val tvsubst_simps =
@@ -1183,20 +1198,41 @@ fun create_binder_datatype (spec : spec) lthy =
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
     val equiv = @{attributes [simp, equiv]}
 
-    val sugar = {
-      map_simps = map_simps,
-      set_simpss = set_simpss,
-      permute_simps = permute_simps,
-      map_permute = #vvsubst_permute vvsubst_res,
-      strong_induct = strong_induct_opt,
-      subst_simps = Option.map snd tvsubst_opt,
-      bsetss = bset_optss,
-      bset_bounds = [],
-      mrbnf = mrbnf,
-      distinct = distinct,
-      inject = injects,
-      ctors = ctors
-    } : binder_sugar;
+    val (sugar, lthy) = if co then
+      let
+        val (locale_name, lthy) = MRBNF_Corecursor.create_binding_corecursor I res lthy;
+        val sugar = {
+          map_simps = [],
+          set_simpss = [],
+          permute_simps = [],
+          map_permute = NONE,
+          strong_induct = NONE,
+          subst_simps = NONE,
+          bsetss = [],
+          bset_bounds = [],
+          mrbnf = mrbnf,
+          distinct = [],
+          inject = [],
+          ctors = []
+        } : binder_sugar;
+      in (sugar, lthy) end
+    else
+      let
+        val sugar = {
+          map_simps = map_simps,
+          set_simpss = set_simpss,
+          permute_simps = permute_simps,
+          map_permute = SOME (#vvsubst_permute (#vvsubst_res (the vvsubst_res_opt))),
+          strong_induct = strong_induct_opt,
+          subst_simps = Option.map snd tvsubst_opt,
+          bsetss = bset_optss,
+          bset_bounds = [],
+          mrbnf = mrbnf,
+          distinct = distinct,
+          inject = injects,
+          ctors = ctors
+        } : binder_sugar;
+      in (sugar, lthy) end
 
     val lthy = register_binder_sugar (fst (dest_Type qT)) sugar lthy;
 
@@ -1213,11 +1249,12 @@ fun create_binder_datatype (spec : spec) lthy =
         ("distinct", distinct, simp),
         ("inject", injects, simp)
       ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
-      ) |> (map (fn (thmN, thms, attrs) =>
+      )
+        |> filter_out (null o #2)
+        |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
-    val (_, lthy) = Local_Theory.notes notes lthy
-
+    val (_, lthy) = Local_Theory.notes notes lthy;;
   in (sugar, lthy) end;
 
 end

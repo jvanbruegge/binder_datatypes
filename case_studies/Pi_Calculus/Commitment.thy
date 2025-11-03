@@ -96,7 +96,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     (@{term Cmt}, @{thm refl})
   ],
   permute_simps = @{thms commit.permute},
-  map_permute = @{thm commit.vvsubst_permute},
+  map_permute = SOME @{thm commit.vvsubst_permute},
   map_simps = [],
   distinct = [],
   bsetss = [[

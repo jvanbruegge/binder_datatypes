@@ -172,7 +172,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       );
     val pre_setss = mk_pre_setss (map (HOLogic.dest_setT o body_type) pre_Ts);
     val raw_pre_setss = mk_pre_setss (map body_type raw_pre_Ts);
-    
+
     val mk_prems = maps (fn f => [mk_bij f, mk_supp_bound f]);
     val f_prems' = mk_prems fs;
     val f_prems = map HOLogic.mk_Trueprop f_prems';
@@ -195,7 +195,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ) (0 upto length binding_rel - 1) binding_rel
     ) (0 upto nrecs - 1);
 
-  
+
     val nbfrees = map (fn i => if member (op=) (#bfree_vars fp_res) i then
       1 else 0
     ) (0 upto nvars - 1);
@@ -218,7 +218,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val mk_FVarsBDs = fn FVarsss => fn bsets => fn rec_sets => fn X => @{map 5} (fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
           mk_minus (foldl1 mk_Un (
-            bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
+            bfree_sets @ map_filter (fn (i, (FVars, UFVars)) =>
               if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
                  (BNF_FP_Util.mk_case_sum (FVars, UFVars))
               ) else NONE
@@ -276,7 +276,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           in
             fold_rev Logic.all (fs @ gs @ [d]) (fold_rev (curry Logic.mk_implies)
               (HOLogic.mk_Trueprop (validU $ d) :: f_prems @ g_prems)
-              (HOLogic.mk_Trueprop (HOLogic.mk_eq (Umap_comp_body_lhs, Umap_comp_body_rhs)))       
+              (HOLogic.mk_Trueprop (HOLogic.mk_eq (Umap_comp_body_lhs, Umap_comp_body_rhs)))
             )
           end
 
@@ -327,11 +327,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             val map_sum_args = map2 (fn permute => fn Umap =>
                 mk_map_sum (Term.list_comb (permute, fs)) (Term.list_comb (Umap, fs)))
               (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps);
-  
+
             val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
               (map HOLogic.id_const plives @ map_sum_args)
               (map HOLogic.id_const pbounds @ fs) (fs @ map HOLogic.id_const (pfrees) @ bfree_fs) mrbnf;
-  
+
             val umap_Udtor_body_lhs = Udtor $ Term.list_comb (Umap, fs @ [d]);
             val umap_Udtor_body_rhs = mk_image image_arg $ (Udtor $ d);
             val umap_Udtor_body = mk_leq umap_Udtor_body_lhs umap_Udtor_body_rhs;
@@ -358,7 +358,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       let
         val T_names = map (short_type_name o fst o dest_Type) qTs;
         fun mk_lname s = qualify (Binding.prefix_name (s ^ "_") (Binding.conglomerate (map Binding.name T_names)));
-      
+
         val (name, lthy) = Expression.add_locale (mk_lname "COREC") Binding.empty [] ([], []) [
           Element.Fixes (map (fn t =>
             let val (b, T) = dest_Free t;
@@ -507,7 +507,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             in Goal.prove_sorry lthy (names [d]) [] goal (fn {context=ctxt, ...} => EVERY1 [
               dtac ctxt valid_Udtor,
               assume_tac ctxt,
-              TRY o etac ctxt UnE,
+              TRY o etac ctxt @{thm UnE},
               K (Local_Defs.unfold0_tac ctxt (@{thms sum.pred_set} @ [MRBNF_Def.pred_set_of_mrbnf mrbnf])),
               REPEAT_DETERM o EVERY' [
                 REPEAT_DETERM o etac ctxt conjE,
@@ -515,7 +515,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 dtac ctxt @{thm bspec[rotated]},
                 assume_tac ctxt,
                 etac ctxt conjE,
-                etac ctxt bspec,
+                etac ctxt @{thm bspec},
                 assume_tac ctxt
               ]
             ]) end
@@ -533,14 +533,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             @{map 5} (fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
 
             mk_minus (foldl1 mk_Un (
-              bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
+              bfree_sets @ map_filter (fn (i, (FVars, UFVars)) =>
                 if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
                    (BNF_FP_Util.mk_case_sum (FVars, UFVars))
                 ) else NONE
               ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
             ), bset $ X)) bfree_setss bsets (#binding_relation fp_res) FVarsss (transpose UFVarsss)
           end;
-          
+
         val FVars_raw_defs2 = @{map 3} (fn rep_abs => map2 (fn thm => fn alpha_FVars => @{thm trans[OF meta_eq_to_obj_eq]} OF [thm,
           alpha_FVars OF [rep_abs]
         ] RS sym)) (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#FVars_defs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
@@ -608,11 +608,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             val map_sum_args = map2 (fn permute => fn Umap =>
                 mk_map_sum (Term.list_comb (permute, fs)) (Term.list_comb (Umap, fs)))
               (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps);
-  
+
             val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
               (map HOLogic.id_const plives @ map_sum_args)
               (map HOLogic.id_const pbounds @ fs) (fs @ map HOLogic.id_const (pfrees) @ bfree_fs) mrbnf;
-  
+
             val rhs = mk_image image_arg $ (Udtor $ d);
             val goal = mk_Trueprop_eq (lhs, rhs);
             val prems = f_prems @ [valid_prem];
@@ -620,14 +620,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                let
                  val (f_prems, valid_prem) = prems
                       |> chop (length f_prems);
-               in EVERY1 ([  
+               in EVERY1 ([
                  rtac ctxt @{thm subset_antisym},
                  rtac ctxt (Umap_Udtor OF (valid_prem @ f_prems)),
                  EqSubst.eqsubst_tac ctxt [0] [Umap_inv RS sym OF prems],
                  rtac ctxt @{thm image_subsetI},
-                 dtac ctxt (Drule.rotate_prems ~1 (Umap_Udtor RS subsetD)),
+                 dtac ctxt (Drule.rotate_prems ~1 (Umap_Udtor RS @{thm subsetD})),
                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ valid_Umap :: prems),
-                 etac ctxt imageE,
+                 etac ctxt @{thm imageE},
                  hyp_subst_tac ctxt,
                  rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
                  rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
@@ -696,7 +696,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              let
                val live_Ts = plives @ replicate_rec (map2 (fn uT => fn T => (mk_sumT (T, uT))) uTs rawTs);
              in
-               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
+               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf
            end;
 
            val rel_sums = @{map 9} (fn rec_bounds => fn alpha => fn t => fn t' => fn d => fn d' => fn uT => fn raw_permute => fn Umap =>
@@ -706,12 +706,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                val fs' = map_index (fn (i, f) => if member (op=) rec_bounds i then f
                      else HOLogic.id_const (domain_type (fastype_of f))
                    ) fs
-  
+
                val (tName, tT) = dest_Free t;
                val (tName', tT') = dest_Free t';
                val L = Abs (tName, tT, Abs (tName', tT',
                  Term.list_comb (alpha, [Term.list_comb (raw_permute, fs' @ [Bound 1]), Bound 0])));
-              
+
                val (dName, dT) = dest_Free d;
                val (dName', dT') = dest_Free d';
                val R = Abs (dName, dT, Abs (dName', dT',
@@ -786,14 +786,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
            TRY o (K (Local_Defs.unfold0_tac ctxt [id_apply])),
            REPEAT_DETERM o EVERY' [
-             rtac ctxt ballI,
+             rtac ctxt @{thm ballI},
              rtac ctxt refl ORELSE' EVERY' [
-               rtac ctxt ballI,
+               rtac ctxt @{thm ballI},
                rtac ctxt @{thm imp_refl}
              ]
            ],
            REPEAT_DETERM o EVERY' [
-             REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+             REPEAT_DETERM o resolve_tac ctxt @{thms ballI impI},
              dtac ctxt @{thm sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2]},
              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms sum.rel_map comp_def id_apply}),
              etac ctxt @{thm sum.rel_mono_strong},
@@ -841,7 +841,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               );
           in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt [snd Utor]),
-            etac ctxt imageE,
+            etac ctxt @{thm imageE},
             hyp_subst_tac_thin true ctxt,
             EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
             REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
@@ -853,7 +853,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             assume_tac ctxt
           ]) end
         ) rawXs ds Utors Udtors mrbnfs;
-      
+
         val raw_UFVars_Utor = @{map 9} (fn mrbnf => fn UFVarss => fn rawX => fn d => fn (rec_sets, bsets, fsets) =>
                                         fn Utor => fn valid_prem => fn UFVars_Udtors => fn Utor_abs_Udtor' =>
           let
@@ -897,7 +897,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              let
                val live_Ts = plives @ replicate_rec (map2 (fn uT => fn T => (mk_sumT (T, uT))) uTs rawTs);
              in
-               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
+               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf
            end;
 
            val rel_sums = @{map 7} (fn alpha => fn t => fn t' => fn d => fn d' => fn raw_permute => fn Umap =>
@@ -906,7 +906,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                val (tName', tT') = dest_Free t';
                val L = Abs (tName, tT, Abs (tName', tT',
                  Term.list_comb (alpha, [Term.list_comb (raw_permute, fs @ [Bound 1]), Bound 0])));
-              
+
                val (dName, dT) = dest_Free d;
                val (dName', dT') = dest_Free d';
                val R = Abs (dName, dT, Abs (dName', dT',
@@ -1041,7 +1041,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                   in BNF_FP_Util.mk_case_sum (filter FVarss, filter UFVarss) end
                 ) in if member (op=) bounds i then mk_minus (rec_set, bset $ pickd) else rec_set end
               ) rec_sets rec_boundss (replicate_rec (map #FVarss (#raw_fps fp_res))) (replicate_rec UFVarsss);
-            in 
+            in
               HOLogic.mk_Trueprop (mk_leq (foldl1 mk_Un ((fset $ pickd) ::
                 map (fn bfree => mk_minus (bfree, bset $ pickd)) bfrees @ recs)) (UFVars $ d))
              end
@@ -1074,20 +1074,20 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 val a = filter xs;
 
                 val assms1 = HOLogic.mk_Trueprop (is_free $ a $ t);
-    
+
                 val assms2 = Logic.all d (fold_rev (curry Logic.mk_implies)
                   (map HOLogic.mk_Trueprop [validU $ d, HOLogic.mk_eq (t, (Term.list_comb (fst fFun, picks)) $ d)])
                   (HOLogic.mk_Trueprop (HOLogic.mk_mem (a, UFVars $ d))));
-    
+
                 val assms3 = HOLogic.mk_Trueprop (mk_pred_sum (pred_True (fastype_of t)) validU $ td);
-    
+
                 val assms = [assms1, assms2, assms3];
-    
+
                 val assm = mk_Trueprop_eq
                   ( t
                   , BNF_FP_Util.mk_case_sum ((HOLogic.id_const (fastype_of t)), (Term.list_comb (fst fFun, picks))) $ td
                   );
-                
+
                 val goal = HOLogic.mk_Trueprop (HOLogic.mk_mem (filter xs, BNF_FP_Util.mk_case_sum (FVars, UFVars) $ td));
               in
                 (a, assms, Logic.mk_implies (assm, goal))
@@ -1134,7 +1134,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               etac ctxt allE,
               etac ctxt impE,
               assume_tac ctxt,
-              etac ctxt imageE,
+              etac ctxt @{thm imageE},
               dtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1]},
               etac ctxt arg_cong,
               EVERY' [
@@ -1143,13 +1143,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               ],
               rtac ctxt @{thm pred_sumE[OF TrueI]},
               hyp_subst_tac_thin true ctxt,
-              rtac ctxt imageE,
+              rtac ctxt @{thm imageE},
               K (prefer_tac 2),
               eresolve_tac ctxt (flat valid_Udtor'),
               assume_tac ctxt,
               K (prefer_tac 3),
               assume_tac ctxt,
-              eresolve_tac ctxt [UnI2, UnI1],
+              eresolve_tac ctxt @{thms UnI2 UnI1},
               EqSubst.eqsubst_tac ctxt [0] @{thms sum.set_map[of _ id, unfolded image_id, symmetric]},
               rtac ctxt @{thm setr.intros},
               rtac ctxt @{thm sym},
@@ -1185,7 +1185,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               let val inner_prem = mk_inner_prem a is_free valid f ufvars t' d;
                in inner_prem
                end) UFVarss is_frees fDefns ts ds validUs;
- 
+
             val prems_conjed = fold_rev Logic.all (a :: ts)
                   (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj inner_prems));
 
@@ -1216,7 +1216,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                   REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
                 ],
                 SELECT_GOAL (Local_Defs.unfold_tac ctxt @{thms image_id Un_assoc[symmetric]}),
-                REPEAT_DETERM o (eresolve_tac ctxt [UnI1, UnI2] ORELSE' rtac ctxt UnI1)
+                REPEAT_DETERM o (eresolve_tac ctxt @{thms UnI1 UnI2} ORELSE' rtac ctxt @{thm UnI1})
               ]) (1 upto n_free)) @ flat (map (fn goalN => [
                 rtac ctxt allI,
                 REPEAT_DETERM o rtac ctxt impI,
@@ -1227,7 +1227,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                   REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
                 ],
                 TRY o K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
-                etac ctxt imageE,
+                etac ctxt @{thm imageE},
                 hyp_subst_tac ctxt,
                 dresolve_tac ctxt (flat f_FVarsD_aux),
                 etac ctxt allE,
@@ -1238,10 +1238,10 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 K (prefer_tac 2),
                 rtac ctxt refl,
                 K (prefer_tac 2),
-                resolve_tac ctxt (map (fn t => Drule.rotate_prems 1 (t RS subsetD)) (flat suitable_FVarsD)),
+                resolve_tac ctxt (map (fn t => Drule.rotate_prems 1 (t RS @{thm subsetD})) (flat suitable_FVarsD)),
                 assume_tac ctxt,
                 K (Local_Defs.unfold0_tac ctxt @{thms Un_assoc}),
-                rtac ctxt UnI2,
+                rtac ctxt @{thm UnI2},
                 TRY o K (Local_Defs.unfold0_tac ctxt @{thms Un_assoc[symmetric]}),
                 resolve_tac ctxt [BNF_Util.mk_UnIN (subgoalN) (goalN + nbfrees)],
                 TRY o EVERY' [
@@ -1254,11 +1254,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 dresolve_tac ctxt vps,
                 REPEAT_DETERM o assume_tac ctxt
               ]
-          ) (1 upto nrecs))) end) UFVarss prems suitable_FVarsD mrbnfs valid_pick_set))) end                                                                                                                          
+          ) (1 upto nrecs))) end) UFVarss prems suitable_FVarsD mrbnfs valid_pick_set))) end
         ) (transpose UFVarsss) is_freess is_free_inducts nbfrees;
 
          val f_FVarsD = @{map 4} (fn FVarss => fn FVars_raw_defs => fn UFVarss => fn f_FVarsD_inner' =>
-          let       
+          let
             val goals = @{map 5} (fn FVars => fn UFVars => fn fFun => fn d => fn validU =>
               let
               val lhs = FVars $ Term.list_comb (fst fFun, picks @ [d]);
@@ -1270,7 +1270,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
               in
                 goal
-              end)               
+              end)
               FVarss UFVarss fDefns ds validUs;
 
               val split_conj = split_conj (length UFVarss);
@@ -1279,7 +1279,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           in map2 (fn goal => fn inner => Goal.prove_sorry lthy (names (picks @ ds)) suitable_prems goal (fn {context=ctxt, prems} =>
             let val inner' = Drule.rotate_prems 1 ((inner OF prems) RS mp RS spec RS mp RS mp);
             in EVERY1 [
-              rtac ctxt subsetI,
+              rtac ctxt @{thm subsetI},
               etac ctxt inner',
               rtac ctxt refl,
               K (Local_Defs.unfold0_tac ctxt (@{thm mem_Collect_eq} :: FVars_raw_defs)),
@@ -1293,7 +1293,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              resolve_tac ctxt suitable_prems,
              etac ctxt conjE,
              rotate_tac ~1,
-             etac ctxt ballE,
+             etac ctxt @{thm ballE},
              assume_tac ctxt,
              etac ctxt @{thm cnf.clause2raw_notE[THEN FalseE, rotated]},
              TRY o K (Local_Defs.unfold0_tac ctxt @{thms o_id}),
@@ -1313,7 +1313,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              let
                val live_Ts = plives @ replicate_rec (map2 (fn uT => fn T => (mk_sumT (T, uT))) uTs rawTs);
              in
-               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
+               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf
            end;
 
            val comp_f_g = map2 (fn f => fn g => HOLogic.mk_comp (f, g));
@@ -1327,7 +1327,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                val (tName', tT') = dest_Free t';
                val L = Abs (tName, tT, Abs (tName', tT',
                  Term.list_comb (alpha, [Term.list_comb (raw_permute, fs @ [Bound 1]), Bound 0])));
-              
+
                val (dName, dT) = dest_Free d;
                val (dName', dT') = dest_Free d';
                val R = Abs (dName, dT, Abs (dName', dT',
@@ -1343,12 +1343,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                      then HOLogic.mk_comp (f, nth gs i)
                      else f
                    ) fs
-  
+
                val (tName, tT) = dest_Free t;
                val (tName', tT') = dest_Free t';
                val L = Abs (tName, tT, Abs (tName', tT',
                  Term.list_comb (alpha, [Term.list_comb (raw_permute, fs' @ [Bound 1]), Bound 0])));
-              
+
                val (dName, dT) = dest_Free d;
                val (dName', dT') = dest_Free d';
                val R = Abs (dName, dT, Abs (dName', dT',
@@ -1383,7 +1383,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            let val (suitable_prems as [suitable_prem1, suitable_prem2], f_prems) = chop (length suitable_prems) prem_rest;
            val raw_Umap_Utor_inst =
              let val thm = Local_Defs.unfold0 lthy [@{thm rel_set_def}] (raw_Umap_Utor' OF (f_prems @ [valid_prem]));
-             in thm RS conjunct2 RS bspec RS bexE
+             in thm RS conjunct2 RS @{thm bspec} RS @{thm bexE}
              end;
            in EVERY1 [
            rtac ctxt raw_Umap_Utor_inst,
@@ -1401,9 +1401,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            K (Local_Defs.unfold0_tac ctxt @{thms insert_subset}),
            rtac ctxt conjI,
            rtac ctxt ((Local_Defs.unfold0 lthy [snd suitable] suitable_prem1) RS spec RS mp OF [valid_prem]),
-           
+
            rtac ctxt conjI,
-           
+
            assume_tac ctxt,
            rtac ctxt @{thm empty_subsetI},
            REPEAT_DETERM o eresolve_tac ctxt [conjE, exE],
@@ -1416,12 +1416,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id eq_OO sum.rel_compp[symmetric]}),
            etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
            REPEAT_DETERM o EVERY' [
-             REPEAT_DETERM o rtac ctxt ballI,
+             REPEAT_DETERM o rtac ctxt @{thm ballI},
              resolve_tac ctxt @{thms refl imp_refl}
            ],
            K (Local_Defs.unfold_tac ctxt @{thms relcompp_apply}),
            REPEAT_DETERM o (EVERY' [
-             REPEAT_DETERM o rtac ctxt ballI,
+             REPEAT_DETERM o rtac ctxt @{thm ballI},
              rtac ctxt impI,
              etac ctxt @{thm sum.rel_cong[OF refl refl, THEN iffD1, rotated -1]},
              TRY o rtac ctxt iffI,
@@ -1443,7 +1443,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
              rtac ctxt refl
            ] ORELSE' EVERY' [
-             REPEAT_DETERM o rtac ctxt ballI,
+             REPEAT_DETERM o rtac ctxt @{thm ballI},
              rtac ctxt impI,
              etac ctxt @{thm sum.rel_mono_strong},
              REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
@@ -1473,7 +1473,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
        ) mrbnfs suitables DTOR_mapD raw_pre_setss ds picks picks' valid_prems Umaps suitable_prems_all raw_Umap_Utor;
 
         val f_swap_alpha =
-         let          
+         let
            val alpha_subgoals = @{map 5} (fn alpha => fn d => fn raw_permute => fn fDefn => fn Umap =>
              alpha
                $ (Term.list_comb (raw_permute, fs @ [Term.list_comb (fDefn, picks @ [d])]))
@@ -1568,11 +1568,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq}),
                    etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
                    REPEAT_DETERM o EVERY' [
-                     REPEAT_DETERM o rtac ctxt ballI,
+                     REPEAT_DETERM o rtac ctxt @{thm ballI},
                      resolve_tac ctxt @{thms refl imp_refl}
                    ],
                    REPEAT_DETERM o EVERY' [
-                     rtac ctxt ballI,
+                     rtac ctxt @{thm ballI},
                      rtac ctxt @{thm comp_inv_aux[THEN fun_cong]},
                      assume_tac ctxt
                    ],
@@ -1593,10 +1593,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                      ],
                      SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric]}),
                      rtac ctxt @{thm Diff_mono[OF _ subset_refl]},
-                     rtac ctxt subsetI,
-                     TRY o REPEAT_DETERM o etac ctxt UnE,
+                     rtac ctxt @{thm subsetI},
+                     TRY o REPEAT_DETERM o etac ctxt @{thm UnE},
                      REPEAT_DETERM o EVERY' [
-                       REPEAT_DETERM o ((EVERY' [TRY o rtac ctxt UnI2, etac ctxt @{thm UN_mono[THEN subsetD, OF subset_refl, rotated -1]}]) ORELSE' rtac ctxt UnI1 ORELSE' assume_tac ctxt),
+                       REPEAT_DETERM o ((EVERY' [
+                         TRY o rtac ctxt @{thm UnI2},
+                         etac ctxt @{thm UN_mono[THEN subsetD, OF subset_refl, rotated -1]}
+                       ]) ORELSE' rtac ctxt @{thm UnI1} ORELSE' assume_tac ctxt),
                        Subgoal.FOCUS_PARAMS (fn {params, context = ctxt, ...} => let val (_,(_,x)) = split_last params in
                          case try (infer_instantiate' ctxt [SOME x]) @{thm sumE} of
                            SOME thm => rtac ctxt thm 1
@@ -1604,7 +1607,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                        end) ctxt,
                        hyp_subst_tac_thin true ctxt,
                        K (Local_Defs.unfold0_tac ctxt @{thms sum.simps id_apply}),
-                       rtac ctxt subset_refl,
+                       rtac ctxt @{thm subset_refl},
                        hyp_subst_tac_thin true ctxt,
                        K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
                        resolve_tac ctxt (flat (map (map (fn t => t OF p)) f_FVarsD)),
@@ -1617,7 +1620,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                    ],
                    REPEAT_DETERM o (resolve_tac ctxt @{thms supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV} ORELSE' assume_tac ctxt),
                    REPEAT_DETERM o EVERY' [
-                     REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+                     REPEAT_DETERM o resolve_tac ctxt @{thms ballI impI},
                      SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms relcompp_conversep_Grp}),
                      SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Grp_OO}),
                      rtac ctxt disjCI,
@@ -1665,7 +1668,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                      resolve_tac ctxt (map (fn t => t RS arg_cong) f_simps),
                      REPEAT_DETERM o (resolve_tac ctxt @{thms supp_comp_bound bij_comp infinite_UNIV} ORELSE' assume_tac ctxt)
                    ]
-                 ]) ctxt                 
+                 ]) ctxt
                ] end) mrbnfs (map (#exhaust o #inner) (#raw_fps fp_res)) (map #inject (#raw_fps fp_res))
                   rel_F_suitable_mapD suitable_prems),
                REPEAT_DETERM_N (length uTs) o EVERY' [
@@ -1679,7 +1682,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
        ;
 
       val f_alpha =
-         let          
+         let
            val alpha_subgoals = @{map 3} (fn alpha => fn d => fn fDefn =>
              alpha
                $ (Term.list_comb (fDefn, picks @ [d]))
@@ -1751,7 +1754,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               mrbnf;
 
             val alphaR = raw_ctor $ (case_fun $ rawX);
-            
+
             val goal = HOLogic.mk_Trueprop (alpha $ alphaL $ alphaR);
 
             val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
@@ -1795,11 +1798,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 hyp_subst_tac ctxt,
                 resolve_tac ctxt prems,
                 rtac ctxt impI,
-                resolve_tac ctxt suitable_pick0_unfolded,  
+                resolve_tac ctxt suitable_pick0_unfolded,
                 assume_tac ctxt
               ],
               TRY o resolve_tac ctxt prems,
-              resolve_tac ctxt (map (fn t => (Local_Defs.unfold0 lthy (map snd Utors) t) RS imageE) utor_prems),
+              resolve_tac ctxt (map (fn t => (Local_Defs.unfold0 lthy (map snd Utors) t) RS @{thm imageE}) utor_prems),
               rotate_tac ~1,
               eresolve_tac ctxt (map (fn t => Drule.rotate_prems 1 t) (flat valid_Udtor')),
               K (prefer_tac 2),
@@ -1810,13 +1813,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                 REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
               ],
-              etac ctxt imageE,
+              etac ctxt @{thm imageE},
               dresolve_tac ctxt @{thms setr.intros[OF sym]},
               K (Local_Defs.unfold0_tac ctxt @{thms sum.set_map image_id setr.simps}),
               etac ctxt exE,
               etac ctxt conjE,
               hyp_subst_tac_thin true ctxt,
-              eresolve_tac ctxt [UnI1, UnI2],
+              eresolve_tac ctxt @{thms UnI1 UnI2},
               REPEAT_DETERM o resolve_tac ctxt prems
             ]
           ] end) end
@@ -1843,7 +1846,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               mrbnf;
 
             val alphaR = raw_ctor $ (case_fun $ rawX);
-            
+
             val goal = HOLogic.mk_Trueprop (alpha $ alphaL $ alphaR);
 
             val suitable_pick0_unfolded = map (fn t => (Local_Defs.unfold0 lthy (map snd suitables) t) RS spec RS mp) suitable_pick0;
@@ -1902,7 +1905,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               mrbnf;
 
             val eqR = ctor $ (case_fun $ X);
-            
+
             val goal = mk_Trueprop_eq (eqL, eqR);
 
             val alpha_intros = map (#alpha_intro o #inner) (#raw_fps fp_res);
@@ -1924,7 +1927,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                resolve_tac ctxt f0_Utor,
                K (Local_Defs.unfold0_tac ctxt (map snd Utors)),
                REPEAT_DETERM o EVERY' [
-                 rtac ctxt imageI,
+                 rtac ctxt @{thm imageI},
                  REPEAT_DETERM o resolve_tac ctxt prems
                ],
                EVERY' [
@@ -1947,7 +1950,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                  forward_tac ctxt @{thms arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1]},
                  assume_tac ctxt,
                  hyp_subst_tac ctxt,
-                 
+
                  K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
                  TRY o K (Local_Defs.unfold0_tac ctxt (map #permute_id (#raw_fps fp_res))),
                  resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
@@ -1969,7 +1972,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             val eqL = fst COREC $ (Term.list_comb (Umap, (fs @ [d])));
 
             val eqR = Term.list_comb (permute, (fs @ [fst COREC $ d]));
-            
+
             val goal = mk_Trueprop_eq (eqL, eqR);
 
           in Goal.prove_sorry lthy (names (ds @ fs)) prems goal (fn {context=ctxt, prems} =>
@@ -2018,7 +2021,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
-    
+
   in (corecursor_result, lthy) end
 
 end

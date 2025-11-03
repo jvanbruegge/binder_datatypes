@@ -1224,7 +1224,6 @@ fun create_binder_datatype co (spec : spec) lthy =
 
     val (sugar, lthy) = if co then
       let
-        val _ = @{print} "before corecursor"
         val (locale_name, lthy) = MRBNF_Corecursor.create_binding_corecursor I res lthy;
         val sugar = {
           map_simps = [],
@@ -1240,7 +1239,6 @@ fun create_binder_datatype co (spec : spec) lthy =
           inject = [],
           ctors = []
         } : binder_sugar;
-        val _ = @{print} ("after corecursor: " ^ locale_name)
       in (sugar, lthy) end
     else create_binder_datatype_sugar spec res fp_pre_T mrbnf absinfo lthy
   in (sugar, lthy) end;

@@ -113,6 +113,45 @@ definition sameShape :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> ('a1,'a2,'a
 definition nonrep :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> bool" where 
   "nonrep x \<equiv> \<forall> x'. sameShape x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
 
+lemma ex_ss_map:
+  fixes x :: "('a1::var,'a2::var,'a3,'a4) F" and y :: "('a1::var,'a2::var,'a3,'a4) F"
+    and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'b4"
+  assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|"
+  assumes "sameShape (map_F v u id g x) y'"
+  shows "\<exists>y. y' = (map_F v u id g y) \<and> sameShape x y"
+  using assms apply -
+  apply (unfold sameShape_def)
+    apply (drule iffD1[OF F.mr_rel_map(1), rotated -1]; (rule assms bij_id supp_id_bound)?)
+    apply (unfold trans[OF id_o o_id[symmetric]] Grp_UNIV_id trans[OF OO_eq eq_OO[symmetric]])
+    apply (unfold trans[OF eq_OO OO_eq[symmetric], of top])
+    apply (unfold eq_alt)
+    apply (subst Grp_UNIV_id)
+    apply (unfold mr_rel_F_def o_id F.rel_compp F.rel_Grp)
+    apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric] id_o)
+    apply (unfold Grp_UNIV_id OO_def Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply)
+    apply (unfold id_def[THEN sym])
+    apply (erule exE)
+  apply (erule conjE)
+  apply (drule F.in_rel[THEN iffD1, rotated -1, unfolded mem_Collect_eq]; (rule assms)?)
+  apply (erule exE)
+    apply (erule conjE)
+    apply (erule conjE)
+  apply (erule conjE)
+  apply (hypsubst_thin)
+  subgoal for y z
+      apply (rule exI[of _ "map_F id id snd snd z"])
+    apply (unfold F.map_comp[OF v u supp_id_bound bij_id supp_id_bound] 
+        F.map_comp[OF supp_id_bound bij_id supp_id_bound v u] id_o o_id)
+    apply (rule conjI)
+    apply (rule refl)
+    apply (subst F.in_rel[unfolded mem_Collect_eq]; (rule bij_id supp_id_bound)?)
+    apply (rule exI[of _ z])
+    apply (intro conjI; assumption?)
+    apply (rule refl)
+    apply (rule refl)
+    done
+  done
+
 lemma nonrep_map_F:
   fixes x :: "('a1::var,'a2::var,'a3,'a4) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'b4"

@@ -27,104 +27,6 @@ binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) te
 
 print_mrbnfs
 
-section "MRBNF fun"
-definition domain :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set" where
-  "domain _ = UNIV"
-
-definition map_fun' :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b')" where
-  "map_fun' d r f = r o f o (inv d)"
-
-abbreviation "rel_fun' \<equiv> rel_fun (=)"
-
-lemma map_fun'_id_comp: "map_fun' id f F = f o F"
-  apply (unfold map_fun'_def inv_id o_id)
-  by (rule refl)
-
-lemma range_map: "bij f \<Longrightarrow> range (map_fun' f g x) = g ` range x"
-  apply (unfold o_apply map_fun'_def)
-  apply (subst fun.set_map[THEN sym])
-  apply (auto)
-  by (metis inv_simp1 range_eqI)
-  
-lemma f_o_map_fun': "f o map_fun' g id F = map_fun' g f F"
-  apply (unfold map_fun'_def)
-  apply (unfold o_assoc id_o)
-  by (rule refl)
-
-lemma map_fun'_o_f: "map_fun' g id (f o F) = map_fun' g f F"
-  apply (unfold map_fun'_def)
-  apply (unfold o_assoc id_o)
-  by (rule refl)
-
-mrbnf "('a::var) \<Rightarrow> 'b"
-  map: map_fun'
-  sets: 
-    bound: domain live: range
-  bd: "natLeq" (* natLeq +c card_suc |UNIV| *)
-  rel: "rel_fun'"
-  subgoal 
-    apply (unfold map_fun'_def o_apply inv_id)
-    by (auto)
-  subgoal for f1 g1 f2 g2
-    apply (unfold map_fun'_def)
-    apply (subst o_inv_distrib; (assumption)?)
-    apply (unfold o_apply)
-    by (auto)
-  subgoal for F f1 g1 f2 g2
-    apply (unfold domain_def map_fun'_def image_def)
-    apply (simp)
-    apply (drule ext)
-    apply (unfold o_apply)
-    apply (rule ext)
-    apply (hypsubst_thin)
-    apply (rule fun_cong[of "(\<lambda>a. g1 (F a))" "(\<lambda>a. g2 (F a))"])
-    by (auto)
-  subgoal for f g
-    apply (unfold o_apply domain_def image_def)
-    by (auto simp add: bij_betw_imp_surj full_SetCompr_eq)
-  subgoal for f g
-    apply (rule ext)
-    by (simp add: range_map)
-  subgoal 
-    by (rule infinite_regular_card_order_natLeq)
-      (* fun_bd*)
-  subgoal for F
-    (*apply (unfold domain_def)
-    by (rule ordLess_bd_fun)*)
-    sorry
-  subgoal for F
-    (* by (rule fun.set_bd) *)
-    sorry
-  subgoal for R S
-    by (simp add: fun.rel_compp)
-  subgoal for f R F G
-    apply (unfold fun.in_rel mem_Collect_eq map_fun'_id_comp)
-    apply (intro iffI)
-     apply (elim conjE exE)
-    subgoal premises prems for Z
-      apply (intro exI[of _ "(map_fun' (inv f) id) Z"] conjI)
-        apply (unfold range_map[OF bij_imp_bij_inv[OF prems(1)], of id Z] image_id f_o_map_fun')
-        apply (rule prems)
-       apply (unfold f_o_map_fun' arg_cong[OF prems(4), of "map_fun' (inv f) id", unfolded map_fun'_o_f])
-       apply (unfold map_fun'_def o_assoc id_o inv_inv_eq[OF prems(1)])[]
-       apply (auto simp add: prems(1))
-      apply (unfold map_fun'_def o_assoc inv_inv_eq[OF prems(1)])
-      apply (subst (3) o_assoc[THEN sym])
-      apply (unfold inv_o_simp2[OF prems(1)] o_id)
-      apply (rule prems)
-      done
-    apply (elim conjE exE)
-    subgoal premises prems for Z
-      apply (intro exI[of _ "(map_fun' f id) Z"] conjI)
-        apply (unfold range_map[OF prems(1), of id Z] image_id)
-        apply (rule prems)
-       apply (unfold f_o_map_fun' arg_cong[OF prems(4), of "map_fun' f id", unfolded map_fun'_o_f])
-       apply (rule refl)
-      apply (rule prems)
-      done
-    done
-  done
-
 section "Intuition: What is nonrep?"
 
 (* LIST *)
@@ -401,6 +303,18 @@ linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::v
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
   sorry
 
+lemma set_empty_nonrep: "set3_G x = {} \<Longrightarrow> set4_G x = {} \<Longrightarrow> nonrep_G x"
+  apply (unfold nonrep_G_def eq_shape_G_def)
+  apply (intro allI impI exI[of _ id])
+  apply (unfold G.map_id)
+  apply (unfold mr_rel_G_def G.in_rel[unfolded mem_Collect_eq])
+  apply (elim exE conjE)
+  apply (hypsubst_thin)
+  apply (unfold G.set_map)
+  apply (rule G.map_cong)
+       apply (auto)
+  done
+
 lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
   apply (unfold nonrep_G_def eq_shape_G_def mr_rel_G_def G.in_rel mem_Collect_eq)
   apply (intro allI impI)
@@ -457,6 +371,48 @@ lemma "x \<in> set1_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = a"
   apply (unfold Abs_lG_inverse[unfolded mem_Collect_eq, OF nonrep_G_wit1])
   apply (erule G.wit1)+
   done
+
+subsection "dpair"
+linearize_mrbnf 'a :: var dpair = "('a ::var \<times> 'a)" on 'a for eq_shape: ident_dpair nonrep: distinct_dpair
+proof -
+  obtain a where "(a::'a) \<in> UNIV"
+    by simp
+  define b where bsrc: "b = (SOME b. b \<noteq> a)"
+  show ?thesis
+    apply (rule exI[of _ "(a, b)"])
+    apply (intro allI impI)
+    apply (unfold rel_prod.simps map_prod_def)
+    apply (elim exE conjE)
+    apply (simp)
+    apply (hypsubst_thin)
+  apply (unfold triv_forall_equality)
+    subgoal for a' b'
+      apply (rule exI[of _ "(\<lambda>x. if x = a then a' else b')"])
+      apply (unfold bsrc)
+      by (metis (full_types) verit_sko_forall)
+    done
+qed
+
+thm distinct_dpair_def
+thm ident_dpair_def
+
+lemma ident_dpair_top: "ident_dpair = top"
+  apply (unfold ident_dpair_def prod.mr_rel_dpair_prod_def rel_prod.simps 
+      map_prod_def id_bnf_apply id_apply top_fun_def top_bool_def)
+  apply (simp)
+  done
+
+lemma "a \<noteq> (b :: 'a ::var) \<Longrightarrow> distinct_dpair (a, b)"
+  apply (unfold distinct_dpair_def ident_dpair_top top_fun_def top_bool_def)
+  apply (intro iffI allI)
+  apply (simp)
+  subgoal for p
+    apply (rule exI[of _ "(\<lambda>x. if x = a then fst p else snd p)"])
+    apply (simp)
+    done
+  done
+
+
 
 
 subsection "other"

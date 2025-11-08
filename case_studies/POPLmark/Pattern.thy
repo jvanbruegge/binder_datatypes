@@ -145,7 +145,7 @@ linearize_mrbnf (PTVars: 'tv::var, PVars: 'v::var) pat = "('tv::var, 'v::var) pr
 
 lemma nonrep_prepat_def_alt: "nonrep_prepat (x :: ('tv::var, 'v::var) prepat) 
   \<equiv> \<forall>(Q :: ('tv::var, 'v::var) prepat). rel_prepat top x Q \<longrightarrow> (\<exists>f. Q = map_prepat f x)"
-  unfolding nonrep_prepat_def sameShape_prepat_def mr_rel_prepat_def map_vvsubst_equiv[THEN sym] P.Pattern.P.prepat.map_id
+  unfolding nonrep_prepat_def eq_shape_prepat_def mr_rel_prepat_def map_vvsubst_equiv[THEN sym] P.Pattern.P.prepat.map_id
   by simp
 
 lemma nonrep_prepat_PPVar[simp]: "nonrep_prepat (PPVar x T)"

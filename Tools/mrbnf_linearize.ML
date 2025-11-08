@@ -340,6 +340,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
         val F_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf mrbnf;
         val F_mr_rel_flip = MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf;
         val F_mr_rel_maps = MRBNF_Def.mr_rel_map_of_mrbnf mrbnf;
+        val F_mr_rel_mono = MRBNF_Def.mr_rel_mono_of_mrbnf mrbnf;
         val F_mr_rel_mono_strong0 = MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf;
 
         (* eq_shape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
@@ -485,7 +486,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
         val F_strong_thm_opt = if null l_As then NONE else SOME (
           Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
           [mr_rel_R, mr_rel_Q] mr_rel_inf
-          (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 
+          (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono
             F_map_id F_in_rel (the F_pullback_strong_thm_opt)));
 
         (* mr_rel_F_exchange *)

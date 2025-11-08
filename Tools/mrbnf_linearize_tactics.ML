@@ -63,14 +63,10 @@ fun eqsubst_all_tac ctxt thm =
             (Thm.nprems_of st) st;
     in REPEAT_DETERM apply_occ_tac #> Seq.maps distinct_subgoals_tac end;
 
-fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 F_map_id F_in_rel F_pullback_strong = 
+fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono F_map_id F_in_rel F_pullback_strong = 
   HEADGOAL (EVERY' [
   Method.insert_tac ctxt prems,
-  forward_tac ctxt [F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems)] THEN_ALL_NEW (
-    TRY o (rtac ctxt ballI THEN_ALL_NEW 
-      resolve_tac ctxt [ballI, refl]) THEN_ALL_NEW
-    TRY o (rtac ctxt impI THEN_ALL_NEW
-      rtac ctxt (trans OF [@{thm top_apply} RS fun_cong, trans OF @{thms top_apply top_bool_def}]))),
+  forward_tac ctxt [(F_mr_rel_mono RS @{thm predicate2D}) OF (id_prems @ (replicate nr_As @{thm top_greatest}))],
   K (unfold_thms_tac ctxt [F_map_id, mr_rel_F_def, @{thm eq_True}]),
   rotate_tac 2,
   dtac ctxt (iffD1 OF [F_pullback_strong]),

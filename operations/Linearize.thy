@@ -60,9 +60,7 @@ abbreviation "rel_F \<equiv> mr_rel_F"
 The relator is closed under intersections. *)
 lemma F_strong:
   "rel_F id id R3 R4 x y \<Longrightarrow> rel_F id id Q3 Q4 x y \<Longrightarrow> rel_F id id (inf R3 Q3) (inf R4 Q4) x y"
-  apply (frule F.mr_rel_mono_strong0[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound];
-      ((rule ballI, rule ballI refl)?, 
-        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?)) 
+  apply (frule F.mr_rel_mono[THEN predicate2D, OF supp_id_bound bij_id supp_id_bound top_greatest top_greatest])
   apply (unfold F.map_id mr_rel_F_def eq_True)
   apply (rotate_tac 2)
   apply (drule F_pullback_strong[THEN iffD1])
@@ -90,95 +88,6 @@ lemma F_strong:
     apply (rule conjI; rule prems)
     done
   done
-
-(*
-lemma F_inj_map_strong2:
-  " (\<forall> R3 R4 Q3 Q4 (x :: ('a :: var,'b :: var,'c,'d) F) (y :: ('a :: var,'b :: var,'c,'d) F). rrel_F R3 R4 x y \<longrightarrow> rrel_F Q3 Q4 x y \<longrightarrow> rrel_F (inf R3 Q3) (inf R4 Q4) x y)
-  \<Longrightarrow> (\<And>p q.
-    p \<in> set3_F (x :: ('a :: var,'b :: var,'c,'d) F) \<Longrightarrow>
-    q \<in> set3_F (y :: ('a :: var,'b :: var,'c,'d) F) \<Longrightarrow> f1 p = g1 q \<Longrightarrow> f1' p = g1' q \<Longrightarrow> p = q)
-  \<Longrightarrow> (\<And>p q.
-    p \<in> set4_F x \<Longrightarrow>
-    q \<in> set4_F y \<Longrightarrow> f2 p = g2 q \<Longrightarrow> f2' p = g2' q \<Longrightarrow> p = q)
-  \<Longrightarrow> map_F id id f1 f2 x = map_F id id g1 g2 y 
-  \<Longrightarrow> map_F id id f1' f2' x = map_F id id g1' g2' y \<Longrightarrow> x = y"
-  subgoal premises prems
-    apply (insert prems(2, 3, 4, 5))
-    apply (drule F.rel_eq[THEN predicate2_eqD, THEN iffD2])
-    apply (drule F.rel_eq[THEN predicate2_eqD, THEN iffD2])
-    apply (rule F.rel_eq[THEN predicate2_eqD, THEN iffD1])
-    apply (drule F.rel_map(1)[THEN iffD1])
-    apply (drule F.rel_map(2)[THEN iffD1])
-    apply (drule F.rel_map(1)[THEN iffD1])
-    apply (drule F.rel_map(2)[THEN iffD1])
-    apply (drule prems(1)[rule_format]; assumption?)
-    apply (drule prems(1)[rule_format]; assumption?)
-    apply (unfold inf_bool_def inf_fun_def)
-    apply (erule F.rel_mono_strong)
-     apply (erule conjE)
-     apply (assumption)
-    apply (erule conjE)
-    apply (assumption)
-    done
-  done
-
-lemma spec6: "\<forall>x1 x2 x3 x4 x5 x6. P x1 x2 x3 x4 x5 x6 \<Longrightarrow> P x1 x2 x3 x4 x5 x6"
-  by blast
-
-lemma "(\<forall> R3 R4 Q3 Q4 x y. rel_F id id R3 R4 (x :: ('a :: var,'b :: var,'c,'d) F) (y :: ('a :: var,'b :: var,'e,'f) F) \<longrightarrow> rel_F id id Q3 Q4 x y \<longrightarrow> rel_F id id (inf R3 Q3) (inf R4 Q4) x y)
-  \<longleftrightarrow>
-  (\<forall> R S (x :: ('a :: var,'b :: var,'c,'d) F) (y :: ('a :: var,'b :: var,'e,'f) F). (rrel_F R S x y =
-      (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
-            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)))"
-  apply (rule iffI)
-   prefer 2
-  apply (intro allI)
-  subgoal premises prem for R3 R4 Q3 Q4 x y
-    apply (intro impI)
-apply (frule F.mr_rel_mono_strong0[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound];
-      ((rule ballI, rule ballI refl)?, 
-        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?)) 
-  apply (unfold F.map_id mr_rel_F_def eq_True)
-    apply (rotate_tac 2)
-  apply (drule prem[rule_format, THEN iffD1])
-  apply (unfold top_apply top_bool_def Collect_const_case_prod if_True eqTrueI[OF subset_UNIV] simp_thms(22))
-  apply (unfold F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded id_apply F.map_id OO_Grp_alt]
-      id_def[symmetric] mem_Collect_eq)
-  apply (elim exE alt_ex1E conjE)
-    subgoal premises prems for z l r
-    apply (insert spec2[OF prems(1), of r z])
-    apply (insert spec2[OF prems(1), of l z])
-    apply (erule impE, intro conjI prems)
-    apply (erule impE, intro conjI prems)
-    apply (rule exI)
-    apply (unfold inf_fun_def inf_bool_def)
-    apply (rule conjI)
-     apply (insert prems) []
-     apply (hypsubst_thin)
-     apply ((rule conjI)?,
-        rule subrelI, 
-        rule CollectI, 
-        rule case_prodI, 
-        (rule conjI; erule rev_subsetD[THEN iffD1[OF prod_in_Collect_iff]]),
-        assumption, assumption)+
-    apply (rule conjI; rule prems)
-    done
-  done
-  apply (intro allI)
-  subgoal premises prem for R S x y
-    apply (auto)
-      apply (simp add: F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id])
-    thm prem[rule_format, unfolded mr_rel_F_def F.map_id]
-    subgoal for z y'
-      apply (hypsubst_thin)
-      thm spec6[OF prem, unfolded mr_rel_F_def F.map_id, rule_format] F_inj_map_strong2[rule_format]
-      sorry
-    subgoal for z
-      by (simp add: F.rel_map(1,2) F.rel_refl_strong subset_iff)
-    done
-  done
-thm F.inj_map_strong
-*)
 
 (* Another important consequence: the following "exchange"-property, which could be read: 
 Since the atoms have a fixed position, we can permute the relations: *)
@@ -276,7 +185,6 @@ lemma nonrep_map_F_rev:
     apply (elim allE impE)
      apply (rule F.mr_rel_map(1)[THEN iffD2]; (rule prems supp_id_bound bij_id)?)
      apply (drule F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]; (rule prems supp_id_bound bij_id)?)
-    thm F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]
      apply (unfold o_id id_o Grp_UNIV_id eq_OO OO_eq)
      apply (assumption)
     apply (erule exE)

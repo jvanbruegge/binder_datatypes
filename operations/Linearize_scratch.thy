@@ -19,13 +19,9 @@ section "binder_datatypes & errors"
 binder_datatype 'var lterm = Vr 'var | Ap "'var lterm" "'var lterm"
   | Lm x::'var t::"'var lterm" binds x in t
 
-
-binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
+binder_datatype ('a, 'b::var) test = V 'b | B "'a list" | C x::'b t::"('a, 'b) test" binds x in t
 
 (*ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>*)
-
-
-print_mrbnfs
 
 section "Intuition: What is nonrep?"
 
@@ -169,7 +165,6 @@ print_theorems
 datatype 'a test_A = F 'a | R "('a test_A) set" (* is set a BNF?*)
 datatype 'a test_B = MK "'a" | MK2 "('a test_B) even_list"
 
-
 linearize_mrbnf 'a::var lin_fset = "'a::var fset" on 'a
   done
 
@@ -189,9 +184,13 @@ mrbnf "('a, 'b) foo"
   bd: "card_suc natLeq"
   wits:
     "wit1_foo" "wit2_foo"
-  sorry
+  rel: rel_foo
+  by (auto simp add: foo.map_id foo.map_comp foo.set_map infinite_regular_card_order_card_suc[OF natLeq_card_order natLeq_Cinfinite] 
+      foo.set_bd[unfolded bd_foo_def] foo.rel_compp foo.in_rel intro: foo.map_cong0 elim: foo.wit1 foo.wit2)
 
 print_mrbnfs
+
+datatype '\<alpha> ex = A "('\<alpha> \<times> ('\<alpha> ex)) list"
 
 primcorec mywit where
   "mywit X = (let y = SOME x. x\<notin>X in Bar y (mywit (insert y X)))"
@@ -245,6 +244,8 @@ mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F"
   var_class: var
   sorry
 
+print_theorems
+
 subsection "G"
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) G
 consts map_G :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow>
@@ -271,6 +272,7 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   rel: rrel_G
   var_class: var
   sorry
+
 
 consts wit1_lG :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G" 
 consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
@@ -299,7 +301,7 @@ linearize_mrbnf (st1:'b::var, st2:'f , st3:'c::var , 'd, st4:'a::var , st5:'e) F
 subsection "G"
 linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
   [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
-    (*"wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)
+    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
   sorry
 
@@ -416,9 +418,17 @@ lemma "a \<noteq> (b :: 'a ::var) \<Longrightarrow> distinct_dpair (a, b)"
 
 
 subsection "other"
-linearize_mrbnf 'a :: var distinct_list = "('a ::var) list" on 'a
+linearize_mrbnf '\<alpha> :: var distinct_list = "('\<alpha> ::var) list" on '\<alpha>
   done
 
 linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
   sorry
+  
+
+datatype 'a success = S1 | S2 "'a \<Rightarrow> 'a success"
+datatype 'a fail = F1 | F2 "'a fail \<Rightarrow> 'a"
+
+
+
+
 end

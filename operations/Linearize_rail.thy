@@ -11,7 +11,7 @@ ML_file \<open>~~/src/Doc/antiquote_setup.ML\<close>
 text  \<open>
 \<^rail>\<open>
   @@{command linearize_mrbnf} @{syntax spec} name '=' term @{syntax wits}? \<newline>
-    @'on' @{syntax on_vars} @{syntax bindings}? @{syntax "morphisms"}?
+    @'on' (typefree + @'and') @{syntax bindings}? (@'morphisms' name name)?
   ;
   @{syntax_def spec}: @{syntax tfree} | '(' (((name ':')? @{syntax tfree}) + ',') ')'
   ;
@@ -19,11 +19,22 @@ text  \<open>
   ;
   @{syntax_def wits}: '[' 'wits' ':' (term + ',') ']'
   ;
-  @{syntax_def on_vars}: (typefree + @'and')
-  ;
   @{syntax_def bindings}: @'for' ((('map' | 'rel' | 'pred' | 'nonrep' | 'sameShape') ':' name) +)
+\<close>
+\<close>
+
+text  \<open>
+\<^rail>\<open>
+  @@{command linearize_mrbnf} @{syntax spec} name '=' term @{syntax wits}? \<newline>
+    @'on' (typefree + @'and') @{syntax bindings}
   ;
-  @{syntax_def "morphisms"}: @'morphisms' name name
+  @{syntax_def spec}: @{syntax tfree} | '(' (((name ':')? @{syntax tfree}) + ',') ')'
+  ;
+  @{syntax_def tfree}: typefree ('::' sort)
+  ;
+  @{syntax_def wits}: '[' 'wits' ':' (term + ',') ']'
+  ;
+  @{syntax_def bindings}: (@'for' ((('map' | 'rel' | 'pred' | 'nonrep' | 'sameShape') ':' name) +))? (@'morphisms' name name)?
 \<close>
 \<close>
 end

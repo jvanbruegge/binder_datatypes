@@ -51,7 +51,24 @@ lemma F_pullback_strong:  "\<And> R S (x :: ('a :: var,'b :: var,'c,'d) F) y.
     rrel_F R S x y =
       (\<exists>!z. set3_F z \<subseteq> {(x, y). R x y} \<and>
             set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
-  apply (auto simp add: F_pullback_unique F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id])
+  apply (unfold F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded F.map_id mem_Collect_eq] conj_assoc)
+  apply (rule iffI)
+   apply (rule ex_ex1I)
+    apply (assumption)
+   apply (erule conjE)
+   apply (erule conjE)
+   apply (erule conjE)
+   apply (erule conjE)
+   apply (erule conjE)
+   apply (erule conjE)
+   apply (hypsubst_thin)
+   apply (rule F_pullback_unique)
+    apply (rule sym)
+    apply (assumption)
+   apply (rule sym)
+   apply (assumption)
+  apply (rule ex1_implies_ex)
+  apply (assumption)
   done
 
 abbreviation "rel_F \<equiv> mr_rel_F"
@@ -60,7 +77,9 @@ abbreviation "rel_F \<equiv> mr_rel_F"
 The relator is closed under intersections. *)
 lemma F_strong:
   "rel_F id id R3 R4 x y \<Longrightarrow> rel_F id id Q3 Q4 x y \<Longrightarrow> rel_F id id (inf R3 Q3) (inf R4 Q4) x y"
-  apply (frule F.mr_rel_mono[THEN predicate2D, OF supp_id_bound bij_id supp_id_bound top_greatest top_greatest])
+  apply (frule F.mr_rel_mono_strong0[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound];
+      ((rule ballI, rule ballI refl)?, 
+        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?)) 
   apply (unfold F.map_id mr_rel_F_def eq_True)
   apply (rotate_tac 2)
   apply (drule F_pullback_strong[THEN iffD1])
@@ -112,45 +131,6 @@ definition sameShape :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> ('a1,'a2,'a
 
 definition nonrep :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> bool" where 
   "nonrep x \<equiv> \<forall> x'. sameShape x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
-
-lemma ex_ss_map:
-  fixes x :: "('a1::var,'a2::var,'a3,'a4) F" and y :: "('a1::var,'a2::var,'a3,'a4) F"
-    and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'b4"
-  assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|"
-  assumes "sameShape (map_F v u id g x) y'"
-  shows "\<exists>y. y' = (map_F v u id g y) \<and> sameShape x y"
-  using assms apply -
-  apply (unfold sameShape_def)
-    apply (drule iffD1[OF F.mr_rel_map(1), rotated -1]; (rule assms bij_id supp_id_bound)?)
-    apply (unfold trans[OF id_o o_id[symmetric]] Grp_UNIV_id trans[OF OO_eq eq_OO[symmetric]])
-    apply (unfold trans[OF eq_OO OO_eq[symmetric], of top])
-    apply (unfold eq_alt)
-    apply (subst Grp_UNIV_id)
-    apply (unfold mr_rel_F_def o_id F.rel_compp F.rel_Grp)
-    apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric] id_o)
-    apply (unfold Grp_UNIV_id OO_def Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply)
-    apply (unfold id_def[THEN sym])
-    apply (erule exE)
-  apply (erule conjE)
-  apply (drule F.in_rel[THEN iffD1, rotated -1, unfolded mem_Collect_eq]; (rule assms)?)
-  apply (erule exE)
-    apply (erule conjE)
-    apply (erule conjE)
-  apply (erule conjE)
-  apply (hypsubst_thin)
-  subgoal for y z
-      apply (rule exI[of _ "map_F id id snd snd z"])
-    apply (unfold F.map_comp[OF v u supp_id_bound bij_id supp_id_bound] 
-        F.map_comp[OF supp_id_bound bij_id supp_id_bound v u] id_o o_id)
-    apply (rule conjI)
-    apply (rule refl)
-    apply (subst F.in_rel[unfolded mem_Collect_eq]; (rule bij_id supp_id_bound)?)
-    apply (rule exI[of _ z])
-    apply (intro conjI; assumption?)
-    apply (rule refl)
-    apply (rule refl)
-    done
-  done
 
 lemma nonrep_map_F:
   fixes x :: "('a1::var,'a2::var,'a3,'a4) F"
@@ -224,6 +204,7 @@ lemma nonrep_map_F_rev:
     apply (elim allE impE)
      apply (rule F.mr_rel_map(1)[THEN iffD2]; (rule prems supp_id_bound bij_id)?)
      apply (drule F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]; (rule prems supp_id_bound bij_id)?)
+    thm F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]
      apply (unfold o_id id_o Grp_UNIV_id eq_OO OO_eq)
      apply (assumption)
     apply (erule exE)
@@ -463,6 +444,8 @@ lemma F'_rel_comp_leq_: "rrel_F' Q OO rrel_F' R \<le> rrel_F' (Q OO R)"
     apply (assumption)
     done
   done
+
+thm F.rel_mono_strong0
 
 lemma rrel_F_map_F3:
   fixes x :: "('a :: var,'b :: var,'c,'d) F"

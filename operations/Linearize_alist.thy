@@ -10,25 +10,13 @@ declare [[mrbnf_internals]]
 
 section "command"
 linearize_mrbnf ('k::var,'v) alist' = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct eq_shape: length_eq morphisms to_alist of_alist
-  unfolding list.in_rel
-  subgoal for S R l r
-    apply safe
-    subgoal for z
-      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
-      apply auto
-      done
-    subgoal for z z1 z2
-      apply (auto simp: list_eq_iff_nth_eq map_prod_def split_beta prod_eq_iff)
-      done
-    subgoal for z
-      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
-      apply (auto simp: subset_eq split_beta)
-      done
-    done
+  apply (auto simp: list_eq_iff_nth_eq map_prod_def split_beta prod_eq_iff)
   done
 
 thm of_alist_inverse[unfolded list_distinct_def]
 thm to_alist
+
+thm map_alist'_def
 
 binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
   | Let "(fs::'a, t::'a lc) alist'" u::"'a lc" binds fs in t u
@@ -40,6 +28,40 @@ setup_lifting type_definition_pre_alist
 
 copy_bnf (keys: 'k, vals: 'v) pre_alist for map: map_pre_alist rel: rel_pre_alist
 print_theorems
+
+
+definition eq_shape :: "('k, 'v) pre_alist \<Rightarrow> ('k, 'v) pre_alist \<Rightarrow> bool" where 
+  "eq_shape x x' \<equiv> rel_pre_alist top (=) x x'"
+
+definition nonrep :: "('k, 'v) pre_alist \<Rightarrow> bool" where 
+  "nonrep x \<equiv> \<forall> x'. eq_shape x x' \<longrightarrow> (\<exists> f. x' = map_pre_alist f id x)"
+
+typedef ('k,'v) alist = "{x :: ('k, 'v) pre_alist. nonrep x}"
+  apply (rule exI[of _ "Abs_pre_alist []"])
+  apply (unfold mem_Collect_eq nonrep_def eq_shape_def pre_alist.map_id rel_pre_alist_def vimage2p_def 
+      map_pre_alist_def o_apply Abs_pre_alist_inverse[simplified])
+  apply (auto)
+    apply (drule arg_cong[where f = Abs_pre_alist])
+    by (auto simp add: Rep_pre_alist_inverse[simplified])
+
+definition map_alist :: "('v \<Rightarrow> 'v') \<Rightarrow> ('k, 'v) alist \<Rightarrow> ('k, 'v') alist" where
+  "map_alist f \<equiv> Abs_alist o (map_pre_alist id f) o Rep_alist"
+
+definition set_alist :: "('k, 'v) alist \<Rightarrow> 'v set" where
+  "set_alist \<equiv> vals o Rep_alist"
+
+definition rel_alist :: "('v \<Rightarrow> 'v' \<Rightarrow> bool) \<Rightarrow> ('k, 'v) alist \<Rightarrow> ('k, 'v') alist \<Rightarrow> bool" where
+  "rel_alist R x y \<equiv> rel_pre_alist (=) R (Rep_alist x) (Rep_alist y)"
+
+
+bnf "('k, 'v) alist"
+  map: "map_alist"
+  sets: "set_alist"
+  bd: natLeq
+  rel: "rel_alist"
+  sorry
+
+print_bnfs
 
 
 mrbnf pre_alist: "('k, 'v) pre_alist"
@@ -56,7 +78,7 @@ mrbnf pre_alist: "('k, 'v) pre_alist"
    apply blast
   done
 
-linearize_mrbnf ('k::var,'v) alist = "('k::var, 'v) pre_alist" on 'k
+linearize_mrbnf ('k::var,'v) alisttt = "('k::var, 'v) pre_alist" on 'k
   oops
 
 axiomatization where

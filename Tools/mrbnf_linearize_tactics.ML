@@ -4,6 +4,8 @@ sig
   val dest_Type_atomic: typ -> typ list
 
   (* helping lemmas *)
+  val mk_F_pullback_strong_tac: Proof.context -> int -> thm list -> thm -> thm -> thm -> tactic
+
   val mk_F_strong_tac: Proof.context -> thm list -> int -> thm list -> thm -> thm -> thm -> thm -> thm -> tactic
 
   val mk_mr_rel_F_exchange_tac: Proof.context -> thm list -> thm list -> thm -> thm option -> tactic
@@ -62,6 +64,26 @@ fun eqsubst_all_tac ctxt thm =
             (EqSubst.skip_first_occs_search 0 EqSubst.searchf_lr_unify_valid) thm
             (Thm.nprems_of st) st;
     in REPEAT_DETERM apply_occ_tac #> Seq.maps distinct_subgoals_tac end;
+
+fun mk_F_pullback_strong_tac ctxt nr_As id_prems F_map_id F_in_rel F_pullback_unique_thm = 
+  unfold_thms_tac ctxt [unfold_thms ctxt [F_map_id, mem_Collect_eq] (F_in_rel OF id_prems), @{thm conj_assoc}] THEN
+  HEADGOAL (EVERY' [
+    rtac ctxt iffI,
+    rtac ctxt @{thm ex_ex1I},
+    assume_tac ctxt
+  ]) THEN
+  REPEAT_DETERM_N ((nr_As + 1) * 2)
+    (HEADGOAL (etac ctxt conjE)) THEN
+  HEADGOAL (EVERY' [
+    hyp_subst_tac_thin true ctxt,
+    rtac ctxt F_pullback_unique_thm,
+    rtac ctxt sym,
+    assume_tac ctxt,
+    rtac ctxt sym,
+    assume_tac ctxt,
+    rtac ctxt ex1_implies_ex,
+    assume_tac ctxt
+  ]);
 
 fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono F_map_id F_in_rel F_pullback_strong = 
   HEADGOAL (EVERY' [

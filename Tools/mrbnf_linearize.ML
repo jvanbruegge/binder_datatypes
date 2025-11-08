@@ -117,7 +117,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     val typ_x = MRBNF_Def.mk_T_of_mrbnf Ds As Bs Fs mrbnf;
     val typ_x'l = MRBNF_Def.mk_T_of_mrbnf Ds (select_n As' As lin_live_poses) Bs Fs mrbnf; (* other lives change typ *)
     val typ_x' = MRBNF_Def.mk_T_of_mrbnf Ds As' Bs Fs mrbnf;
-    val typ_z = MRBNF_Def.mk_T_of_mrbnf Ds As_pair Bs Fs mrbnf; (* z: F with (A, A') as lives *)
+    val typ_lr = MRBNF_Def.mk_T_of_mrbnf Ds As_pair Bs Fs mrbnf; (* l/r: F with (A, A') as lives *)
     val typ_f_As = map (fn A => A --> A) As;
     val typ_f'_As = map (fn (A, A') => A --> A') (As ~~ As');
     val typ_u_Bs = map (fn B => B --> B) Bs;
@@ -131,7 +131,8 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     val (var_x2, names_lthy) = mk_Free "x" typ_x names_lthy;
     val (var_x'l, names_lthy) = mk_Free "x'l" typ_x'l names_lthy;
     val (var_x', names_lthy) = mk_Free "x'" typ_x' names_lthy;
-    val (var_z, names_lthy) = mk_Free "z" typ_z names_lthy;
+    val (var_l, names_lthy) = mk_Free "l" typ_lr names_lthy;
+    val (var_r, names_lthy) = mk_Free "r" typ_lr names_lthy;
     val (var_f_As, names_lthy) = mk_Frees "f" typ_f_As names_lthy;
     val (var_f'_As, names_lthy) = mk_Frees "f'" typ_f'_As names_lthy;
     val (var_u_Bs, names_lthy) = mk_Frees "u" typ_u_Bs names_lthy;
@@ -265,45 +266,17 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
 
     val nonrep_wit_goals = map (mk_nonrep_wit) Iwits_new;
 
-    (* F_pullback_strong *)
-    val map_fst_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.fst_const As_pair) 
-      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
-    val map_eq_x = HOLogic.mk_eq (map_fst_z, var_x);
+    (* F_pullback_unique *)
+    val map_fst = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.fst_const As_pair) 
+      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf;
+    val map_fst_eq = HOLogic.mk_eq (map_fst $ var_l, map_fst $ var_r) |> HOLogic.mk_Trueprop;
+    val map_snd = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.snd_const As_pair) 
+      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf;
+    val map_snd_eq = HOLogic.mk_eq (map_snd $ var_l, map_snd $ var_r) |> HOLogic.mk_Trueprop;
+    val map_imp_eq = Logic.mk_implies (map_fst_eq, Logic.mk_implies (map_snd_eq, HOLogic.mk_Trueprop (HOLogic.mk_eq (var_l, var_r))));
+    val F_pullback_unique = map_imp_eq |> Logic.all var_r |> Logic.all var_l;
 
-    val map_snd_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.snd_const As_pair) 
-      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
-    val map_eq_x' = HOLogic.mk_eq (map_snd_z, var_x');
-    val map_eq_conj = HOLogic.mk_conj (map_eq_x, map_eq_x');
-    
-    val set_Fs_P = MRBNF_Def.mk_sets_of_mrbnf (replicate nr_ABFs Ds) (replicate nr_ABFs As_pair) 
-      (replicate nr_ABFs Bs) (replicate nr_ABFs Fs) mrbnf;
-    val set_Fs_P_live = filter (fn (_, vtype) => vtype = MRBNF_Def.Live_Var) (set_Fs_P ~~ var_types) |> map fst;
-    val set_map_conj = fold (fn (set, (R, (var_a, var_b))) => (fn conj =>
-      let 
-        val set_z = set $ var_z;
-        val R_xy = R $ var_a $ var_b;
-        val absfree_R_xy = R_xy |> absfree (dest_Free var_b) |>
-          absfree (dest_Free var_a);
-        val case_prod_R_xy = HOLogic.mk_case_prod absfree_R_xy;
-        val collect_set = HOLogic.Collect_const 
-          (HOLogic.mk_prodT (fastype_of var_a, fastype_of var_b)) $ case_prod_R_xy;
-        val set_leq_collect = mk_leq set_z collect_set;
-      in
-        HOLogic.mk_conj (set_leq_collect, conj)
-      end)) (rev (set_Fs_P_live ~~ (var_R'_As ~~ (var_as ~~ var_as')))) map_eq_conj;
-
-    val ex1_z = Const ("HOL.Ex1", (typ_z --> HOLogic.boolT) --> HOLogic.boolT) $ 
-      absfree (dest_Free var_z) set_map_conj;
-
-    val rrel_F_R = MRBNF_Def.mk_rel_of_mrbnf Ds 
-      (map (fst o HOLogic.dest_prodT) As_pair) 
-      (map (snd o HOLogic.dest_prodT) As_pair) Bs Fs mrbnf;
-    val rrel_R_x_x' = Term.list_comb (rrel_F_R, var_R'_As @ [var_x, var_x']);
-    val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
-    val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
-    val F_pullback_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
-
-    val goals = if null l_As then [] else [F_pullback_strong];
+    val goals = if null l_As then [] else [F_pullback_unique];
 
     val goals = 
       if null (Iwits_new @ Iwits_F) then
@@ -314,7 +287,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     fun after_qed thmss lthy = 
       let
         (* prepare thms *)
-        val (F_pullback_strong_thm_opt, thmss) = if null l_As then (NONE, thmss) else
+        val (F_pullback_unique_thm_opt, thmss) = if null l_As then (NONE, thmss) else
           chop 1 thmss |> apfst (SOME o the_single o the_single);
         val (ex_nonrep_opt, wit_new_thmss) = if null (Iwits_new @ Iwits_F) then chop 1 thmss |> apfst (SOME o the_single o the_single) else (NONE, thmss);
         val wits_new_thms = map the_single wit_new_thmss;
@@ -343,7 +316,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
         val F_mr_rel_mono = MRBNF_Def.mr_rel_mono_of_mrbnf mrbnf;
         val F_mr_rel_mono_strong0 = MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf;
 
-        (* eq_shape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
+        (* eq_shape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? (use rrel_top_x_x')*)
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf;
         val mr_rel_args = MRBNF_Def.interlace top_eqs (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) var_types;
         val mr_rel_F_top_x_x' = Term.list_comb (mr_rel_F, mr_rel_args @ [var_x, var_x2]);
@@ -470,31 +443,79 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
         fun mk_Rep_F' ctxt = #Rep td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
         fun mk_Abs_F'_inverse ctxt = #Abs_inverse td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
 
-        (* F_strong *)
-        val mr_rel = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As' Bs Fs mrbnf;
-        val id_Bs = (map HOLogic.id_const Bs);
-        val id_Fs = (map HOLogic.id_const Fs);
-        val R_args = MRBNF_Def.interlace var_R'_As id_Bs id_Fs var_types;
-        val Q_args = MRBNF_Def.interlace var_R'_As2 id_Bs id_Fs var_types;
-        val inf_args = MRBNF_Def.interlace (map (fn (R, Q) => 
-            Const ("Lattices.inf_class.inf", [fastype_of R, fastype_of Q] ---> fastype_of R) $ R $ Q
-          ) (var_R'_As ~~ var_R'_As2)) id_Bs id_Fs var_types;
-        val mr_rel_R = Term.list_comb (mr_rel, R_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
-        val mr_rel_Q = Term.list_comb (mr_rel, Q_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
-        val mr_rel_inf = Term.list_comb (mr_rel, inf_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
+        (* mr_rel_F_exchange *)        
+        val mr_rel_F_exchange_thm = 
+        let 
+          val mr_rel = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As' Bs Fs mrbnf;
+          val id_Bs = (map HOLogic.id_const Bs);
+          val id_Fs = (map HOLogic.id_const Fs);
+          val R_args = MRBNF_Def.interlace var_R'_As id_Bs id_Fs var_types;
+          val Q_args = MRBNF_Def.interlace var_R'_As2 id_Bs id_Fs var_types;
+          val RQ_args = select_n Q_args R_args lin_poses;
+          val mr_rel_R = Term.list_comb (mr_rel, R_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
+          val mr_rel_Q = Term.list_comb (mr_rel, Q_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
+          val mr_rel_RQ = Term.list_comb (mr_rel, RQ_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
+          fun mk_mr_rel_F_exchange_thm F_strong_thm_opt = 
+            Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) [mr_rel_R, mr_rel_Q] mr_rel_RQ
+            (fn {context = ctxt, prems} => mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm_opt);
+        in
+          if null l_As then
+            mk_mr_rel_F_exchange_thm NONE
+          else 
+          let 
+            (* F_pullback_strong *)
+            val map_fst_l = map_fst $ var_l;
+            val map_eq_x = HOLogic.mk_eq (map_fst_l, var_x);
+        
+            val map_snd_l = map_snd $ var_l;
+            val map_eq_x' = HOLogic.mk_eq (map_snd_l, var_x');
+            val map_eq_conj = HOLogic.mk_conj (map_eq_x, map_eq_x');
+            
+            val set_Fs_P = MRBNF_Def.mk_sets_of_mrbnf (replicate nr_ABFs Ds) (replicate nr_ABFs As_pair) 
+              (replicate nr_ABFs Bs) (replicate nr_ABFs Fs) mrbnf;
+            val set_Fs_P_live = filter (fn (_, vtype) => vtype = MRBNF_Def.Live_Var) (set_Fs_P ~~ var_types) |> map fst;
+            val set_map_conj = fold (fn (set, (R, (var_a, var_b))) => (fn conj =>
+              let 
+                val set_z = set $ var_l;
+                val R_xy = R $ var_a $ var_b;
+                val absfree_R_xy = R_xy |> absfree (dest_Free var_b) |>
+                  absfree (dest_Free var_a);
+                val case_prod_R_xy = HOLogic.mk_case_prod absfree_R_xy;
+                val collect_set = HOLogic.Collect_const 
+                  (HOLogic.mk_prodT (fastype_of var_a, fastype_of var_b)) $ case_prod_R_xy;
+                val set_leq_collect = mk_leq set_z collect_set;
+              in
+                HOLogic.mk_conj (set_leq_collect, conj)
+              end)) (rev (set_Fs_P_live ~~ (var_R'_As ~~ (var_as ~~ var_as')))) map_eq_conj;
+        
+            val ex1_z = Const ("HOL.Ex1", (typ_lr --> HOLogic.boolT) --> HOLogic.boolT) $ 
+              absfree (dest_Free var_l) set_map_conj;
+        
+            val rrel_F_R = MRBNF_Def.mk_rel_of_mrbnf Ds 
+              (map (fst o HOLogic.dest_prodT) As_pair) 
+              (map (snd o HOLogic.dest_prodT) As_pair) Bs Fs mrbnf;
+            val rrel_R_x_x' = Term.list_comb (rrel_F_R, var_R'_As @ [var_x, var_x']);
+            val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
+            val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
+            val F_pullback_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
+            val F_pullback_strong_thm = Goal.prove_sorry lthy [] [] F_pullback_strong
+              (fn {context = ctxt, ...} => mk_F_pullback_strong_tac ctxt nr_As id_prems F_map_id F_in_rel (the F_pullback_unique_thm_opt));
 
-        val F_strong_thm_opt = if null l_As then NONE else SOME (
-          Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
-          [mr_rel_R, mr_rel_Q] mr_rel_inf
-          (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono
-            F_map_id F_in_rel (the F_pullback_strong_thm_opt)));
-
-        (* mr_rel_F_exchange *)
-        val RQ_args = select_n Q_args R_args lin_poses;
-        val mr_rel_RQ = Term.list_comb (mr_rel, RQ_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
-        val mr_rel_F_exchange_thm = Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
-          [mr_rel_R, mr_rel_Q] mr_rel_RQ
-          (fn {context = ctxt, prems} => mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm_opt);
+            (* F_strong *)
+            val inf_args = MRBNF_Def.interlace (map (fn (R, Q) => 
+                Const ("Lattices.inf_class.inf", [fastype_of R, fastype_of Q] ---> fastype_of R) $ R $ Q
+              ) (var_R'_As ~~ var_R'_As2)) id_Bs id_Fs var_types;
+            val mr_rel_inf = Term.list_comb (mr_rel, inf_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
+    
+            val F_strong_thm = 
+              Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
+              [mr_rel_R, mr_rel_Q] mr_rel_inf
+              (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono
+                F_map_id F_in_rel F_pullback_strong_thm);
+          in
+            mk_mr_rel_F_exchange_thm (SOME F_strong_thm)
+          end
+        end;
         
         (* nonrep_map_F *)
         val u_props_raw = map (fn u => [MRBNF_Util.mk_bij u |> HOLogic.mk_Trueprop, 

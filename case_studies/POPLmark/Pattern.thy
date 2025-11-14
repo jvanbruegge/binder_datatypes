@@ -1,10 +1,6 @@
 theory Pattern
   imports POPLmark_1B
-  keywords "linearize_mrbnf" :: thy_goal
 begin
-
-ML_file "../../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../../Tools/mrbnf_linearize.ML"
 
 setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
 

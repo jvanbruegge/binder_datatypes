@@ -561,7 +561,7 @@ fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_live_poses rrel_F'_def map_F'_
             HEADGOAL (EVERY' [
               EqSubst.eqsubst_tac ctxt [1, 3] [Rep_F'_inverse RS sym],
               rtac ctxt conjI,
-              (COND (fn _ => nr_As=1) all_tac) o rtac ctxt conjI, (*skip this if we linearize on the only live*)
+              TRY o rtac ctxt conjI,
               EqSubst.eqsubst_tac ctxt [0] [nth subprems 0],
               rtac ctxt refl
             ]) THEN
@@ -573,7 +573,7 @@ fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_live_poses rrel_F'_def map_F'_
               resolve_tac ctxt subprems
             ])) THEN
             HEADGOAL (EVERY' [
-              (COND (fn _ => nr_As=1) all_tac) o rtac ctxt conjI, (*skip this if we linearize on the only live*)
+              TRY o rtac ctxt conjI,
               EqSubst.eqsubst_tac ctxt [0] [nth subprems 1 RS sym],
               rtac ctxt (F_map_cong RS arg_cong) THEN_ALL_NEW
                 TRY o resolve_tac ctxt (refl::prems)

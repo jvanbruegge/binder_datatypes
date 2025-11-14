@@ -1,5 +1,5 @@
 theory Linearize
-  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
+  imports "Binders.MRBNF_Composition"
 begin
 
 (* This theory we start with an MRBNF F, which is assumed (in the imported theory 
@@ -35,9 +35,8 @@ print_mrbnfs
 declare [[ML_print_depth=10000]]
 
 axiomatization where
-  (* The next property assumes preservation of pullbacks on the third position. 
-   NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
-   without uniqueness.  *)
+  (* The next property assumes preservation of pullbacks. 
+   All MRBNFs already preserve _weak_ pullbacks, thus we only assume the uniqueness  *)
   F_pullback_unique: 
   "\<And>l r.
       map_F id id fst fst l = map_F id id fst fst r \<Longrightarrow> map_F id id snd snd l =  map_F id id snd snd r \<Longrightarrow>
@@ -90,7 +89,6 @@ lemma F_strong:
     apply (insert spec2[OF prems(1), of l z])
     apply (erule impE, intro conjI prems)
     apply (erule impE, intro conjI prems)
-
     apply (rule exI)
     apply (unfold inf_fun_def inf_bool_def)
     apply (rule conjI)
@@ -122,22 +120,22 @@ lemma rel_F_exchange:
     done
   done
 
-(* Then notion of two items having the same shape (w.r.t. the 3rd position): *)
-(* these definitions are lin_pos dependent *)
-definition sameShape :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> ('a1,'a2,'a3,'a4) F \<Rightarrow> bool" where 
-  "sameShape x x' \<equiv> rel_F id id top (=) x x'"
+(* Then notion of two items being of equivalent shape (w.r.t. the 3rd position): *)
+
+definition eq_shape :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> ('a1,'a2,'a3,'a4) F \<Rightarrow> bool" where 
+  "eq_shape x x' \<equiv> rel_F id id top (=) x x'"
 
 definition nonrep :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> bool" where 
-  "nonrep x \<equiv> \<forall> x'. sameShape x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
+  "nonrep x \<equiv> \<forall> x'. eq_shape x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
 
 lemma ex_ss_map:
   fixes x :: "('a1::var,'a2::var,'a3,'a4) F" and y :: "('a1::var,'a2::var,'a3,'a4) F"
     and v :: "'a1 \<Rightarrow> 'a1" and u :: "'a2\<Rightarrow>'a2" and g :: "'a4 \<Rightarrow> 'b4"
   assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|"
-  assumes "sameShape (map_F v u id g x) y'"
-  shows "\<exists>y. y' = (map_F v u id g y) \<and> sameShape x y"
+  assumes "eq_shape (map_F v u id g x) y'"
+  shows "\<exists>y. y' = (map_F v u id g y) \<and> eq_shape x y"
   using assms apply -
-  apply (unfold sameShape_def)
+  apply (unfold eq_shape_def)
     apply (drule iffD1[OF F.mr_rel_map(1), rotated -1]; (rule assms bij_id supp_id_bound)?)
     apply (unfold trans[OF id_o o_id[symmetric]] Grp_UNIV_id trans[OF OO_eq eq_OO[symmetric]])
     apply (unfold trans[OF eq_OO OO_eq[symmetric], of top])
@@ -146,7 +144,9 @@ lemma ex_ss_map:
     apply (unfold mr_rel_F_def o_id F.rel_compp F.rel_Grp)
     apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric] id_o)
     apply (unfold Grp_UNIV_id OO_def Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply)
-    apply (unfold id_def[THEN sym])
+  apply (unfold id_def[THEN sym])
+  apply (subst (asm) eq_commute)
+  apply (subst (2) eq_commute)
     apply (erule exE)
   apply (erule conjE)
   apply (drule F.in_rel[THEN iffD1, rotated -1, unfolded mem_Collect_eq]; (rule assms)?)
@@ -177,7 +177,7 @@ lemma nonrep_map_F:
   shows "nonrep (map_F v u id g x)"
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep_def sameShape_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
     apply (subst F.map_comp; (rule prems bij_id supp_id_bound)?)
@@ -199,7 +199,7 @@ lemma nonrep_map_F:
     apply (erule CollectE)
     apply (erule conjE)
     apply (erule conjE)
-    apply (insert prems(4)[unfolded nonrep_def sameShape_def mr_rel_F_def F.map_id])
+    apply (insert prems(4)[unfolded nonrep_def eq_shape_def mr_rel_F_def F.map_id])
     apply (rotate_tac -1)
     apply (hypsubst_thin)
     subgoal premises subprems for x' y z
@@ -234,10 +234,10 @@ lemma nonrep_map_F_rev:
   shows "nonrep x"
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep_def sameShape_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
-    apply (insert prems(3)[unfolded nonrep_def sameShape_def])
+    apply (insert prems(3)[unfolded nonrep_def eq_shape_def])
     apply (elim allE impE)
      apply (rule F.mr_rel_map(1)[THEN iffD2]; (rule prems supp_id_bound bij_id)?)
      apply (drule F.mr_rel_map(2)[rotated -1, of _ _ _ _ _ _ _ _ id _]; (rule prems supp_id_bound bij_id)?)
@@ -262,7 +262,6 @@ lemma nonrep_map_F_rev:
      apply (elim F.mr_rel_mono_strong0[rotated -5]; (rule supp_id_bound bij_id)?)
       (*left subtactic is for frees and bounds, right subtactic for lives*)
     apply ((rule ballI,rule refl)?; (rule ballI,rule ballI,rule impI,rotate_tac 2,subst (asm) eq_commute,assumption))+
-
     apply (erule thin_rl)
     apply (subst (asm) Grp_UNIV_def[symmetric])
     apply (rule exI)
@@ -279,12 +278,12 @@ lemma nonrep_mapF_bij:
   shows "nonrep (map_F id id g id x)" (is "nonrep ?x'")
   using assms apply -
   subgoal premises prems
-    apply (unfold nonrep_def sameShape_def)
+    apply (unfold nonrep_def eq_shape_def)
     apply (rule allI)
     apply (rule impI)
     apply (drule F.mr_rel_map(1)[THEN iffD1, rotated -1]; (rule supp_id_bound bij_id)?)
     apply (unfold o_id Grp_UNIV_id eq_OO Grp_OO_top)
-    apply (drule x[unfolded nonrep_def sameShape_def, rule_format])
+    apply (drule x[unfolded nonrep_def eq_shape_def, rule_format])
     apply (erule exE conjE)+
     apply hypsubst_thin
     subgoal for _ f
@@ -312,7 +311,7 @@ lemma nonrep_mapF_bij_2:
   done
 
 typedef ('a1::var,'a2::var,'a3::var,'a4) F' = "{x :: ('a1,'a2,'a3,'a4) F. nonrep x}"
-  apply (unfold mem_Collect_eq nonrep_def sameShape_def mr_rel_F_def F.map_id)
+  apply (unfold mem_Collect_eq nonrep_def eq_shape_def mr_rel_F_def F.map_id)
   by (rule ex_nonrep)
 
 definition set1_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
@@ -506,12 +505,9 @@ lemma F'_in_rel:
         eqTrueI[OF supp_id_bound] eqTrueI[OF bij_id] o_apply)
     apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
      apply (rule nonrep_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
-
-(* instantiation for bounds B, frees F, lives A: [_ * nr_BFs @ id * nr_BFs @ _ * nr_As @ id * nr_As] *)
     apply (subst F.map_comp[of _ _ id id _ _ id id, unfolded o_id id_o, symmetric]; (rule prems bij_id supp_id_bound)?)
     apply (subst rrel_F_map_F3[symmetric])
     apply (subst F.in_rel; (rule prems)?)
-
     apply (rule iffI)
     apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21))
      apply (erule exE)
@@ -529,7 +525,6 @@ lemma F'_in_rel:
        apply (unfold o_id id_o)
        apply (subst subprems)
       apply (rule Rep_F'[unfolded mem_Collect_eq])
-
       apply (subst (1 2) F.map_comp; (rule supp_id_bound bij_id prems)?)
       apply (unfold o_id id_o)
       apply (rule conjI)
@@ -559,7 +554,6 @@ lemma F'_in_rel:
       apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
        apply (rule nonrep_mapF_bij_2; (rule supp_id_bound bij_id Rep_F'[unfolded mem_Collect_eq])?)
       apply (rule conjI; (rule conjI)?)
-
         prefer 3(* subgoal 3 is solvable without the exI instantiation and it "instantiates" ?z 
           so that the other 2 subgoals are solvable as well*)
         apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
@@ -569,7 +563,6 @@ lemma F'_in_rel:
         apply (unfold o_def)
         apply (rule F.map_cong; (rule prems refl)?)
         apply (rule snd_conv)
-
        apply (rule CollectI)
        apply (subst F.set_map; (rule bij_id supp_id_bound)?)+
        apply (unfold image_ident)
@@ -584,7 +577,6 @@ lemma F'_in_rel:
         apply (rule trans[OF sym])
          apply (assumption)
         apply (erule arg_cong)
-
       apply (subst F.map_comp; (rule supp_id_bound bij_id)?)
       apply (unfold o_def fst_conv id_def)
       apply (rule refl)
@@ -593,7 +585,7 @@ lemma F'_in_rel:
   done
 
 (* this is not part of the linearization itself, 
-  but it shows that linearization preserves strongness *)
+  but it shows that linearization preserves strength *)
 lemma F'_strong:
   assumes "rrel_F' R x x'" 
     and "rrel_F' Q x x'"
@@ -613,7 +605,6 @@ mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   bd: natLeq
   rel: rrel_F'
   var_class: var
-
   subgoal by (rule F'_map_id)
   subgoal premises prems by (rule F'_map_comp1_; (rule prems))
   subgoal premises prems 
@@ -643,5 +634,4 @@ mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   subgoal by (rule F'_rel_comp_leq_)
   subgoal premises prems by (rule F'_in_rel[OF prems])
   done        
-
 end

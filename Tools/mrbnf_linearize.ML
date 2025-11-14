@@ -50,7 +50,7 @@ fun mk_asSS f = let val typ_f = fastype_of f; in
 (** linearize **)
 fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morphs opts lthy =
   let
-    val tfrees = map (TFree o snd) specs |> @{print};
+    val tfrees = map (TFree o snd) specs;
 
     fun flatten_tyargs Ass =
       (map dest_TFree tfrees
@@ -60,21 +60,21 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
       (Binding.prefix_name (Binding.name_of b ^ "_")) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 
-    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
+    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
     val (As, Bs, Fs) = fold_rev (fn (T, vt) => (fn (acc_As, acc_Bs, acc_Fs) => 
       case vt of
         MRBNF_Def.Live_Var => (T::acc_As, acc_Bs, acc_Fs)
       | MRBNF_Def.Bound_Var => (acc_As, T::acc_Bs, acc_Fs)
       | MRBNF_Def.Free_Var => (acc_As, acc_Bs, T::acc_Fs)
       | _ => error "Dead_Var!" ))
-      (ABFs ~~ var_types) ([], [], []) |> @{print};
+      (ABFs ~~ var_types) ([], [], []);
 
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
     val lives = MRBNF_Def.lives_of_mrbnf mrbnf;
     val bounds = MRBNF_Def.bounds_of_mrbnf mrbnf;
     val frees = MRBNF_Def.frees_of_mrbnf mrbnf;
 
-    val mrbnf_subst = ((Ds @ As @ Bs @ Fs) ~~ (deads @ lives @ bounds @ frees)) |> @{print}
+    val mrbnf_subst = ((Ds @ As @ Bs @ Fs) ~~ (deads @ lives @ bounds @ frees));
 
     val nr_As = MRBNF_Def.live_of_mrbnf mrbnf;
     val nr_Fs = MRBNF_Def.free_of_mrbnf mrbnf;
@@ -86,26 +86,26 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
     val (As', names_lthy) = mk_TFrees nr_As names_lthy;
     val (As'', names_lthy) = mk_TFrees nr_As names_lthy;
 
-    val on_tfrees = map (fn tv => TFree (tv, class)) on_tvars |> distinct (op =) |> @{print tracing};
+    val on_tfrees = map (fn tv => TFree (tv, class)) on_tvars |> distinct (op =);
 
     val l_ABFs = subtract (op =) Ds tfrees;
     val l_Ds = subtract (op =) ABFs tfrees;
-    val l_As = subtract (op =) (Bs @ Fs @ on_tfrees) l_ABFs |> @{print};
-    val l_Bs = subtract (op =) (l_As @ Fs) l_ABFs |> @{print};
-    val l_Fs = subtract (op =) (As @ Bs) l_ABFs |> @{print};
+    val l_As = subtract (op =) (Bs @ Fs @ on_tfrees) l_ABFs;
+    val l_Bs = subtract (op =) (l_As @ Fs) l_ABFs;
+    val l_Fs = subtract (op =) (As @ Bs) l_ABFs;
 
     val nr_lin = length on_tfrees;
     val l_nr_As = nr_As - nr_lin;
     val l_nr_Bs = nr_Bs + nr_lin;
-    val lin_poses = map (fn tv => find_index (fn x => x = tv) ABFs) on_tfrees |> (sort int_ord) |> @{print tracing};
-    val lin_live_poses = map (fn tv => find_index (fn x => x = tv) As) on_tfrees |> (sort int_ord) |> @{print tracing};
-    val l_lin_poses = map (fn tv => find_index (fn x => x = tv) l_ABFs) on_tfrees |> (sort int_ord) |> @{print tracing};
-    val l_lin_bound_poses = map (fn tv => find_index (fn x => x = tv) l_Bs) on_tfrees |> (sort int_ord) |> @{print tracing};
+    val lin_poses = map (fn tv => find_index (fn x => x = tv) ABFs) on_tfrees |> (sort int_ord);
+    val lin_live_poses = map (fn tv => find_index (fn x => x = tv) As) on_tfrees |> (sort int_ord);
+    val l_lin_poses = map (fn tv => find_index (fn x => x = tv) l_ABFs) on_tfrees |> (sort int_ord);
+    val l_lin_bound_poses = map (fn tv => find_index (fn x => x = tv) l_Bs) on_tfrees |> (sort int_ord);
 
     val l_var_types = map (fn l_T => find_first (fn (T, _) => T = l_T) (ABFs ~~ var_types) |> the) l_ABFs |> map snd;
     val l_var_types = select_n l_var_types (replicate nr_ABFs MRBNF_Def.Bound_Var) l_lin_poses;
 
-    val specs_non_dead = subtract (fn (d, (_, x)) => d = TFree x) Ds specs |> @{print}
+    val specs_non_dead = subtract (fn (d, (_, x)) => d = TFree x) Ds specs;
     val set_bs_non_dead = map_index (fn (i, (b_opt, _)) => if Option.getOpt (b_opt, Binding.empty) |> Binding.is_empty |> not then
               the b_opt else
               Binding.prefix_name ("set" ^ (Int.toString (i+1)) ^ "_") b) specs_non_dead;
@@ -163,13 +163,13 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
       else
         let
           val (suffix1, suffix2, be, this) =
-            (if length subsumed_Iwits_new = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"))
+            (if length subsumed_Iwits_new = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"));
         in
           subsumed_Iwits_new
           |> map (Syntax.pretty_typ lthy o fastype_of o snd)
           |> Pretty.big_list
             ("The following type" ^ suffix1 ^ " of nonemptiness witness" ^ suffix2 ^
-              be ^ " subsumed by the existing witnesses of the MRBNF:")
+              " " ^ be ^ " subsumed by the existing witnesses of the MRBNF:")
           |> (fn pt => Pretty.chunks [pt,
             Pretty.para ("You do not need to lift " ^ this ^ " subsumed witness" ^ suffix2 ^ ".")])
           |> Pretty.string_of
@@ -192,7 +192,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b eq_shp_b nrp_b morph
           |> map (Syntax.pretty_typ lthy o fastype_of o snd)
           |> Pretty.big_list
             ("The following type" ^ suffix1 ^ " of specified nonemptiness witness" ^ suffix2 ^
-              be ^ " subsumed by other specified witnesses:")
+              " " ^ be ^ " subsumed by other specified witnesses:")
           |> (fn pt => Pretty.chunks [pt,
             Pretty.para ("You do not need to lift " ^ this ^ " subsumed witness" ^ suffix2 ^ ".")])
           |> Pretty.string_of

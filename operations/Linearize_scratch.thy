@@ -1,27 +1,43 @@
 theory Linearize_scratch                                                      
-  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor" 
-    "HOL-Library.FSet" "HOL-Library.Uprod"
-  keywords "linearize_mrbnf" :: thy_goal
+  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor" "HOL-Library.FSet" "HOL-Library.Uprod"
 begin
 
 section "setup"
-
-ML_file "../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../Tools/mrbnf_linearize.ML"
-
-
 declare [[bnf_internals]]
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 declare [[ML_print_depth=1000]]
 
-section "binder_datatypes & errors"
-binder_datatype 'var lterm = Vr 'var | Ap "'var lterm" "'var lterm"
-  | Lm x::'var t::"'var lterm" binds x in t
+section "Example: Lambda calculus with parallel let and alist"
+(* t := x | t\<^sub>1 t\<^sub>2 | (\<lambda>x. t) | let x\<^sub>1 = t\<^sub>1 and ... and x\<^sub>n = t\<^sub>n in t\<^sub>n\<^sub>+\<^sub>1 *)
 
-binder_datatype ('a, 'b::var) test = V 'b | B "'a list" | C x::'b t::"('a, 'b) test" binds x in t
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct eq_shape: length_eq morphisms to_alist of_alist
+  by (auto simp: list_eq_iff_nth_eq map_prod_def split_beta prod_eq_iff)
 
-(*ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>*)
+thm of_alist_inverse[unfolded list_distinct_def]
+thm to_alist
+
+thm map_alist_def
+
+(* as datatype *)
+datatype 'a ltrm' = Var' 'a | App' "'a ltrm'" "'a ltrm'" | Abs' 'a "'a ltrm'" 
+  | Let' "('a \<times> 'a ltrm') list" "'a ltrm'"
+
+(* as binder-datatype *)
+binder_datatype 'a ltrm = Var 'a | App "'a ltrm" "'a ltrm" | Abs x::'a t::"'a ltrm" binds x in t
+  | Let "(fs::'a, t::'a ltrm) alist" u::"'a ltrm" binds fs in t u
+
+print_mrbnfs
+print_bnfs
+
+lemma "set_ltrm' (App' (Abs' ''a'' (Var' ''a'')) (Var' ''b'')) = {''a'', ''b''}"
+  by auto
+
+lemma "FVars_ltrm (App (Abs ''a'' (Var ''a'')) (Var ''b'')) = {''b''}"
+  by auto
+
+
+binder_datatype ('a, 'b::var) test = V 'b | C x::'b t::"('a, 'b) test" binds x in t
 
 section "Intuition: What is nonrep?"
 
@@ -61,10 +77,27 @@ lemma "nonrep_list ([1, 2, 3]::nat list)"
     by (metis (lifting) ext length_0_conv length_Suc_conv list.sel(1,3))
   done
 
-typedef 'a nrp_list = "{(xs :: 'a list). nonrep_list xs}"
+typedef 'a nrp_list = "{x :: 'a list. nonrep_list x}" morphisms of_nrp to_nrp
   apply (rule exI[of _ "[]"])
   apply (auto simp add: nonrep_list_def eq_shape_list_def)
   done
+
+definition dist_set :: "'a nrp_list \<Rightarrow> 'a set" where
+ "dist_set = set o of_nrp"
+
+definition dist_map :: "('a \<Rightarrow> 'a') \<Rightarrow> 'a nrp_list \<Rightarrow> 'a' nrp_list" where
+ "dist_map f x = to_nrp (remdups (map f (of_nrp x)))"
+
+
+definition dist_rel :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> 'a nrp_list \<Rightarrow> 'a' nrp_list \<Rightarrow> bool" where
+ "dist_rel R x y = list_all2 R (of_nrp x) (of_nrp y)"
+
+bnf "'a nrp_list"
+  map: "dist_map"
+sets: dist_set
+  bd: "natLeq"
+  rel: "dist_rel"
+  sorry
 
 (* PROD *)
 definition eq_shape_prod_1 :: "('a \<times> 'b) \<Rightarrow> ('a \<times> 'b) \<Rightarrow> bool" where 
@@ -114,8 +147,9 @@ typedef 'a even_list = "{x :: 'a list. even (length x)}"
   apply (rule even_zero)
   done
 
-datatype 'a test_A = F 'a | R "('a test_A) set"
-datatype 'a test_B = MK "'a" | MK2 "('a test_B) even_list"
+(* FAIL - not BNFs *)
+(* datatype 'a test_A = F 'a | R "('a test_A) set" *)
+(* datatype 'a test_B = MK "'a" | MK2 "('a test_B) even_list" *)
 
 setup_lifting type_definition_even_list
 lift_bnf 'a even_list [wits: "[] :: 'a list"] 
@@ -139,36 +173,12 @@ lift_bnf 'a even_list [wits: "[] :: 'a list"]
     done
   done
 
-thm fun.set_bd
-(*
-bnf "'a set"
-  map: image
-    sets: "(id :: 'a set \<Rightarrow> 'a set)"
-  bd: "natLeq +c card_suc |UNIV|"
-  rel: rel_set
-           apply (auto simp add: card_order_bd_fun Cinfinite_bd_fun[THEN conjunct1] regularCard_bd_fun)
-  subgoal for f g
-    by fastforce
-  subgoal for x
-    using card_of_UNIV ordLeq_ordLess_trans ordLess_bd_fun by blast
-  subgoal for R S x y z
-    apply (unfold rel_set_def)
-    by (meson relcomppI)
-  apply (intro ext)
-  subgoal for R x y
-    sorry
-  done
-print_theorems
-*)
-
-
-datatype 'a test_A = F 'a | R "('a test_A) set" (* is set a BNF?*)
 datatype 'a test_B = MK "'a" | MK2 "('a test_B) even_list"
 
 linearize_mrbnf 'a::var lin_fset = "'a::var fset" on 'a
   done
 
-binder_datatype 'a test_C = Leaf | MK2' "(r::'a) lin_fset" "s::'a test_C" binds r in s
+binder_datatype 'a test_C = Leaf | MK2' "(r::'a) lin_fset" "s::'a test_C" binds r in s t
 
 
 section "Example: Foo"
@@ -415,7 +425,27 @@ lemma "a \<noteq> (b :: 'a ::var) \<Longrightarrow> distinct_dpair (a, b)"
   done
 
 
+lemma Grp_conversep: "((Grp g)\<inverse>\<inverse>) = (\<lambda> x y. x = g y)"
+  apply (unfold Grp_UNIV_def conversep.simps)
+  apply (auto)
+  done
 
+(*list_all2 ((Grp fst)\<inverse>\<inverse> OO Grp snd) x y*)
+lemma "list_all2 top x y \<Longrightarrow> list_all2 ((Grp fst)\<inverse>\<inverse> OO Grp snd) x y"
+  apply (subst (asm) list.in_rel)
+  apply (auto simp add: top_fun_def)
+  apply (subst (asm) (2) eq_commute)
+  apply (subst (asm) list.rel_eq[symmetric])
+  apply (subst (asm) list.rel_eq[symmetric])
+  apply (unfold list.rel_map)
+  apply (unfold Grp_UNIV_def[of snd, symmetric] Grp_conversep[of fst, symmetric])
+  subgoal premises prems for z
+    apply (insert prems )
+    apply (drule relcomppI[of "list_all2 (Grp fst)\<inverse>\<inverse>" x z "list_all2 (Grp snd)" y])
+     apply (assumption)
+    thm list.rel_compp
+    by (simp add: Grp_UNIV_def list_all2_refl relcompp_apply)
+  done
 
 subsection "other"
 linearize_mrbnf '\<alpha> :: var distinct_list = "('\<alpha> ::var) list" on '\<alpha>
@@ -426,7 +456,8 @@ linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
   
 
 datatype 'a success = S1 | S2 "'a \<Rightarrow> 'a success"
-datatype 'a fail = F1 | F2 "'a fail \<Rightarrow> 'a"
+(* FAIL - recursion on dead var *)
+(* datatype 'a fail = F1 | F2 "'a fail \<Rightarrow> 'a" *)
 
 
 

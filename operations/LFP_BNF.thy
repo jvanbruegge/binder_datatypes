@@ -135,7 +135,6 @@ lemma alg_not_empty:
 
      apply (rule subset_emptyI)
      apply (erule F1.wit1 F1.wit2 F2.wit)
-  thm  F1.wit2(2)
 
     apply (rule subsetI)
     apply (drule F1.wit1 F1.wit2 F2.wit)
@@ -753,7 +752,8 @@ lemma card_of_min_algs:
 
     apply (rule ordLeq_transitive)
      apply (rule card_of_image)
-    apply (rule ordLeq_transitive)
+  apply (rule ordLeq_transitive)
+  thm F1.in_bd
      apply (rule F1.in_bd)
     apply (rule ordLeq_transitive)
      apply (rule cexp_mono1)
@@ -840,6 +840,7 @@ lemma card_of_min_algs:
     apply (rule ordLeq_transitive)
      apply (rule ordLeq_csum1)
      apply (rule F1bd'_Card_order)
+  thm cardSuc_ordLeq[of "(F1bd' +c F2bd')"]
     apply (rule cardSuc_ordLeq)
     apply (rule Card_order_csum)
 

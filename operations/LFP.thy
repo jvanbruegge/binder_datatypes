@@ -48,14 +48,20 @@ consts F1rel :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b1 \<
   ('a, 'b1, 'b2, 'c, 'd) F1 \<Rightarrow> ('a', 'b1', 'b2', 'c, 'd) F1 \<Rightarrow> bool"
 consts wit1F1 :: "'a \<Rightarrow> 'b1 \<Rightarrow> ('a, 'b1, 'b2, 'c, 'b) F1"
 consts wit2F1 :: "'a \<Rightarrow> 'b2 \<Rightarrow> ('a, 'b1, 'b2, 'c, 'b) F1"
-(*
-typedecl bd_type_F1
-consts bd_F1 :: "(bd_type_F1 \<times> bd_type_F1) set"
-*)
 
-(* TODO: generalize bound and var class. For now define bd_F1 = natLeq *)
-abbreviation "bd_F1 \<equiv> natLeq"
-type_synonym bd_type_F1 = nat
+typedecl bd_type_F1
+axiomatization bd_F1 :: "(bd_type_F1 \<times> bd_type_F1) set" where
+  CinfF1: "Cinfinite bd_F1"
+  and regularF1: "regularCard bd_F1"
+
+local_setup \<open>fn lthy =>
+let
+  val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_F1} @{term bd_F1} lthy;
+
+  val lthy = Var_Classes.prove_class_theorems true true class @{thm CinfF1} @{thm regularF1} lthy;
+in lthy end
+\<close>
+
 
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F1"
   map: F1map
@@ -64,7 +70,7 @@ mrbnf "('a, 'b1, 'b2, 'c, 'b) F1"
   bd: bd_F1
   wits: wit1F1 wit2F1
   rel: F1rel
-  var_class: (*var_F1*) var
+  var_class: var_F1
   sorry
 
 
@@ -79,14 +85,19 @@ consts F2bound :: "('a, 'b1, 'b2, 'c, 'd) F2 \<Rightarrow> 'd set"
 consts F2rel :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b1 \<Rightarrow> 'b1' \<Rightarrow> bool) \<Rightarrow> ('b2 \<Rightarrow> 'b2' \<Rightarrow> bool) \<Rightarrow> 
   ('a, 'b1, 'b2, 'c, 'd) F2 \<Rightarrow> ('a', 'b1', 'b2', 'c, 'd) F2 \<Rightarrow> bool"
 consts witF2 :: "('a, 'b1, 'b2, 'c, 'b) F2"
-(*
-typedecl bd_type_F2
-consts bd_F2 :: "(bd_type_F2 \<times> bd_type_F2) set"
-*)
 
-(* TODO: generalize bound and var class. For now define bd_F2 = natLeq *)
-abbreviation "bd_F2 \<equiv> natLeq"
-type_synonym bd_type_F2 = nat
+typedecl bd_type_F2
+axiomatization bd_F2 :: "(bd_type_F2 \<times> bd_type_F2) set" where
+  CinfF2: "Cinfinite bd_F2"
+  and regularF2: "regularCard bd_F2"
+
+local_setup \<open>fn lthy =>
+let
+  val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_F2} @{term bd_F2} lthy;
+
+  val lthy = Var_Classes.prove_class_theorems true true class @{thm CinfF2} @{thm regularF2} lthy;
+in lthy end
+\<close>
 
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F2"
   map: F2map
@@ -95,7 +106,7 @@ mrbnf "('a, 'b1, 'b2, 'c, 'b) F2"
   bd: bd_F2
   wits: witF2
   rel: F2rel
-  var_class: (*var_F2*) var
+  var_class: var_F2
   sorry
 
 
@@ -105,13 +116,13 @@ print_mrbnfs
 lemmas ss_id = supp_id_bound
 lemmas bij_ss_id = bij_id ss_id
 
-abbreviation F1in :: "'a1 set \<Rightarrow> 'a2 set \<Rightarrow> 'a3 set \<Rightarrow> 'c set \<Rightarrow> 'd set \<Rightarrow> (('a1, 'a2, 'a3, 'c, 'd) F1) set" where
-  "F1in A1 A2 A3 C D \<equiv> {x. F1set1 x \<subseteq> A1 \<and> F1set2 x \<subseteq> A2 \<and> F1set3 x \<subseteq> A3 \<and> F1free x \<subseteq> C \<and> F1bound x \<subseteq> D}"
-abbreviation F2in :: "'a1 set \<Rightarrow> 'a2 set \<Rightarrow> 'a3 set \<Rightarrow> 'c set \<Rightarrow> 'd set \<Rightarrow> (('a1, 'a2, 'a3, 'c, 'd) F2) set" where
-  "F2in A1 A2 A3 C D \<equiv> {x. F2set1 x \<subseteq> A1 \<and> F2set2 x \<subseteq> A2 \<and> F2set3 x \<subseteq> A3 \<and> F2free x \<subseteq> C \<and> F2bound x \<subseteq> D}"
+abbreviation F1in :: "'a1 set \<Rightarrow> 'a2 set \<Rightarrow> 'a3 set \<Rightarrow> (('a1, 'a2, 'a3, 'c, 'd) F1) set" where
+  "F1in A1 A2 A3 \<equiv> {x. F1set1 x \<subseteq> A1 \<and> F1set2 x \<subseteq> A2 \<and> F1set3 x \<subseteq> A3}"
+abbreviation F2in :: "'a1 set \<Rightarrow> 'a2 set \<Rightarrow> 'a3 set \<Rightarrow> (('a1, 'a2, 'a3, 'c, 'd) F2) set" where
+  "F2in A1 A2 A3 \<equiv> {x. F2set1 x \<subseteq> A1 \<and> F2set2 x \<subseteq> A2 \<and> F2set3 x \<subseteq> A3}"
 
 lemma F1map_comp_id: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
   shows "F1map g1 g2 g3 v u (F1map id f2 f3 id id x) = F1map g1 (g2 o f2) (g3 o f3) v u x"
   apply (rule trans)
@@ -123,7 +134,7 @@ lemma F1map_comp_id:
 lemmas F1in_mono23 = F1.in_mono[OF subset_refl]
 
 lemma F1map_congL: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1" 
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1" 
   shows "\<lbrakk>\<forall>a \<in> F1set2 x. f a = a; \<forall>a \<in> F1set3 x. g a = a\<rbrakk> \<Longrightarrow> F1map id f g id id x = x"
   apply (rule trans)
    apply (rule F1.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
@@ -144,7 +155,7 @@ lemma F1map_congL:
   done
 
 lemma F2map_comp_id:
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
   shows "F2map g1 g2 g3 v u (F2map id f2 f3 id id x) = F2map g1 (g2 o f2) (g3 o f3) v u x"
   apply (rule trans)
@@ -156,7 +167,7 @@ lemma F2map_comp_id:
 lemmas F2in_mono23 = F2.in_mono[OF subset_refl]
 
 lemma F2map_congL: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2" 
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2" 
   shows "\<lbrakk>\<forall>a \<in> F2set2 x. f a = a; \<forall>a \<in> F2set3 x. g a = a\<rbrakk> \<Longrightarrow> F2map id f g id id x = x"
   apply (rule trans)
    apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
@@ -181,10 +192,9 @@ subsection\<open>Algebra\<close>
 
 definition alg where
   "alg B1 B2 s1 s2 =
-    ((\<forall>x \<in> F1in (UNIV :: 'a set) B1 B2 (UNIV :: 'c set) (UNIV :: 'd set). s1 x \<in> B1) \<and> 
-      (\<forall>y \<in> F2in (UNIV :: 'a set) B1 B2 (UNIV :: 'c set) (UNIV :: 'd set). s2 y \<in> B2))"
+    ((\<forall>x \<in> F1in (UNIV :: 'a set) B1 B2. s1 x \<in> B1) \<and> 
+      (\<forall>y \<in> F2in (UNIV :: 'a set) B1 B2. s2 y \<in> B2))"
 
-thm alg_def
 lemma alg_F1set: "\<lbrakk>alg B1 B2 s1 s2; F1set2 x \<subseteq> B1; F1set3 x \<subseteq> B2\<rbrakk> \<Longrightarrow> s1 x \<in> B1"
   apply (drule iffD1[OF alg_def])
   apply (erule conjE)+
@@ -192,9 +202,7 @@ lemma alg_F1set: "\<lbrakk>alg B1 B2 s1 s2; F1set2 x \<subseteq> B1; F1set3 x \<
   apply (rule CollectI)
   apply (rule conjI[OF subset_UNIV])
   apply (erule conjI)
-  apply (erule conjI)
-  apply (rule conjI[OF subset_UNIV])
-  apply (rule subset_UNIV)
+  apply assumption
   done
 
 lemma alg_F2set: "\<lbrakk>alg B1 B2 s1 s2; F2set2 x \<subseteq> B1; F2set3 x \<subseteq> B2\<rbrakk> \<Longrightarrow> s2 x \<in> B2"
@@ -204,13 +212,11 @@ lemma alg_F2set: "\<lbrakk>alg B1 B2 s1 s2; F2set2 x \<subseteq> B1; F2set3 x \<
   apply (rule CollectI)
   apply (rule conjI[OF subset_UNIV])
   apply (erule conjI)
-  apply (erule conjI)
-  apply (rule conjI[OF subset_UNIV])
-  apply (rule subset_UNIV)
+  apply assumption
   done
 
 lemma alg_not_empty:
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1 \<Rightarrow> 'b1"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "alg B1 B2 s1 s2 \<Longrightarrow> B1 \<noteq> {} \<and> B2 \<noteq> {}"
   apply (rule conjI)
    apply (rule notI)
@@ -258,10 +264,10 @@ subsection \<open>Morphism\<close>
 definition mor where
   "mor B1 B2 s1 s2 B1' B2' s1' s2' f g =
    (((\<forall>a \<in> B1. f a \<in> B1') \<and> (\<forall>a \<in> B2. g a \<in> B2')) \<and>
-   ((\<forall>z \<in> F1in (UNIV :: 'a set) B1 B2 (UNIV :: 'c set) (UNIV :: 'd set). f (s1 z) = s1' (F1map id f g id id z)) \<and>
-     (\<forall>z \<in> F2in (UNIV :: 'a set) B1 B2 (UNIV :: 'c set) (UNIV :: 'd set). g (s2 z) = s2' (F2map id f g id id z))))"
+   ((\<forall>z \<in> F1in (UNIV :: 'a set) B1 B2. f (s1 z) = s1' (F1map id f g id id z)) \<and>
+     (\<forall>z \<in> F2in (UNIV :: 'a set) B1 B2. g (s2 z) = s2' (F2map id f g id id z))))"
 
-lemma morE1: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F1in UNIV B1 B2 UNIV UNIV\<rbrakk>
+lemma morE1: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F1in UNIV B1 B2\<rbrakk>
    \<Longrightarrow> f (s1 z) = s1' (F1map id f g id id z)"
   apply (tactic \<open>dtac @{context} @{thm iffD1[OF mor_def]} 1\<close>)
   apply (erule conjE)+
@@ -269,7 +275,7 @@ lemma morE1: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F1in UNIV B1
   apply assumption
   done
 
-lemma morE2: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F2in UNIV B1 B2 UNIV UNIV\<rbrakk>
+lemma morE2: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F2in UNIV B1 B2\<rbrakk>
    \<Longrightarrow> g (s2 z) = s2' (F2map id f g id id z)"
   apply (tactic \<open>dtac @{context} @{thm iffD1[OF mor_def]} 1\<close>)
   apply (erule conjE)+
@@ -277,8 +283,8 @@ lemma morE2: "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g; z \<in> F2in UNIV B1
   apply assumption
   done
 
-lemma mor_incl: 
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1 \<Rightarrow> 'b1"
+lemma mor_incl:
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "\<lbrakk>B1 \<subseteq> B1'; B2 \<subseteq> B2'\<rbrakk> \<Longrightarrow> mor B1 B2 s1 s2 B1' B2' s1 s2 id id"
   apply (tactic \<open>rtac @{context} (@{thm mor_def} RS iffD2) 1\<close>)
   apply (rule conjI)
@@ -307,7 +313,7 @@ lemma mor_incl:
   done
 
 lemma mor_comp:
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1 \<Rightarrow> 'b1" 
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "\<lbrakk>mor B1 B2 s1 s2 B1' B2' s1' s2' f g;
     mor B1' B2' s1' s2' B1'' B2'' s1'' s2'' f' g'\<rbrakk> \<Longrightarrow>
    mor B1 B2 s1 s2 B1'' B2'' s1'' s2'' (f' o f) (g' o g)"
@@ -350,16 +356,12 @@ lemma mor_comp:
      apply (erule bspec)
      apply (erule subsetD)
      apply assumption
-  apply (rule conjI)
     apply (rule ord_eq_le_trans)
      apply (rule F1.set_map(3)[OF ss_id bij_ss_id])
     apply (rule image_subsetI)
     apply (erule bspec)
     apply (erule subsetD)
     apply assumption
-    apply (rule conjI)
-     apply (rule subset_UNIV)
-     apply (rule subset_UNIV)
    apply (rule arg_cong[OF F1map_comp_id[OF ss_id bij_ss_id]])
 
   apply (rule ballI)
@@ -381,16 +383,12 @@ lemma mor_comp:
     apply (erule bspec)
     apply (erule subsetD)
     apply assumption
-  apply (rule conjI)
    apply (rule ord_eq_le_trans)
     apply (rule F2.set_map(3)[OF ss_id bij_ss_id])
    apply (rule image_subsetI)
    apply (erule bspec)
    apply (erule subsetD)
    apply assumption
-   apply (rule conjI)
-    apply (rule subset_UNIV)
-    apply (rule subset_UNIV)
   apply (rule arg_cong[OF F2map_comp_id[OF ss_id bij_ss_id]])
   done
 
@@ -427,24 +425,23 @@ type_synonym SucFbd_type = "((bd_type_F1' + bd_type_F2') set)"
 type_synonym 'a1 ASucFbd_type = "(SucFbd_type \<Rightarrow> ('a1 + bool))"
 
 abbreviation "F1bd' \<equiv> bd_F1 +c |UNIV :: (bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1) F1 set|"
-lemma F1set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F1). |F1set1 x| <o F1bd'"
+lemma F1set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set1 x| <o F1bd'"
   by (rule ordLess_ordLeq_trans[OF F1.set_bd(1) ordLeq_csum1[OF F1.bd_Card_order]])
-lemma F1set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F1). |F1set2 x| <o F1bd'"
+lemma F1set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set2 x| <o F1bd'"
   by (rule ordLess_ordLeq_trans[OF F1.set_bd(2) ordLeq_csum1[OF F1.bd_Card_order]])
-lemma F1set3_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F1). |F1set3 x| <o F1bd'"
+lemma F1set3_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set3 x| <o F1bd'"
   by (rule ordLess_ordLeq_trans[OF F1.set_bd(3) ordLeq_csum1[OF F1.bd_Card_order]])
 
 lemmas F1bd'_Card_order = Card_order_csum
 lemmas F1bd'_Cinfinite = Cinfinite_csum1[OF F1.bd_Cinfinite]
 lemmas F1bd'_Cnotzero = Cinfinite_Cnotzero[OF F1bd'_Cinfinite]
 lemmas F1bd'_card_order = card_order_csum[OF F1.bd_card_order card_of_card_order_on]
-
 abbreviation "F2bd' \<equiv> bd_F2 +c |UNIV :: (bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2) F2 set|"
-lemma F2set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F2). |F2set1 x| <o F2bd'"
+lemma F2set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2). |F2set1 x| <o F2bd'"
   by (rule ordLess_ordLeq_trans[OF F2.set_bd(1) ordLeq_csum1[OF F2.bd_Card_order]])
-lemma F2set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F2). |F2set2 x| <o F2bd'"
+lemma F2set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2). |F2set2 x| <o F2bd'"
   by (rule ordLess_ordLeq_trans[OF F2.set_bd(2) ordLeq_csum1[OF F2.bd_Card_order]])
-lemma F2set3_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var, 'd::var) F2). |F2set3 x| <o F2bd'"
+lemma F2set3_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2). |F2set3 x| <o F2bd'"
   by (rule ordLess_ordLeq_trans[OF F2.set_bd(3) ordLeq_csum1[OF F2.bd_Card_order]])
 
 lemmas F2bd'_Card_order = Card_order_csum
@@ -456,7 +453,7 @@ abbreviation SucFbd where "SucFbd \<equiv> cardSuc (F1bd' +c F2bd')"
 abbreviation ASucFbd where "ASucFbd \<equiv> ( |UNIV| +c ctwo ) ^c SucFbd"
 
 lemma F1set1_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   shows "|F1set1 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F1.set_bd(1))
@@ -465,7 +462,7 @@ lemma F1set1_bd:
   done
 
 lemma F1set2_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   shows "|F1set2 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F1.set_bd(2))
@@ -474,7 +471,7 @@ lemma F1set2_bd:
   done
 
 lemma F1set3_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   shows "|F1set3 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F1.set_bd(3))
@@ -483,7 +480,7 @@ lemma F1set3_bd:
   done
 
 lemma F1free_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   shows "|F1free x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F1.set_bd(4))
@@ -492,7 +489,7 @@ lemma F1free_bd:
   done
 
 lemma F1bound_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1"
   shows "|F1bound x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F1.set_bd(5))
@@ -501,7 +498,7 @@ lemma F1bound_bd:
   done
 
 lemma F2set1_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   shows "|F2set1 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F2.set_bd(1))
@@ -510,7 +507,7 @@ lemma F2set1_bd:
   done
 
 lemma F2set2_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   shows "|F2set2 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F2.set_bd(2))
@@ -519,7 +516,7 @@ lemma F2set2_bd:
   done
 
 lemma F2set3_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   shows "|F2set3 x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F2.set_bd(3))
@@ -528,20 +525,20 @@ lemma F2set3_bd:
   done
 
 lemma F2free_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   shows "|F2free x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F2.set_bd(4))
-  apply (rule ordLeq_csum1)
+  apply (rule ordLeq_csum2)
   apply (rule F2.bd_Card_order)
   done
 
 lemma F2bound_bd: 
-  fixes x :: "('a, 'b1, 'b2, 'c::var, 'd::var) F2"
+  fixes x :: "('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2"
   shows "|F2bound x| <o bd_F1 +c bd_F2"
   apply (rule ordLess_ordLeq_trans)
    apply (rule F2.set_bd(5))
-  apply (rule ordLeq_csum1)
+  apply (rule ordLeq_csum2)
   apply (rule F2.bd_Card_order)
   done
 
@@ -563,8 +560,8 @@ abbreviation min_G2 where
 
 abbreviation min_H where
   "min_H s1 s2 As1_As2 i \<equiv>
-    (min_G1 As1_As2 i \<union> s1 ` (F1in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i) (UNIV :: 'c set) (UNIV :: 'd set)),
-    min_G2 As1_As2 i \<union> s2 ` (F2in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i) (UNIV :: 'c set) (UNIV :: 'd set)))"
+    (min_G1 As1_As2 i \<union> s1 ` (F1in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i)),
+    min_G2 As1_As2 i \<union> s2 ` (F2in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i)))"
 
 abbreviation min_algs where
   "min_algs s1 s2 \<equiv> wo_rel.worec SucFbd (min_H s1 s2)"
@@ -574,10 +571,6 @@ definition min_alg1 where
 
 definition min_alg2 where
   "min_alg2 s1 s2 = (\<Union>i \<in> Field SucFbd. snd (min_algs s1 s2 i))"
-
-
-lemma arg_cong4: "\<lbrakk>a1 = b1; a2 = b2; a3 = b3; a4 = b4\<rbrakk> \<Longrightarrow> f a1 a2 a3 a4 = f b1 b2 b3 b4"
-  by (iprover intro: refl elim: subst)
 
 lemma min_algs:
   "i \<in> Field SucFbd \<Longrightarrow> min_algs s1 s2 i = min_H s1 s2 (min_algs s1 s2) i"
@@ -600,7 +593,7 @@ lemma min_algs:
     apply (erule arg_cong)
 
    apply (rule image_cong)
-    apply (rule arg_cong4[of _ _ _ _ UNIV UNIV UNIV UNIV "F1in UNIV"])
+    apply (rule arg_cong2[of _ _ _ _ "F1in UNIV"])
      apply (rule SUP_cong)
       apply (rule refl)
      apply (drule bspec)
@@ -612,8 +605,6 @@ lemma min_algs:
      apply assumption
     apply (erule arg_cong)
    apply (rule refl)
-   apply (rule refl)
-   apply (rule refl)
 
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule SUP_cong)
@@ -623,7 +614,7 @@ lemma min_algs:
    apply (erule arg_cong)
 
   apply (rule image_cong)
-    apply (rule arg_cong4[of _ _ _ _ UNIV UNIV UNIV UNIV "F2in UNIV"])
+    apply (rule arg_cong2[of _ _ _ _ "F2in UNIV"])
     apply (rule SUP_cong)
      apply (rule refl)
     apply (drule bspec)
@@ -635,13 +626,11 @@ lemma min_algs:
     apply assumption
    apply (erule arg_cong)
   apply (rule refl)
-   apply (rule refl)
-   apply (rule refl)
   done
 
 corollary min_algs1: "i \<in> Field SucFbd \<Longrightarrow> fst (min_algs s1 s2 i) =
   min_G1 (min_algs s1 s2) i \<union>
-    s1 ` (F1in UNIV (min_G1 (min_algs s1 s2) i) (min_G2 (min_algs s1 s2) i) UNIV UNIV)"
+    s1 ` (F1in UNIV (min_G1 (min_algs s1 s2) i) (min_G2 (min_algs s1 s2) i))"
   apply (rule trans)
    apply (erule arg_cong[OF min_algs])
   apply (rule fst_conv)
@@ -649,7 +638,7 @@ corollary min_algs1: "i \<in> Field SucFbd \<Longrightarrow> fst (min_algs s1 s2
 
 corollary min_algs2: "i \<in> Field SucFbd \<Longrightarrow> snd (min_algs s1 s2 i) =
   min_G2 (min_algs s1 s2) i \<union>
-    s2 ` (F2in UNIV (min_G1 (min_algs s1 s2) i) (min_G2 (min_algs s1 s2) i) UNIV UNIV)"
+    s2 ` (F2in UNIV (min_G1 (min_algs s1 s2) i) (min_G2 (min_algs s1 s2) i))"
   apply (rule trans)
    apply (erule arg_cong[OF min_algs])
   apply (rule snd_conv)
@@ -721,7 +710,7 @@ lemma SucFbd_limit: "\<lbrakk>x1 \<in> Field SucFbd & x2 \<in> Field SucFbd\<rbr
   done
 
 lemma alg_min_alg: 
-  fixes s1 :: "('a, 'b1, 'b3, 'c::var, 'd::var) F1 \<Rightarrow> 'b1"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "alg (min_alg1 s1 s2) (min_alg2 s1 s2) s1 s2"
   apply (tactic \<open>rtac @{context} (@{thm alg_def} RS iffD2) 1\<close>)
   apply (rule conjI)
@@ -762,8 +751,6 @@ lemma alg_min_alg:
     apply (erule thin_rl)
     apply (erule thin_rl)
     apply (erule thin_rl)
-    apply (erule thin_rl)
-    apply (erule thin_rl)
     apply (erule thin_rl) (* m + 3 * n *)
     apply assumption
    apply (rule subsetD)
@@ -790,14 +777,9 @@ lemma alg_min_alg:
      apply assumption
     apply assumption
 
-   apply (rule conjI)
    apply (erule subset_trans)
    apply (erule UN_upper[OF underS_I])
     apply assumption
-
-   apply (rule conjI)
-  apply (assumption)
-  apply (assumption)
 
 (**)
 
@@ -840,8 +822,6 @@ lemma alg_min_alg:
    apply (erule thin_rl)
    apply (erule thin_rl)
    apply (erule thin_rl)
-  apply (erule thin_rl)
-  apply (erule thin_rl)
    apply (erule thin_rl) (* m + 3 * n *)
    apply assumption
   apply (rule subsetD)
@@ -865,14 +845,9 @@ lemma alg_min_alg:
    apply (erule underS_I)
    apply assumption
 
-  apply (rule conjI)
   apply (erule subset_trans)
   apply (rule UN_upper)
   apply (erule underS_I)
-   apply assumption
-
-  apply (rule conjI)
-   apply assumption
    apply assumption
   done
 
@@ -882,7 +857,7 @@ lemmas SucFbd_ASucFbd = ordLess_ordLeq_trans[OF
     OF SucFbd_Card_order SucFbd_Card_order]
 
 lemma card_of_min_algs:
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var, 'd::var) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c, 'd) F2 \<Rightarrow> 'b2"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "i \<in> Field SucFbd \<longrightarrow>
   ( |fst (min_algs s1 s2 i)| \<le>o (ASucFbd :: 'a ASucFbd_type rel) \<and> |snd (min_algs s1 s2 i)| \<le>o (ASucFbd :: 'a ASucFbd_type rel) )"
   apply (rule well_order_induct_imp[of _ "%i. ( |fst (min_algs s1 s2 i)| \<le>o ASucFbd \<and> |snd (min_algs s1 s2 i)| \<le>o ASucFbd )", OF worel_SucFbd])
@@ -916,7 +891,6 @@ lemma card_of_min_algs:
     apply (rule ordLeq_transitive)
      apply (rule card_of_image)
     apply (rule ordLeq_transitive)
-  thm F1.in_bd
      apply (rule F1.in_bd)
     apply (rule ordLeq_transitive)
      apply (rule cexp_mono1)
@@ -1003,7 +977,9 @@ lemma card_of_min_algs:
     apply (rule ordLeq_transitive)
      apply (rule ordLeq_csum1)
      apply (rule F1bd'_Card_order)
-    apply (rule cardSuc_ordLeq)
+  sorry(*
+  thm cardSuc_ordLeq[of "(F1bd' +c F2bd')"]
+    apply (rule cardSuc_ordLeq[of "(F1bd' +c F2bd')"])
     apply (rule Card_order_csum)
 
    apply (rule ASucFbd_Cinfinite)
@@ -1127,10 +1103,10 @@ lemma card_of_min_algs:
    apply (rule Card_order_csum)
 
   apply (rule ASucFbd_Cinfinite)
-  done
+  done*)
 
 lemma card_of_min_alg1:
-  fixes s1 :: "('a, 'b, 'c) F1 \<Rightarrow> 'b" and s2 :: "('a, 'b, 'c) F2 \<Rightarrow> 'c"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "|min_alg1 s1 s2| \<le>o (ASucFbd :: 'a ASucFbd_type rel)"
   apply (rule ordIso_ordLeq_trans)
    apply (rule card_of_ordIso_subst[OF min_alg1_def])
@@ -1151,7 +1127,7 @@ lemma card_of_min_alg1:
   done
 
 lemma card_of_min_alg2:
-  fixes s1 :: "('a, 'b, 'c) F1 \<Rightarrow> 'b" and s2 :: "('a, 'b, 'c) F2 \<Rightarrow> 'c"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
   shows "|min_alg2 s1 s2| \<le>o (ASucFbd :: 'a ASucFbd_type rel)"
   apply (rule ordIso_ordLeq_trans)
    apply (rule card_of_ordIso_subst[OF min_alg2_def])
@@ -1269,7 +1245,8 @@ lemma least_min_alg2: "alg B1 B2 s1 s2 \<Longrightarrow> min_alg2 s1 s2 \<subset
   done
 
 lemma mor_incl_min_alg:
-  "alg B1 B2 s1 s2 \<Longrightarrow>
+  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
+  shows "alg B1 B2 s1 s2 \<Longrightarrow>
    mor (min_alg1 s1 s2) (min_alg2 s1 s2) s1 s2 B1 B2 s1 s2 id id"
   apply (rule mor_incl)
    apply (erule least_min_alg1)

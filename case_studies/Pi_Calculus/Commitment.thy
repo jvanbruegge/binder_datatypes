@@ -108,6 +108,7 @@ local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
     SOME @{term "\<lambda>x P. bns x"}
   ]],
   bset_bounds = @{thms bns_bound},
+  pset_ctors = [],
   strong_induct = NONE,
   inject = @{thms commit.inject},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),

@@ -1121,13 +1121,16 @@ fun create_binder_datatype co (spec : spec) lthy =
 
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
       let
+        val _ = @{print} "before tvsubst"
         val recursor_result = #recursor_result (the vvsubst_res_opt);
         val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt);
         val vvsubst_res = #vvsubst_res (the vvsubst_res_opt);
 
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
-          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec)
+          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#pset_ctors (#vvsubst_res (the vvsubst_res_opt))) (#tvsubst_b spec)
           (#etas tvsubst_model) (#QREC_fixed recursor_result) lthy;
+
+        val _ = @{print} "after tvsubst"
 
         val lthy = BMV_Monad_Def.register_pbmv_monad (fst (dest_Type qT))
           (MRSBNF_Def.bmv_monad_of_mrsbnf (#mrsbnf tvsubst_res)) lthy;
@@ -1261,6 +1264,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = [],
           bset_bounds = [],
+          pset_ctors = [],
           mrbnf = mrbnf,
           distinct = [],
           inject = [],
@@ -1281,6 +1285,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = bset_optss,
           bset_bounds = [],
+          pset_ctors = #pset_ctors (#vvsubst_res (the vvsubst_res_opt)),
           mrbnf = mrbnf,
           distinct = distinct,
           inject = injects,

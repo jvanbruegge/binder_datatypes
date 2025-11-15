@@ -796,7 +796,6 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
     val facts = facts_of_bmv_monad bmv;
     val params = params_of_bmv_monad bmv;
     val unfolds = unfolds_of_bmv_monad bmv;
-    val _ = @{print} unfolds
 
     fun note_unless_dont_note (noted, lthy) =
       let val notes =

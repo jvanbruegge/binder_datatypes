@@ -1543,7 +1543,7 @@ val mrbnf = the (MRBNF_Def.mrbnf_of lthy @{type_name FTerm});
 open BNF_Util
 
 val x = TVSubst.create_tvsubst_of_mrsbnf
-  I fp_res mrsbnf mrbnf @{thm FTerm.vvsubst_cctor} @{thm FTerm.vvsubst_permute} @{binding tvsubst_FTerm'} [SOME {
+  I fp_res mrsbnf mrbnf @{thm FTerm.vvsubst_cctor} @{thm FTerm.vvsubst_permute} [] @{binding tvsubst_FTerm'} [SOME {
     eta = @{term "\<eta> :: 'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre"},
     Inj = (@{term "Var :: 'v \<Rightarrow> ('tv::var, 'v::var) FTerm"}, @{thm Var_def}),
     tacs = {

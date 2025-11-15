@@ -11,6 +11,7 @@ type binder_sugar = {
   tvsubst_permute: thm option,
   bsetss: term option list list,
   bset_bounds: thm list,
+  pset_ctors: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm option,
   distinct: thm list,
@@ -38,6 +39,7 @@ type binder_sugar = {
   tvsubst_permute: thm option,
   bsetss: term option list list,
   bset_bounds: thm list,
+  pset_ctors: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm option,
   distinct: thm list,
@@ -47,7 +49,7 @@ type binder_sugar = {
 
 fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, subst_simps, mrbnf,
   strong_induct, distinct, inject, ctors, bsetss, bset_bounds, IImsupp_permute_commutes, IImsupp_Diffs,
-  tvsubst_permute
+  tvsubst_permute, pset_ctors
 } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
@@ -59,6 +61,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, 
   tvsubst_permute = Option.map (Morphism.thm phi) tvsubst_permute,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
   bset_bounds = map (Morphism.thm phi) bset_bounds,
+  pset_ctors = map (Morphism.thm phi) pset_ctors,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
   strong_induct = Option.map (Morphism.thm phi) strong_induct,
   distinct = map (Morphism.thm phi) distinct,

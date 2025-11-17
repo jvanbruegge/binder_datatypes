@@ -977,8 +977,8 @@ lemma card_of_min_algs:
     apply (rule ordLeq_transitive)
      apply (rule ordLeq_csum1)
      apply (rule F1bd'_Card_order)
-  sorry(*
   thm cardSuc_ordLeq[of "(F1bd' +c F2bd')"]
+  sorry(*
     apply (rule cardSuc_ordLeq[of "(F1bd' +c F2bd')"])
     apply (rule Card_order_csum)
 
@@ -1258,8 +1258,8 @@ subsection \<open>Initiality\<close>
 text\<open>The following ``happens" to be the type (for our particular construction)
 of the initial algebra carrier:\<close>
 
-type_synonym 'a1 F1init_type = "('a1, 'a1 ASucFbd_type, 'a1 ASucFbd_type) F1 \<Rightarrow> 'a1 ASucFbd_type"
-type_synonym 'a1 F2init_type = "('a1, 'a1 ASucFbd_type, 'a1 ASucFbd_type) F2 \<Rightarrow> 'a1 ASucFbd_type"
+type_synonym 'a1 F1init_type = "('a1, 'a1 ASucFbd_type, 'a1 ASucFbd_type, 'a1, 'a1) F1 \<Rightarrow> 'a1 ASucFbd_type"
+type_synonym 'a1 F2init_type = "('a1, 'a1 ASucFbd_type, 'a1 ASucFbd_type, 'a1, 'a1) F2 \<Rightarrow> 'a1 ASucFbd_type"
 
 typedef 'a1 IIT =
   "UNIV ::
@@ -1273,13 +1273,13 @@ abbreviation II :: "'a1 IIT set" where
   "II \<equiv> {Abs_IIT ((B1, B2), (s1, s2)) |B1 B2 s1 s2. alg B1 B2 s1 s2}"
 definition str_init1 where
   "str_init1 (dummy :: 'a1)
-    (y::('a1, 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type, 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type) F1)
+    (y::('a1, 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type, 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type, 'a1, 'a1) F1)
     (i :: 'a1 IIT) =
       fst (snd (Rep_IIT i))
-        (F1map id (\<lambda>f :: 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type. f i) (\<lambda>f. f i) y)"
+        (F1map id (\<lambda>f :: 'a1 IIT \<Rightarrow> 'a1 ASucFbd_type. f i) (\<lambda>f. f i) id id y)"
 definition str_init2 where
   "str_init2 (dummy :: 'a1) y (i :: 'a1 IIT) =
-      snd (snd (Rep_IIT i)) (F2map id (\<lambda>f. f i) (\<lambda>f. f i) y)"
+      snd (snd (Rep_IIT i)) (F2map id (\<lambda>f. f i) (\<lambda>f. f i) id id y)"
 abbreviation car_init1 where
   "car_init1 dummy \<equiv> min_alg1 (str_init1 dummy) (str_init2 dummy)"
 abbreviation car_init2 where

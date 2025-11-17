@@ -1166,6 +1166,7 @@ lemma mor_select:
     apply (rule o_id)
    apply (rule sym)
    apply (rule o_id)
+  thm  mor_comp[rotated]
   apply (tactic \<open>rtac @{context} (Thm.permute_prems 0 1 @{thm mor_comp}) 1\<close>)
    apply (tactic \<open>etac @{context} (Thm.permute_prems 0 1 @{thm mor_comp}) 1\<close>)
    apply (tactic \<open>rtac @{context} (@{thm mor_def} RS iffD2) 1\<close>)

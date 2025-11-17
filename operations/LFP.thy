@@ -51,17 +51,25 @@ consts wit2F1 :: "'a \<Rightarrow> 'b2 \<Rightarrow> ('a, 'b1, 'b2, 'c, 'b) F1"
 
 typedecl bd_type_F1
 axiomatization bd_F1 :: "(bd_type_F1 \<times> bd_type_F1) set" where
-  CinfF1: "Cinfinite bd_F1"
-  and regularF1: "regularCard bd_F1"
+  infinite_regular_card_order_bd_F1: "infinite_regular_card_order bd_F1"
 
 local_setup \<open>fn lthy =>
 let
   val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_F1} @{term bd_F1} lthy;
 
-  val lthy = Var_Classes.prove_class_theorems true true class @{thm CinfF1} @{thm regularF1} lthy;
+  val lthy = Var_Classes.prove_class_theorems true true class
+    @{thm infinite_regular_card_order.Cinfinite[OF infinite_regular_card_order_bd_F1]}
+    @{thm infinite_regular_card_order.regularCard[OF infinite_regular_card_order_bd_F1]} lthy;
 in lthy end
 \<close>
 
+instantiation bd_type_F1 :: var_F1 begin
+instance
+  apply standard
+  apply simp
+  using card_of_unique infinite_regular_card_order.Card_order infinite_regular_card_order_bd_F1
+    infinite_regular_card_order_def regularCard_ordIso by blast
+end
 
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F1"
   map: F1map
@@ -88,16 +96,25 @@ consts witF2 :: "('a, 'b1, 'b2, 'c, 'b) F2"
 
 typedecl bd_type_F2
 axiomatization bd_F2 :: "(bd_type_F2 \<times> bd_type_F2) set" where
-  CinfF2: "Cinfinite bd_F2"
-  and regularF2: "regularCard bd_F2"
+  infinite_regular_card_order_bd_F2: "infinite_regular_card_order bd_F2"
 
 local_setup \<open>fn lthy =>
 let
   val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_F2} @{term bd_F2} lthy;
 
-  val lthy = Var_Classes.prove_class_theorems true true class @{thm CinfF2} @{thm regularF2} lthy;
+  val lthy = Var_Classes.prove_class_theorems true true class
+    @{thm infinite_regular_card_order.Cinfinite[OF infinite_regular_card_order_bd_F2]}
+    @{thm infinite_regular_card_order.regularCard[OF infinite_regular_card_order_bd_F2]} lthy;
 in lthy end
 \<close>
+
+instantiation bd_type_F2 :: var_F2 begin
+instance
+  apply standard
+  apply simp
+  using card_of_unique infinite_regular_card_order.Card_order infinite_regular_card_order_bd_F2
+    infinite_regular_card_order_def regularCard_ordIso by blast
+end
 
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F2"
   map: F2map
@@ -418,14 +435,14 @@ lemma mor_str:
 
 
 subsection\<open>Bounds\<close>
+thm F1.in_bd
+type_synonym ('c, 'd) bd_type_F1' = "bd_type_F1 + (bd_type_F1, bd_type_F1, bd_type_F1, 'c, 'd) F1"
+type_synonym ('c, 'd) bd_type_F2' = "bd_type_F2 + (bd_type_F2, bd_type_F2, bd_type_F2, 'c, 'd) F2"
+type_synonym ('c, 'd) SucFbd_type = "((('c, 'd) bd_type_F1' + ('c, 'd) bd_type_F2') set)"
+type_synonym ('a1, 'c, 'd) ASucFbd_type = "(('c, 'd) SucFbd_type \<Rightarrow> ('a1 + bool))"
 
-type_synonym bd_type_F1' = "bd_type_F1 + (bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1) F1"
-type_synonym bd_type_F2' = "bd_type_F2 + (bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2) F2"
-type_synonym SucFbd_type = "((bd_type_F1' + bd_type_F2') set)"
-type_synonym 'a1 ASucFbd_type = "(SucFbd_type \<Rightarrow> ('a1 + bool))"
-
-abbreviation "F1bd' \<equiv> bd_F1 +c |UNIV :: (bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1, bd_type_F1) F1 set|"
-lemma F1set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set1 x| <o F1bd'"
+abbreviation "F1bd' \<equiv> bd_F1 +c |UNIV :: (bd_type_F1, bd_type_F1, bd_type_F1, 'c :: var_F1, 'd :: var_F1) F1 set|"
+lemma F1set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set1 x| <o F1bd'" (*type annotate*)
   by (rule ordLess_ordLeq_trans[OF F1.set_bd(1) ordLeq_csum1[OF F1.bd_Card_order]])
 lemma F1set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1). |F1set2 x| <o F1bd'"
   by (rule ordLess_ordLeq_trans[OF F1.set_bd(2) ordLeq_csum1[OF F1.bd_Card_order]])
@@ -436,7 +453,7 @@ lemmas F1bd'_Card_order = Card_order_csum
 lemmas F1bd'_Cinfinite = Cinfinite_csum1[OF F1.bd_Cinfinite]
 lemmas F1bd'_Cnotzero = Cinfinite_Cnotzero[OF F1bd'_Cinfinite]
 lemmas F1bd'_card_order = card_order_csum[OF F1.bd_card_order card_of_card_order_on]
-abbreviation "F2bd' \<equiv> bd_F2 +c |UNIV :: (bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2, bd_type_F2) F2 set|"
+abbreviation "F2bd' \<equiv> bd_F2 +c |UNIV :: (bd_type_F2, bd_type_F2, bd_type_F2, 'c :: var_F2, 'd :: var_F2) F2 set|"
 lemma F2set1_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2). |F2set1 x| <o F2bd'"
   by (rule ordLess_ordLeq_trans[OF F2.set_bd(1) ordLeq_csum1[OF F2.bd_Card_order]])
 lemma F2set2_bd_incr: "\<And>(x :: ('a, 'b1, 'b2, 'c::var_F2, 'd::var_F2) F2). |F2set2 x| <o F2bd'"
@@ -559,7 +576,9 @@ abbreviation min_G2 where
   "min_G2 As1_As2 i \<equiv> (\<Union>j \<in> underS SucFbd i. snd (As1_As2 j))"
 
 abbreviation min_H where
-  "min_H s1 s2 As1_As2 i \<equiv>
+  "min_H (s1 :: ('a, 'b, 'e, 'c :: {var_F1, var_F2}, 'd :: {var_F1, var_F2}) F1 \<Rightarrow> 'b)
+         (s2 :: ('a, 'b, 'e, 'c :: {var_F1, var_F2}, 'd :: {var_F1, var_F2}) F2 \<Rightarrow> 'e)
+         (As1_As2 :: ('c, 'd) SucFbd_type \<Rightarrow> _) i \<equiv>
     (min_G1 As1_As2 i \<union> s1 ` (F1in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i)),
     min_G2 As1_As2 i \<union> s2 ` (F2in (UNIV :: 'a set) (min_G1 As1_As2 i) (min_G2 As1_As2 i)))"
 
@@ -710,7 +729,7 @@ lemma SucFbd_limit: "\<lbrakk>x1 \<in> Field SucFbd & x2 \<in> Field SucFbd\<rbr
   done
 
 lemma alg_min_alg: 
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) F2 \<Rightarrow> 'b2"
   shows "alg (min_alg1 s1 s2) (min_alg2 s1 s2) s1 s2"
   apply (tactic \<open>rtac @{context} (@{thm alg_def} RS iffD2) 1\<close>)
   apply (rule conjI)
@@ -857,9 +876,9 @@ lemmas SucFbd_ASucFbd = ordLess_ordLeq_trans[OF
     OF SucFbd_Card_order SucFbd_Card_order]
 
 lemma card_of_min_algs:
-  fixes s1 :: "('a, 'b1, 'b2, 'c::var_F1, 'd::var_F1) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c'::var_F2, 'd'::var_F2) F2 \<Rightarrow> 'b2"
+  fixes s1 :: "('a, 'b1, 'b2, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) F1 \<Rightarrow> 'b1" and s2 :: "('a, 'b1, 'b2, 'c, 'd) F2 \<Rightarrow> 'b2"
   shows "i \<in> Field SucFbd \<longrightarrow>
-  ( |fst (min_algs s1 s2 i)| \<le>o (ASucFbd :: 'a ASucFbd_type rel) \<and> |snd (min_algs s1 s2 i)| \<le>o (ASucFbd :: 'a ASucFbd_type rel) )"
+  ( |fst (min_algs s1 s2 i)| \<le>o (ASucFbd :: ('a, 'c, 'd) ASucFbd_type rel) \<and> |snd (min_algs s1 s2 i)| \<le>o (ASucFbd :: ('a, 'c, 'd) ASucFbd_type rel) )"
   apply (rule well_order_induct_imp[of _ "%i. ( |fst (min_algs s1 s2 i)| \<le>o ASucFbd \<and> |snd (min_algs s1 s2 i)| \<le>o ASucFbd )", OF worel_SucFbd])
   apply (rule impI)
   apply (rule conjI)
@@ -977,8 +996,6 @@ lemma card_of_min_algs:
     apply (rule ordLeq_transitive)
      apply (rule ordLeq_csum1)
      apply (rule F1bd'_Card_order)
-  thm cardSuc_ordLeq[of "(F1bd' +c F2bd')"]
-  sorry(*
     apply (rule cardSuc_ordLeq[of "(F1bd' +c F2bd')"])
     apply (rule Card_order_csum)
 

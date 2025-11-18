@@ -61,6 +61,7 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val (lives, bounds, frees) = MRBNF_Def.deinterlace (map TFree new_tys) var_types;
     val bounds = map (resort_tfree_or_tvar var_class) bounds;
     val frees = map (resort_tfree_or_tvar var_class) frees;
+    val new_tys = map dest_TFree (MRBNF_Def.interlace lives bounds frees var_types);
 
     val rep_T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf';
 
@@ -87,9 +88,14 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
           (BMV_Monad_Def.leader BMV_Monad_Def.lives'_of_bmv_monad bmv);
       in BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism subst) bmv end;
 
+    val var_types' = map (fn MRBNF_Def.Free_Var => BMV_Monad_Def.Free_Var
+      | MRBNF_Def.Live_Var => BMV_Monad_Def.Live_Var
+      | _ => BMV_Monad_Def.Dead_Var
+    ) var_types;
+
     val ((bmv, _, bmv_defs, _), lthy) = BMV_Monad_Def.seal_bmv_monad qualify (
       bmv_unfolds @ #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds)
-    ) name [] bmv (SOME info) lthy;
+    ) name (var_types' ~~ map TFree new_tys) bmv (SOME info) lthy;
 
     val mrbnfs = map_index (fn (i, x) => if i = BMV_Monad_Def.leader_of_bmv_monad bmv then mrbnf else x)
       (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
@@ -178,7 +184,7 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
             K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
             rtac ctxt refl
           ]
-        ])) (#set_Vrs axioms)
+        ])) frees
       }
     ) (MRSBNF_Def.axioms_of_mrsbnf mrsbnf)) lthy;
   in ((mrsbnf, (snd (dest_Type T), absT_info)), lthy) end

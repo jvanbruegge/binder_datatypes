@@ -120,7 +120,7 @@ signature BMV_MONAD_DEF = sig
     -> { frees: typ list, deads: typ list, lives: typ list } option list -> local_theory
     -> (bmv_monad * thm list) * local_theory
 
-  val seal_bmv_monad: (binding -> binding) -> thm list -> binding -> typ list -> bmv_monad
+  val seal_bmv_monad: (binding -> binding) -> thm list -> binding -> (var_type * typ) list -> bmv_monad
     -> (string * Typedef.info) option -> local_theory
     -> (bmv_monad * thm list * thm list * (string * Typedef.info)) * local_theory
 end
@@ -505,7 +505,7 @@ fun mk_bmv_monad_axioms ops consts bmv_ops lthy =
             ) (List.find (curry (op=) (body_type (fastype_of RVr)) o body_type o fastype_of) RVrs) end
           ) Vrs rhos in fold_rev Logic.all (fs @ rhos @ [x]) (
             fold_rev (curry Logic.mk_implies) small_prems (mk_Trueprop_eq (
-              RVr $ (Term.list_comb (Sb, fs @ rhos) $ x), foldr1 mk_Un ((mk_image f $ (RVr $ x)) :: UNs)
+              RVr $ (Term.list_comb (Sb, fs @ rhos) $ x), foldl1 mk_Un ((mk_image f $ (RVr $ x)) :: UNs)
             ))
           ) end
         ) fs RVrs @ map2 (fn Vr => fn Inj =>
@@ -2106,17 +2106,30 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
     val rep_T = leader ops_of_bmv_monad bmv;
     val ((T_name, info), lthy) = (case info_opt of
       SOME info => (info, lthy)
-      | NONE => BNF_Util.typedef (name, map dest_TFree tys, NoSyn)
+      | NONE => BNF_Util.typedef (name, map (dest_TFree o snd) tys, NoSyn)
         (HOLogic.mk_UNIV rep_T) NONE (fn ctxt => rtac ctxt @{thm UNIV_witness} 1) lthy)
 
     val T = #abs_type (fst info);
     val abs = Const (#Abs_name (fst info), rep_T --> #abs_type (fst info));
     val rep = Const (#Rep_name (fst info), #abs_type (fst info) -->  rep_T);
 
+    val frees = map_filter (fn (Free_Var, a) => SOME a | _ => NONE) tys;
+    val lives = map_filter (fn (Live_Var, a) => SOME a | _ => NONE) tys;
+    val deads = map_filter (fn (Dead_Var, a) => SOME a | _ => NONE) tys;
+    val lives' = map (the o AList.lookup (op=) (leader lives_of_bmv_monad bmv ~~ leader lives'_of_bmv_monad bmv)) lives;
+
+    val (ifrees, rfrees) = partition (
+      member (op=) (map (domain_type o fastype_of) (leader Injs_of_bmv_monad bmv))
+    ) frees;
+
     val (((fs, rhos), gs), _) = lthy
-      |> mk_Frees "f" (map ((fn a => a --> a) o HOLogic.dest_setT o body_type o fastype_of) (leader RVrs_of_bmv_monad bmv))
+      |> mk_Frees "f" (map (fn a => a --> a) rfrees)
       ||>> mk_Frees "\<rho>" (map ((fn T' => if body_type T' = rep_T then domain_type T' --> T else T') o fastype_of) (leader Injs_of_bmv_monad bmv))
-      ||>> mk_Frees "g" (the_default [] (Option.map (fst o split_last o binder_types o fastype_of) (leader Maps_of_bmv_monad bmv)))
+      ||>> mk_Frees "g" (map2 (curry (op-->)) lives lives')
+
+    val rep_fs = map (fn RVrs => the (List.find (fn f =>
+      domain_type (fastype_of f) = HOLogic.dest_setT (range_type (fastype_of RVrs))
+    ) fs)) (leader RVrs_of_bmv_monad bmv);
 
     val mk_def_t = mk_def_t false Binding.empty qualify
     val mk_defs_t = mk_defs_t false Binding.empty qualify
@@ -2127,9 +2140,12 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
     val (((((Sb, RVrs), Injs), Vrs), extra_Vrs), lthy) = lthy
       |> mk_def_t (mk_name "Sb") 0 (fold_rev (Term.absfree o dest_Free) (fs @ rhos) (
         HOLogic.mk_comp (HOLogic.mk_comp (abs, Term.list_comb (leader Sbs_of_bmv_monad bmv,
-          fs @ map (fn rho => if body_type (fastype_of rho) = T then HOLogic.mk_comp (rep, rho) else rho) rhos
+          rep_fs @ map (fn rho => if body_type (fastype_of rho) = T then HOLogic.mk_comp (rep, rho) else rho) rhos
         )), rep)))
-      ||>> mk_defs_t (mk_name "RVrs") 0 (map (fn RVrs => HOLogic.mk_comp (RVrs, rep)) (leader RVrs_of_bmv_monad bmv))
+      ||>> mk_defs_t (mk_name "RVrs") 0 (map (fn free => case List.find (fn RVrs => HOLogic.dest_setT (range_type (fastype_of RVrs)) = free) (leader RVrs_of_bmv_monad bmv) of
+          SOME RVrs => HOLogic.mk_comp (RVrs, rep)
+          | NONE => Term.abs ("_", T) (mk_bot free)
+        ) rfrees)
       ||>> mk_defs_t (mk_name "Inj") 0 (map_filter (fn Inj =>
         if body_type (fastype_of Inj) = rep_T then SOME (HOLogic.mk_comp (abs, Inj)) else NONE
       ) (leader Injs_of_bmv_monad bmv))
@@ -2142,9 +2158,13 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       | SOME Map =>
         lthy
         |> apfst SOME o mk_def_t (mk_name "Map") 0 (fold_rev (Term.absfree o dest_Free) gs (
-          HOLogic.mk_comp (HOLogic.mk_comp (subst abs, Term.list_comb (Map, gs)), rep)
+          HOLogic.mk_comp (HOLogic.mk_comp (subst abs, Term.list_comb (Map, map (fn live =>
+            the (List.find (fn g => domain_type (fastype_of g) = live) gs)
+          ) (leader lives_of_bmv_monad bmv))), rep)
         ))
-        ||>> apfst SOME o mk_defs_t (mk_name "Supp") 0 (map (fn Supp => HOLogic.mk_comp (Supp, rep)) (the (leader Supps_of_bmv_monad bmv)))
+        ||>> apfst SOME o mk_defs_t (mk_name "Supp") 0 (map (fn live => HOLogic.mk_comp (
+          the (List.find (fn Supp => HOLogic.dest_setT (range_type (fastype_of Supp)) = live) (the (leader Supps_of_bmv_monad bmv))),
+        rep)) lives)
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -2188,10 +2208,10 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       bmv_ops = map_filter (fn i => if i = leader_of_bmv_monad bmv then NONE else SOME (unsafe_slice_bmv_monad i bmv)) (0 upto length (ops_of_bmv_monad bmv) - 1),
       bd_infinite_regular_card_order = fn ctxt => rtac ctxt (bd_infinite_regular_card_order_of_bmv_monad bmv) 1,
       var_class = var_class_of_bmv_monad bmv,
-      frees = [leader frees_of_bmv_monad bmv],
-      lives = [leader lives_of_bmv_monad bmv],
-      lives' = [leader lives'_of_bmv_monad bmv],
-      deads = [map TFree (rev (fold Term.add_tfreesT (leader deads_of_bmv_monad bmv) []))],
+      frees = [frees],
+      lives = [lives],
+      lives' = [lives'],
+      deads = [deads],
       consts = consts,
       leader = 0,
       params = [Option.map (fn Supps => {
@@ -2255,13 +2275,13 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
           rtac ctxt refl
         ]) Supps,
         Vrs_Map = map (fn _ => fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt ([
+          K (Local_Defs.unfold0_tac ctxt (@{thms image_empty} @ [
             snd (the Map_opt), #Abs_inverse (snd info) OF @{thms UNIV_I},
             infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
             infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (subst rep))] @{thm comp_apply},
             infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (subst abs))] @{thm comp_apply}
           ] @ map snd Vrs @ map snd RVrs)),
-          resolve_tac ctxt (#Vrs_Map (the params))
+          resolve_tac ctxt (@{thms refl} @ #Vrs_Map (the params))
         ]) (RVrs @ Vrs),
         Map_Injs = map_filter (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
           SOME (fn ctxt => EVERY1 [
@@ -2308,7 +2328,8 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
         ],
         Vrs_bds = map (K (fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ map snd Vrs @ map snd RVrs)),
-          resolve_tac ctxt (#Vrs_bds axioms)
+          resolve_tac ctxt (@{thms Cinfinite_gt_empty} @ #Vrs_bds axioms),
+          TRY o rtac ctxt (@{thm infinite_regular_card_order.Cinfinite} OF [bd_infinite_regular_card_order_of_bmv_monad bmv])
         ])) (RVrs @ Vrs),
         Vrs_Injss = map (K (map_filter (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
           SOME (fn ctxt => EVERY1 [
@@ -2317,15 +2338,17 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
           ])
         ) Injs)) (RVrs @ Vrs @ extra_Vrs),
         Vrs_Sbs = map (K (fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt ([
+          K (Local_Defs.unfold0_tac ctxt (@{thms image_empty} @ [
             snd Sb, @{thm SSupp_type_copy} OF [copy], @{thm IImsupp_type_copy} OF [copy],
             #Abs_inverse (snd info) OF @{thms UNIV_I},
             infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
             infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt abs)] @{thm comp_apply}
           ] @ defs)),
-          rtac ctxt trans,
-          resolve_tac ctxt (#Vrs_Sbs axioms) THEN_ALL_NEW assume_tac ctxt,
-          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+          TRY o EVERY' [
+            rtac ctxt trans,
+            resolve_tac ctxt (#Vrs_Sbs axioms) THEN_ALL_NEW assume_tac ctxt,
+            K (Local_Defs.unfold0_tac ctxt @{thms comp_def})
+          ],
           rtac ctxt refl
         ])) (RVrs @ Vrs),
         Sb_cong = fn ctxt => EVERY1 [

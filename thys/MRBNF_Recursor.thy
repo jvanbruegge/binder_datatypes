@@ -37,6 +37,9 @@ lemma neq_equiv[equiv]: "bij f \<Longrightarrow> f a \<noteq> f b \<longleftrigh
 lemma notin_Un_forward: "x \<notin> A \<union> B \<Longrightarrow> (x \<notin> A \<Longrightarrow> y \<notin> C) \<Longrightarrow> (x \<notin> B \<Longrightarrow> y \<notin> D) \<Longrightarrow> y \<notin> C \<union> D"
   by blast
 
+lemma nested_cong: "f x = f' x \<Longrightarrow> x = x' \<Longrightarrow> f x = f' x'"
+  by simp
+
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 

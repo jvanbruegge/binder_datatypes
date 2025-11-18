@@ -876,6 +876,7 @@ fun create_binder_datatype co (spec : spec) lthy =
       K (Local_Defs.unfold0_tac ctxt (
         @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton map_sum.simps map_prod_simp id_apply sum.inject}
         @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+        @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf]
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
         @ BMV_Monad_Def.defs_of_bmv_monad bmv
         @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}]
@@ -1121,7 +1122,6 @@ fun create_binder_datatype co (spec : spec) lthy =
 
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
       let
-        val _ = @{print} "before tvsubst"
         val recursor_result = #recursor_result (the vvsubst_res_opt);
         val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt);
         val vvsubst_res = #vvsubst_res (the vvsubst_res_opt);
@@ -1129,8 +1129,6 @@ fun create_binder_datatype co (spec : spec) lthy =
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
           rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#pset_ctors (#vvsubst_res (the vvsubst_res_opt))) (#tvsubst_b spec)
           (#etas tvsubst_model) (#QREC_fixed recursor_result) lthy;
-
-        val _ = @{print} "after tvsubst"
 
         val lthy = BMV_Monad_Def.register_pbmv_monad (fst (dest_Type qT))
           (MRSBNF_Def.bmv_monad_of_mrsbnf (#mrsbnf tvsubst_res)) lthy;
@@ -1153,24 +1151,25 @@ fun create_binder_datatype co (spec : spec) lthy =
                 val phi = MRBNF_Util.subst_typ_morphism (map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv));
               in BMV_Monad_Def.morph_bmv_monad phi bmv end
             val Injs = hd (BMV_Monad_Def.Injs_of_bmv_monad bmv);
+            val RVrs = hd (BMV_Monad_Def.RVrs_of_bmv_monad bmv);
 
-            val (fs, _) = lthy
-              |> mk_Frees "f" (map fastype_of Injs);
+            val ((fs, rhos), _) = lthy
+              |> mk_Frees "f" (map ((fn a => a --> a) o HOLogic.dest_setT o range_type o fastype_of) RVrs)
+              ||>> mk_Frees "\<rho>" (map fastype_of Injs);
             val Sbs = BMV_Monad_Def.Sbs_of_bmv_monad bmv;
 
             val small_premss = map (map HOLogic.dest_Trueprop) (
-              BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv 0 [] fs
+              BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv 0 fs rhos
             );
 
             fun mk_supp_bound f = if Term.is_TFree (body_type (fastype_of f)) then SOME [MRBNF_Util.mk_supp_bound f] else
               List.find (fn xs => Term.exists_subterm (curry (op=) f) (hd xs)) small_premss;
 
-            fun mk_imsupp h _ =
+            fun mk_imsupp h _ = if Term.is_TFree (body_type (fastype_of h)) then SOME [MRBNF_Util.mk_imsupp h] else
               let
                 val Inj = the (List.find (fn Inj => fastype_of Inj = fastype_of h) Injs);
-                val Vrs = nth (BMV_Monad_Def.Vrs_of_bmv_monad bmv) (
-                  find_index (curry (op=) (body_type (fastype_of Inj))) (BMV_Monad_Def.ops_of_bmv_monad bmv)
-                );
+                val idx = find_index (curry (op=) (body_type (fastype_of Inj))) (BMV_Monad_Def.ops_of_bmv_monad bmv);
+                val Vrs = nth (BMV_Monad_Def.RVrs_of_bmv_monad bmv) idx @ nth (BMV_Monad_Def.Vrs_of_bmv_monad bmv) idx;
                 val IImsupps = (mk_SSupp Inj $ h) :: map (fn Vrs => mk_IImsupp Inj Vrs $ h) Vrs;
               in SOME IImsupps end
 
@@ -1228,7 +1227,7 @@ fun create_binder_datatype co (spec : spec) lthy =
               ]
             ];
           in map (Local_Defs.unfold0 lthy bmv_unfolds) (
-            mk_map_simps lthy false true Sbs plives fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac
+            mk_map_simps lthy false true Sbs plives (fs @ rhos) mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac
           ) end;
         in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
       else (lthy, NONE);

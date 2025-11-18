@@ -4,6 +4,9 @@ begin
 
 lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
   unfolding supp_def by blast
+lemma notin_imsupp: "x \<notin> imsupp f \<Longrightarrow> f x = x"
+  unfolding imsupp_def notin_supp
+  by (simp add: not_in_supp_alt)
 
 lemma imsupp_absorb[simp]: "supp f \<union> imsupp f = imsupp f"
   unfolding imsupp_def by blast
@@ -13,6 +16,11 @@ definition SSupp :: "('a \<Rightarrow> 't) \<Rightarrow> ('a \<Rightarrow> 't) \
 
 definition IImsupp :: "('a \<Rightarrow> 't) \<Rightarrow> ('t \<Rightarrow> 'b set) \<Rightarrow> ('a \<Rightarrow> 't) \<Rightarrow> 'b set" where
   "IImsupp Inj Vr \<equiv> \<lambda>\<rho>. (\<Union>a\<in>SSupp Inj \<rho>. Vr (\<rho> a))"
+
+lemma in_SSupp: "\<rho> a \<noteq> Inj a \<Longrightarrow> a \<in> SSupp Inj \<rho>"
+  unfolding SSupp_def by blast
+lemma in_IImsupp: "\<rho> a \<noteq> Inj a \<Longrightarrow> b \<in> Vrs (\<rho> a) \<Longrightarrow> b \<in> IImsupp Inj Vrs \<rho>"
+  unfolding IImsupp_def SSupp_def by blast
 
 lemma SSupp_Inj[simp]: "SSupp Inj Inj = {}"
   unfolding SSupp_def by simp
@@ -25,6 +33,9 @@ lemma IImsupp_Inj_comp[simp]: "inj Inj \<Longrightarrow> (\<And>a. FVars (Inj a)
 
 lemma IImsupp_Inj[simp]: "IImsupp Inj Vr Inj = {}"
   unfolding IImsupp_def by simp
+
+lemma IImsupp_triv_subset: "SSupp Inj' (f \<circ> g) \<subseteq> SSupp Inj g \<Longrightarrow> (\<And>a. Vrs' (f (g a)) \<subseteq> Vrs (g a)) \<Longrightarrow> IImsupp Inj' Vrs' (f \<circ> g) \<subseteq> IImsupp Inj Vrs g"
+  unfolding IImsupp_def SSupp_def by auto
 
 lemma SSupp_Inj_bound[simp]: "|SSupp Inj Inj| <o |UNIV::'a set|"
   by simp

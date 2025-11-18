@@ -10,8 +10,6 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
   + 'bv * 'tv FType * 'c \<comment>\<open>Lam x::'v \<open>'tv FType\<close> t::\<open>('tv, 'v) FTerm\<close> binds x in t\<close>
   + 'btv * 'c            \<comment>\<open>TyLam a::'tv t::\<open>('tv, 'v) FTerm\<close> binds a in t\<close>"
 
-ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
-
 local_setup \<open>fn lthy =>
 let
   val T = @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"};
@@ -1531,8 +1529,6 @@ lemma FTerm_subst:
   apply (rule refl)
   done
 
-ML_file \<open>../Tools/tvsubst.ML\<close>
-
 local_setup \<open>fn lthy =>
 let
 
@@ -1551,7 +1547,7 @@ val x = TVSubst.create_tvsubst_of_mrsbnf
       eta_compl_free = fn ctxt => etac ctxt @{thm eta_compl_free} 1,
       eta_inj = fn ctxt => etac ctxt @{thm eta_inj} 1,
       eta_natural = fn ctxt => HEADGOAL (rtac ctxt @{thm eta_natural} THEN_ALL_NEW assume_tac ctxt),
-      eta_Sb = fn ctxt => HEADGOAL (etac ctxt @{thm eta_Sb[rotated -1]} THEN_ALL_NEW assume_tac ctxt)
+      eta_Sb = fn ctxt => HEADGOAL (etac ctxt @{thm eta_Sb[unfolded FTerm_pre.Map_map, rotated -1]} THEN_ALL_NEW assume_tac ctxt)
     }
   }] "BMV_Fixpoint.QREC_fixed_FTerm" lthy
 

@@ -1,8 +1,5 @@
 theory BMV_Monad
   imports "Binders.MRBNF_Recursor"
-  keywords "print_pbmv_monads" :: diag and
-   "pbmv_monad" :: thy_goal and
-    "mrsbnf" :: thy_goal
 begin
 
 declare [[mrbnf_internals]]

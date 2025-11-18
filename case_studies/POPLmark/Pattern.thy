@@ -1,5 +1,5 @@
 theory Pattern
-  imports POPLmark_1B
+  imports SystemFSub
 begin
 
 datatype ('tv::var, PPVars: 'v) prepat = PPVar 'v "'tv typ" | PPRec "(label, ('tv, 'v) prepat) lfset"
@@ -232,7 +232,7 @@ lemma PPTVars_vvsubst_prepat[simp]:
 
 lemma PPTVars_tvsubst_prepat[simp]: 
   fixes P :: "('tv::var, 'v::var) prepat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> PPTVars (tvsubst_prepat \<tau> \<sigma> P) = (\<Union>x \<in> PPTVars P. FVars_typ (\<tau> x))"
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> PPTVars (tvsubst_prepat \<tau> \<sigma> P) = (\<Union>x \<in> PPTVars P. FVars_typ (\<tau> x))"
   by (induct P) (auto simp: lfset.set_map FVars_tvsubst_typ)
 
 lemma nonrep_prepat_vvsubst_prepat:
@@ -276,14 +276,14 @@ lemma PTVars_vvsubst_pat:
 
 lemma PTVars_tvsubst_pat:
   fixes P :: "('tv::var, 'v::var) pat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (tvsubst_pat \<tau> \<sigma> P) = (\<Union>x \<in> PTVars P. FVars_typ (\<tau> x))"
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (tvsubst_pat \<tau> \<sigma> P) = (\<Union>x \<in> PTVars P. FVars_typ (\<tau> x))"
   by transfer auto
 
 lemma vvsubst_prepat_tvsubst_prepat:
   fixes P :: "('tv::var, 'v::var) prepat"
   shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow>
     vvsubst_prepat \<tau> \<sigma> P = tvsubst_prepat (TyVar o \<tau>) \<sigma> P"
-  by (induct P) (auto simp: vvsubst_typ_tvsubst_typ intro!: lfset.map_cong)
+  by (induct P) (auto simp: typ.map_is_Sb intro!: lfset.map_cong)
 
 lemma vvsubst_pat_tvsubst_pat:
   fixes P :: "('tv::var, 'v::var) pat"
@@ -293,26 +293,26 @@ lemma vvsubst_pat_tvsubst_pat:
 
 lemma tvsubst_prepat_comp:
   fixes P :: "('tv::var, 'v::var) prepat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp TyVar \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
     tvsubst_prepat \<tau> \<sigma> (tvsubst_prepat \<tau>' \<sigma>' P) = tvsubst_prepat (tvsubst_typ \<tau> o \<tau>') (\<sigma> o \<sigma>') P"
-  by (induct P) (auto simp: tvsubst_typ_comp lfset.map_comp intro!: lfset.map_cong)
+  by (induct P) (auto simp: trans[OF comp_apply[symmetric] typ.Sb_comp[THEN fun_cong]] lfset.map_comp intro!: lfset.map_cong)
 
 lemma tvsubst_prepat_cong:
   fixes P :: "('tv::var, 'v::var) prepat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp TyVar \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
   (\<forall>x \<in> PPTVars P. \<tau> x = \<tau>' x) \<Longrightarrow> (\<forall>x \<in> PPVars P. \<sigma> x = \<sigma>' x) \<Longrightarrow>  
   tvsubst_prepat \<tau> \<sigma> P = tvsubst_prepat \<tau>' \<sigma>' P"
-  by (induct P) (auto intro!: lfset.map_cong tvsubst_typ_cong)
+  by (induct P) (auto intro!: lfset.map_cong typ.Sb_cong)
 
 lemma tvsubst_pat_comp:
   fixes P :: "('tv::var, 'v::var) pat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp TyVar \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
     tvsubst_pat \<tau> \<sigma> (tvsubst_pat \<tau>' \<sigma>' P) = tvsubst_pat (tvsubst_typ \<tau> o \<tau>') (\<sigma> o \<sigma>') P"
   by transfer (auto simp: tvsubst_prepat_comp)
 
 lemma tvsubst_pat_cong:
   fixes P :: "('tv::var, 'v::var) pat"
-  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
+  shows "|SSupp TyVar \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp TyVar \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
   (\<forall>x \<in> PTVars P. \<tau> x = \<tau>' x) \<Longrightarrow> (\<forall>x \<in> PVars P. \<sigma> x = \<sigma>' x) \<Longrightarrow>  
   tvsubst_pat \<tau> \<sigma> P = tvsubst_pat \<tau>' \<sigma>' P"
   by transfer (auto simp: tvsubst_prepat_cong)
@@ -468,5 +468,36 @@ lemma finite_PVars[simp]: "finite (PVars P)"
   by (auto simp: PVars_def finite_PPVars)
 lemma finite_PTVars[simp]: "finite (PTVars P)"
   by (auto simp: PTVars_def finite_PPTVars)
+
+pbmv_monad "('tv::var, 'v::var) pat" and "'tv typ"
+  Sbs: "\<lambda>\<rho>. tvsubst_pat \<rho> id"
+  Injs: TyVar
+  Vrs: PTVars
+  bd: natLeq
+         apply (rule infinite_regular_card_order_natLeq)
+  subgoal
+    apply (rule ext)
+    apply transfer
+    apply auto
+    by (metis (full_types) Abs_pat_inverse bij_betw_id fcomp_comp id_fcomp mem_Collect_eq pat.rel_map(2) supp_id_bound vvsubst_pat.rep_eq
+        vvsubst_prepat_tvsubst_prepat)
+  subgoal
+    using tvsubst_pat_comp by force
+    apply (rule pat.set_bd)+
+
+   apply (simp add: PTVars_tvsubst_pat)
+  apply (simp add: tvsubst_pat_cong)
+  done
+
+mrsbnf "('tv::var, 'v::var) pat" and "'tv typ"
+  subgoal
+    using vvsubst_pat_tvsubst_pat by blast
+  subgoal
+    apply (rule ext)
+    apply (unfold comp_apply)
+    apply transfer
+    by (auto simp: tvsubst_prepat_comp typ.Sb_Inj typ.Sb_comp_Inj vvsubst_prepat_tvsubst_prepat)
+  subgoal by transfer auto
+  by (auto simp: typ.map_is_Sb)
 
 end

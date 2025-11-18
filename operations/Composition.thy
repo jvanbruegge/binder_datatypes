@@ -34,7 +34,6 @@ val name2 = "T2";
 val rel = [[1,3], [1]];
 \<close>
 
-declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -71,9 +70,9 @@ let
   val _ = @{print} tys
 
   (* Step 2: Seal the pre-MRBNF with a typedef *)
-  val ((mrbnf1, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 lthy
+  val ((mrbnf1, _, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 NONE lthy
   val _ = @{print} "seal1"
-  val ((mrbnf2, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name2 ^ "_pre")) true (fst tys2) [] mrbnf2 lthy
+  val ((mrbnf2, _, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name2 ^ "_pre")) true (fst tys2) [] mrbnf2 NONE lthy
   val _ = @{print} "seal2"
 
   (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
@@ -84,7 +83,5 @@ in lthy end
 \<close>
 print_theorems
 print_mrbnfs
-
-declare [[quick_and_dirty=false]]
 
 end

@@ -66,6 +66,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           (MRBNF_Util.subst_typ_morphism (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts))
           mrbnf))
       | collect_params _ = [];
+
     val pot_bind_Ts = foldl1 (fn (xs, ys) => if
       subset (op=) (xs, ys) then ys else union (op=) ys xs
     ) (map collect_params param_Ts);
@@ -78,7 +79,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
       | collect_binders (Abs (_, _, t)) = collect_binders t
       | collect_binders (t as (t1 $ t2)) = case try (dest_Type o Term.body_type o fastype_of) t of
         NONE => map2 (curry (op@)) (collect_binders t1) (collect_binders t2)
-        | SOME (s, _) => (case MRBNF_Sugar.binder_sugar_of no_defs_lthy s of
+        | SOME (s, _) => (case Binder_Sugar.binder_sugar_of no_defs_lthy s of
             NONE => map2 (curry (op@)) (collect_binders t1) (collect_binders t2)
             | SOME sugar =>
               let
@@ -115,7 +116,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           val intro = unvarify_global (Term.subst_TVars subst (Thm.prop_of intro));
           val binderss = map (distinct (op=)) (collect_binders intro);
           val xs_binders = map (fn binders => fold_rev (fn t => fn (a, b) => case t of
-            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (x::a, b)
+            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (case x of
+              Bound _ => (a, b) | _ => (x::a, b))
             | _ => (a, t::b)
           ) binders ([], [])) binderss;
           val binders = map (fn (xs, binders) =>
@@ -539,7 +541,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           map_filter (try dest_Type o snd) (fold Term.add_frees (flat bind_ts) [])
         );
 
-        val bset_bounds = maps (fn Type (s, _) => (case MRBNF_Sugar.binder_sugar_of lthy s of
+        val bset_bounds = maps (fn Type (s, _) => (case Binder_Sugar.binder_sugar_of lthy s of
           SOME sugar => #bset_bounds sugar
           | NONE => [])
         | _ => []) param_Ts;
@@ -550,7 +552,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             hyp_subst_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms conjI emp_bound iffD2[OF insert_bound] ordLeq_refl}
+              @{thms conjI emp_bound iffD2[OF insert_bound_UNIV] ordLeq_refl}
               @ infinite_UNIVs @ [Un_bound, UN_bound]
               @ maps (fn thm => [thm, @{thm ordLess_ordLeq_trans} OF [thm]]) (
                 maps set_bd_UNIVs_of_mr_bnfs binder_mr_bnfs

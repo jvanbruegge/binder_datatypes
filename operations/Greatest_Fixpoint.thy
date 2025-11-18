@@ -25,7 +25,6 @@ ML \<open>
   val rel = [[([], [0]), ([], [0, 1])]];
   \<close>
 
-declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -44,7 +43,7 @@ local_setup \<open>fn lthy =>
   val _ = @{print} "comp"
 
   (* Step 2: Seal the pre-MRBNF with a typedef *)
-  val ((mrbnf1, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 lthy
+  val ((mrbnf1, _, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 NONE lthy
   val _ = @{print} "seal"
 
   (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
@@ -61,8 +60,6 @@ set2_term_pre := top-most bound variables
 set3_term_pre := recursive occurences that bind variables
 set4_term_pre := recursive non-binding occurences
 *)
-
-declare [[quick_and_dirty=false]]
 
 lemmas infinite_UNIV = cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]
 

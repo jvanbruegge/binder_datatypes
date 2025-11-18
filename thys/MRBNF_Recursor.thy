@@ -3,7 +3,10 @@ theory MRBNF_Recursor
   keywords "binder_datatype" :: thy_defn
     and "binder_codatatype" :: thy_defn
     and "binder_inductive" :: thy_goal_defn
-    and "binds"
+    and "binds" 
+    and "print_pbmv_monads" :: diag
+    and "pbmv_monad" :: thy_goal
+    and "mrsbnf" :: thy_goal
 begin
 
 context begin
@@ -34,10 +37,19 @@ lemma neq_equiv[equiv]: "bij f \<Longrightarrow> f a \<noteq> f b \<longleftrigh
 lemma notin_Un_forward: "x \<notin> A \<union> B \<Longrightarrow> (x \<notin> A \<Longrightarrow> y \<notin> C) \<Longrightarrow> (x \<notin> B \<Longrightarrow> y \<notin> D) \<Longrightarrow> y \<notin> C \<union> D"
   by blast
 
+lemma nested_cong: "f x = f' x \<Longrightarrow> x = x' \<Longrightarrow> f x = f' x'"
+  by simp
+
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
+ML_file \<open>../Tools/bmv_monad_tacs.ML\<close>
+ML_file \<open>../Tools/bmv_monad_def.ML\<close>
+ML_file \<open>../Tools/mrsbnf_def.ML\<close>
+ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
+
+ML_file \<open>../Tools/binder_sugar.ML\<close>
+ML_file \<open>../Tools/tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 context begin

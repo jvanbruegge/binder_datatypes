@@ -504,6 +504,81 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
       }) axioms') lthy;
   in ((mrsbnf, tys), ((old_bmv_unfold @ bmv_unfolds, mrbnf_unfolds), lthy)) end
 
+fun demote_mrsbnf qualify var_types mrsbnf ((bmv_unfolds, accum), lthy) =
+  let
+    val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+    val mrbnfs = MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf;
+    val mrbnf = nth mrbnfs (BMV_Monad_Def.leader_of_bmv_monad bmv);
+    
+    val prev_var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+    val vars = MRBNF_Def.interlace (MRBNF_Def.lives_of_mrbnf mrbnf) (MRBNF_Def.bounds_of_mrbnf mrbnf)
+      (MRBNF_Def.frees_of_mrbnf mrbnf) prev_var_types;
+
+    val free_demote = map (fn free => the (AList.lookup (op=) (vars ~~ var_types) free) = MRBNF_Def.Bound_Var) (BMV_Monad_Def.leader BMV_Monad_Def.frees_of_bmv_monad bmv);
+    val live_demote = map (fn live => case the (AList.lookup (op=) (vars ~~ var_types) live) of
+      MRBNF_Def.Live_Var => BMV_Monad_Def.Live_Var
+      | MRBNF_Def.Free_Var => BMV_Monad_Def.Free_Var
+      | _ => BMV_Monad_Def.Dead_Var
+    ) (BMV_Monad_Def.leader BMV_Monad_Def.lives_of_bmv_monad bmv)
+
+    val bmv' = bmv;
+    val ((bmv, unfolds), lthy) = BMV_Monad_Def.demote_bmv_monad BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify NONE bmv {
+      frees = free_demote, lives = live_demote
+    } lthy;
+
+    val (mrbnfs, (accum, lthy)) = fold_map (fn mrbnf =>
+      let
+        val var_types' = map (fn a => the (AList.lookup (op=) (vars ~~ var_types) a)) (
+          MRBNF_Def.interlace (MRBNF_Def.lives_of_mrbnf mrbnf) (MRBNF_Def.bounds_of_mrbnf mrbnf)
+            (MRBNF_Def.frees_of_mrbnf mrbnf) (MRBNF_Def.var_types_of_mrbnf mrbnf)
+          );
+      in MRBNF_Comp.demote_mrbnf qualify var_types' mrbnf end
+    ) mrbnfs (accum, lthy)
+
+    val mrbnfs = map2 (fn T => fn mrbnf =>
+      let
+        val lives = BMV_Monad_Def.leader BMV_Monad_Def.lives_of_bmv_monad bmv;
+        val lives' = BMV_Monad_Def.leader BMV_Monad_Def.lives'_of_bmv_monad bmv;
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (MRBNF_Def.T_of_mrbnf mrbnf, T) Vartab.empty;
+        val mrbnf = MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism (map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv))) mrbnf;
+        val subst = map2 (fn l => fn l' => (l', nth lives' (find_index (curry (op=) l) lives)))
+          (MRBNF_Def.lives_of_mrbnf mrbnf) (MRBNF_Def.lives'_of_mrbnf mrbnf);
+      in MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism subst) mrbnf end
+    ) (BMV_Monad_Def.ops_of_bmv_monad bmv) mrbnfs;
+
+    val axioms = MRSBNF_Def.axioms_of_mrsbnf mrsbnf;
+
+    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def (K BNF_Def.Dont_Note) qualify NONE mrbnfs bmv (@{map 4} (fn mrbnf => fn Injs => fn Vrs => fn RVrs => {
+      map_Injs = if MRBNF_Def.bound_of_mrbnf mrbnf = 0 then NONE else SOME (map_filter (fn Inj =>
+        if range_type (fastype_of Inj) <> MRBNF_Def.T_of_mrbnf mrbnf then NONE else SOME (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt unfolds),
+          K (print_tac ctxt "map_Inj")
+        ])
+      ) Injs),
+      map_Sb = if MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf = 0 then NONE else SOME (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ unfolds @ map #Sb_Inj (BMV_Monad_Def.axioms_of_bmv_monad bmv'))),
+        rtac ctxt refl
+      ]),
+      map_is_Sb = fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt unfolds),
+        rtac ctxt trans,
+        resolve_tac ctxt (map #map_is_Sb axioms),
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+        K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+        rtac ctxt refl
+      ],
+      set_Sb = replicate (MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf) (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt (@{thms id_apply} @ unfolds @ map #Sb_Inj (BMV_Monad_Def.axioms_of_bmv_monad bmv'))),
+        resolve_tac ctxt (refl :: maps #set_Sb axioms)
+      ]),
+      set_Vrs = replicate (length (RVrs @ Vrs)) (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt unfolds),
+        K (print_tac ctxt "set_Vrs")
+      ])
+    }) mrbnfs (BMV_Monad_Def.Injs_of_bmv_monad bmv) (BMV_Monad_Def.Vrs_of_bmv_monad bmv) (BMV_Monad_Def.RVrs_of_bmv_monad bmv)) lthy
+
+  in (mrsbnf, ((bmv_unfolds @ unfolds, accum), lthy)) end
+
 fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_Def.mrsbnf Symtab.table * thm list) * (MRBNF_Comp.comp_cache * MRBNF_Comp.unfold_set)), lthy:local_theory) =
   (if member (op =) Ds0 T' then ((Inr MRBNF_Comp.DEADID_mrbnf, ([T], [])), (accum, lthy)) else
       (case map_filter (fn a => if fst a = T' then SOME (snd a) else NONE) var_types of
@@ -546,7 +621,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
           val (mrsbnf, accum) = if MRBNF_Def.var_types_of_mrbnf mrbnf = var_types then
               (outer, ((bmv_unfolds, accum), lthy))
             else case outer of
-              Inl mrsbnf => error "TODO: Demote MRSBNF"
+              Inl mrsbnf => apfst Inl (demote_mrsbnf qualify' var_types mrsbnf ((bmv_unfolds, accum), lthy))
               | Inr mrbnf => apsnd (apfst (pair bmv_unfolds)) (apfst Inr (MRBNF_Comp.demote_mrbnf qualify' var_types mrbnf (accum, lthy)));
         in ((mrsbnf, (inter (op=) Ts (deads @ map TFree Ds0), subtract (op=) (map TFree Ds0) Ts')), apfst (apfst (pair mrsbnf_cache)) accum) end
       else

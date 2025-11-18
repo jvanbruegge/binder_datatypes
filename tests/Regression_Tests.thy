@@ -25,7 +25,6 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
 
-declare [[ML_print_depth=1000]]
 (* #75 *)
 binder_datatype ('a, 'b, 'c, 'd) trm3 =
     Var 'a
@@ -33,10 +32,8 @@ binder_datatype ('a, 'b, 'c, 'd) trm3 =
   | Lam a::'a b::'b c::'c d::'d e::"('a, 'b, 'c, 'd) trm3" binds a b c d in e
 
 (* #74 *)
-(*
 binder_datatype 'a trm4 = V 'a | Lm x::'a t::"'a trm4" binds x in t
 binder_datatype 'a foo = Foo 'a | Bind "(x::'a) trm4" t::"'a foo" binds x in t
-*)
 
 (* #82 *)
 datatype ('ev, 'rv) aeff = Eff 'ev | Reg 'rv

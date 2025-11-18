@@ -54,7 +54,6 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme3 =
     TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme3" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type2" binds \<epsilon> \<rho> in T
 
-(*
 binder_datatype ('v, 'tv, 'ev, 'rv) expr =
     Var 'v
   | Int int
@@ -65,7 +64,6 @@ binder_datatype ('v, 'tv, 'ev, 'rv) expr =
   | Assert "('ev, 'rv) constraint"  "('v, 'tv, 'ev, 'rv) expr"
   | Let x::'v "('v, 'tv, 'ev, 'rv) expr"  e::"('v, 'tv, 'ev, 'rv) expr" binds x in e
   | RApp "('v, 'tv, 'ev, 'rv) expr" "'rv list"  "('v, 'tv, 'ev, 'rv) expr"
-*)
 
 (* #86 *)
 binder_datatype 'a "term" =

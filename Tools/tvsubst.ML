@@ -2222,8 +2222,6 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         }]
       } [] (*TODO: Put definitions here *) lthy;
 
-    val _ = @{print} rec_bmv
-
     val isInj_Map = if null plives then [] else map (Option.map (fn def =>
       let
         val t = Free ("t", #T quot);

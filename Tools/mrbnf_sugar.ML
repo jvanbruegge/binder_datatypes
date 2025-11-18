@@ -184,16 +184,28 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
     end
   ) (mr_bnf_of lthy false C);
 
+fun message quiet_mode s = if quiet_mode then () else writeln s;
+fun clean_message ctxt quiet_mode s =
+  if Config.get ctxt quick_and_dirty then () else message quiet_mode s;
+
 fun create_binder_datatype co (spec : spec) lthy =
   let
     val fp_kind = if co then MRBNF_Util.Greatest_FP else MRBNF_Util.Least_FP;
+    val quiet_mode = false;
+
+    val _ = clean_message lthy quiet_mode "  Creating quotient type ...";
+
     val ((res, fp_pre_T, mrsbnf, absinfo), lthy) = create_binder_type fp_kind spec lthy;
     val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
 
     val (vvsubst_res_opt, lthy) = if co then (NONE, lthy) else (* TODO: Automate renaming for codatatypes *)
       let
+        val _ = clean_message lthy quiet_mode "  Creating recursor locale ...";
+
         val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
+
+        val _ = clean_message lthy quiet_mode "  Creating renaming function and proving MRBNF axioms ...";
 
         val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
         val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
@@ -219,6 +231,8 @@ fun create_binder_datatype co (spec : spec) lthy =
     val qualify = Binding.qualify false (short_type_name (fst (dest_Type qT)));
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val _ = clean_message lthy quiet_mode "  Defining high-level constructors and lifting theorems ...";
 
     val (ctors, (_, lthy)) = fold_map (fn ((name, syn), Ts) => fn (i, lthy) =>
       let
@@ -1126,6 +1140,8 @@ fun create_binder_datatype co (spec : spec) lthy =
         val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt);
         val vvsubst_res = #vvsubst_res (the vvsubst_res_opt);
 
+        val _ = clean_message lthy quiet_mode "  Creating substition function ...";
+
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
           rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#pset_ctors (#vvsubst_res (the vvsubst_res_opt))) (#tvsubst_b spec)
           (#etas tvsubst_model) (#QREC_fixed recursor_result) lthy;
@@ -1138,7 +1154,6 @@ fun create_binder_datatype co (spec : spec) lthy =
         val (_, lthy) = BMV_Monad_Def.note_bmv_monad_thms (K BNF_Def.Note_Some) I NONE (
           MRSBNF_Def.bmv_monad_of_mrsbnf (#mrsbnf tvsubst_res)
         ) lthy;
-
 
         val tvsubst_simps =
           let
@@ -1215,6 +1230,7 @@ fun create_binder_datatype co (spec : spec) lthy =
                 )),
                 K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
                   @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
+                  @ map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs
                   @ BMV_Monad_Def.unfolds_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf)
                   @ BMV_Monad_Def.defs_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf)
                   @ map (BNF_Def.map_id_of_bnf o snd) bnfs

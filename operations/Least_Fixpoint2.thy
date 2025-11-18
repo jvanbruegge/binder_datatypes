@@ -25,7 +25,6 @@ val name1 = "term";
 val rel = [[([], [0]), ([], [0, 1])]];
 \<close>
 
-declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -55,8 +54,6 @@ in lthy end
 \<close>
 print_theorems
 print_mrbnfs
-
-declare [[quick_and_dirty=false]]
 
 lemmas infinite_UNIV = cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]
 

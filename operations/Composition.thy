@@ -34,7 +34,6 @@ val name2 = "T2";
 val rel = [[1,3], [1]];
 \<close>
 
-declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -84,7 +83,5 @@ in lthy end
 \<close>
 print_theorems
 print_mrbnfs
-
-declare [[quick_and_dirty=false]]
 
 end

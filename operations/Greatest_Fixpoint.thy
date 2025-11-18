@@ -25,7 +25,6 @@ ML \<open>
   val rel = [[([], [0]), ([], [0, 1])]];
   \<close>
 
-declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -61,8 +60,6 @@ set2_term_pre := top-most bound variables
 set3_term_pre := recursive occurences that bind variables
 set4_term_pre := recursive non-binding occurences
 *)
-
-declare [[quick_and_dirty=false]]
 
 lemmas infinite_UNIV = cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]
 

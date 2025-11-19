@@ -75,6 +75,9 @@ let
   val ((mrbnf2, _, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name2 ^ "_pre")) true (fst tys2) [] mrbnf2 NONE lthy
   val _ = @{print} "seal2"
 
+  val lthy = MRBNF_Def.register_mrbnf_raw "Composition.T1_pre" mrbnf1 lthy
+  val lthy = MRBNF_Def.register_mrbnf_raw "Composition.T2_pre" mrbnf2 lthy
+
   (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
   val (bnf1, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf1 lthy
   val (bnf2, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf2 lthy

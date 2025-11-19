@@ -46,6 +46,8 @@ local_setup \<open>fn lthy =>
   val ((mrbnf1, _, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 NONE lthy
   val _ = @{print} "seal"
 
+  val lthy = MRBNF_Def.register_mrbnf_raw "Greatest_Fixpoint.term_pre" mrbnf1 lthy;
+
   (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
   val (bnf1, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf1 lthy
   val _ = @{print} "register"

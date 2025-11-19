@@ -1431,7 +1431,6 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       |> map (fn (b, def) => ((b, []), [([def], [])]))
     val (noted, lthy'') = lthy'
       |> Local_Theory.notes notes
-      ||> (if repTA = TA then I else register_mrbnf_raw (fst (dest_Type TA)) mrbnf'')
   in
     ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', the info_opt, (all_Ds, absT_info)), lthy'')
   end;

@@ -84,7 +84,7 @@ abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
 
 lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var set|"
-  by (cases \<alpha>) (auto simp: emp_bound infinite_UNIV)
+  by (cases \<alpha>) auto
 
 local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [
@@ -111,7 +111,7 @@ local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
   pset_ctors = [],
   strong_induct = NONE,
   inject = @{thms commit.inject},
-  mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
+  mrbnf = #mrbnf (the (Binder_Sugar.binder_sugar_of @{context} @{type_name commit})),
   set_simpss = [],
   subst_simps = NONE,
   IImsupp_Diffs = NONE,

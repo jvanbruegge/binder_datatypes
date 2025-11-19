@@ -7,10 +7,16 @@ sig
     pset_ctors: thm list
   };
 
+  type vvsubst_bs = {
+    vvsubst: binding option,
+    rel: binding option,
+    psets: binding option list
+  };
+
   val vvsubst_result_of: local_theory -> string -> vvsubst_result option
   val register_vvsubst_result: string -> vvsubst_result -> local_theory -> local_theory
 
-  val mrbnf_of_quotient_fixpoint: binding list -> (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
+  val mrbnf_of_quotient_fixpoint: vvsubst_bs list -> (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> string -> local_theory -> (MRBNF_Def.mrbnf * vvsubst_result) list * local_theory
 end
 
@@ -27,6 +33,12 @@ type vvsubst_result = {
   vvsubst_permute: thm,
   psets: (term * thm) list,
   pset_ctors: thm list
+};
+
+type vvsubst_bs = {
+  vvsubst: binding option,
+  rel: binding option,
+  psets: binding option list
 };
 
 fun morph_vvsubst_result phi { vvsubst_ctor, vvsubst_permute, psets, pset_ctors } = {
@@ -55,7 +67,7 @@ val vvsubst_result_of = vvsubst_result_of_generic o Context.Proof;
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
 
-fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) vars deadss (plives, plives', pbounds, pfrees) old_lthy =
+fun define_vvsubst_consts qualify vvsubst_bss (fp_res : MRBNF_FP_Def_Sugar.fp_result) vars deadss (plives, plives', pbounds, pfrees) old_lthy =
   let
     val subst = Term.typ_subst_atomic (plives ~~ plives');
 
@@ -78,9 +90,13 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
     val Ts = map #T (#quotient_fps fp_res);
     fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs);
 
-    fun mk_pset_names (fps:'a MRBNF_FP_Def_Sugar.fp_result_T list) = map (fn raw => map (fn i =>
-      "set" ^ string_of_int (i + nvars) ^ "_" ^ short_type_name (fst (dest_Type (#T raw)))
-    ) (1 upto npassive)) fps;
+    fun mk_pset_names public (fps:'a MRBNF_FP_Def_Sugar.fp_result_T list) = map2 (fn raw => fn vvsubst_bs => map2 (fn i => fn b =>
+      let val def = "set" ^ string_of_int (i + nvars) ^ "_" ^ short_type_name (fst (dest_Type (#T raw)));
+      in if public then case b of
+        SOME b => Binding.name_of b
+        | NONE => def
+      else def end
+    ) (1 upto npassive) (#psets vvsubst_bs)) fps vvsubst_bss;
     val ms = map (fn mrbnf => MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf) mrbnfs;
     val mrbnf_setss = @{map 3} (fn m => fn deads =>
       MRBNF_Def.mk_sets_of_mrbnf (replicate m deads)
@@ -97,7 +113,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
 
     val (raw_psetss, lthy) =
       let
-        val namess = mk_pset_names (#raw_fps fp_res);
+        val namess = mk_pset_names false (#raw_fps fp_res);
         val setss = map2 (fn raw => map2 (fn var => fn n =>
           Free (n, #T raw --> HOLogic.mk_setT var)
         ) (pfrees @ plives @ pbounds)) (#raw_fps fp_res) namess;
@@ -137,7 +153,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
       mk_def_t false Binding.empty qualify name 1 (Term.absfree (dest_Free v) (
         fst raw_pset $ (#rep (#inner quot) $ v)
       ))
-    )) (#quotient_fps fp_res) vs (mk_pset_names (#quotient_fps fp_res)) raw_psetss lthy;
+    )) (#quotient_fps fp_res) vs (mk_pset_names true (#quotient_fps fp_res)) raw_psetss lthy;
 
     val (rels_opt, lthy) = if length plives = 0 then (NONE, lthy) else
       let
@@ -163,10 +179,12 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
           ||>> apply2 transpose o chop (length (#bfree_vars fp_res));
         val bfree_setss = if null bfree_setss then replicate (length mrbnfs) [] else bfree_setss;
 
-        val rels = map (fn quot => Free ("rel_" ^ short_type_name (fst (dest_Type (#T quot))),
+        val rels = map2 (fn quot => fn vvsubst_bs =>
+          let val def = "rel_" ^ short_type_name (fst (dest_Type (#T quot)));
+          in Free (the_default def (Option.map Binding.name_of (#rel vvsubst_bs)),
           fold_rev (curry (op-->)) (map2 (fn a => fn b => a --> b --> @{typ bool}) plives plives')
-            (#T quot --> subst (#T quot) --> @{typ bool})
-        )) (#quotient_fps fp_res);
+            (#T quot --> subst (#T quot) --> @{typ bool})) end
+        ) (#quotient_fps fp_res) vvsubst_bss;
 
         val f_premss = @{map 4} (fn rec_sets => fn x => fn bfree_sets =>
           flat o @{map 5} (fn i => fn FVarss => fn f => fn rel => fn bset =>
@@ -237,7 +255,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
     lthy
   ) end;
 
-fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Sugar.fp_result) QREC_fixed_name lthy =
+fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sugar.fp_result) QREC_fixed_name lthy =
   let
     val mrbnfs = #pre_mrbnfs fp_result;
 
@@ -266,7 +284,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       in map (Envir.subst_type tyenv) (MRBNF_Def.deads_of_mrbnf mrbnf) end
     ) (#pre_mrbnfs fp_res) (#raw_fps fp_res);
 
-    val ((raw_psetss, psetss, rels_opt), lthy) = define_vvsubst_consts qualify names fp_res vars deadss passives lthy;
+    val ((raw_psetss, psetss, rels_opt), lthy) = define_vvsubst_consts qualify vvsubst_bss fp_res vars deadss passives lthy;
 
     val live = MRBNF_Def.live_of_mrbnf (hd mrbnfs);
     val frees = vars @ pfrees;
@@ -405,9 +423,9 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       ])) ctxt
     ])), Position.no_range), NONE) state;
 
-    val (vvsubsts, lthy) = @{fold_map 2} (fn b =>
-      mk_def_t true Binding.empty qualify (Binding.name_of b) 0
-    ) vvsubst_bs (MRBNF_Recursor.get_RECs true "vvsubst" lthy) lthy;
+    val (vvsubsts, lthy) = @{fold_map 3} (fn b => fn T =>
+      mk_def_t true Binding.empty qualify (the_default ("map_" ^ short_type_name (fst (dest_Type T))) (Option.map Binding.name_of b)) 0
+    ) (map #vvsubst vvsubst_bss) (map #T (#quotient_fps fp_res)) (MRBNF_Recursor.get_RECs true "vvsubst" lthy) lthy;
 
     val vvsubst_cctors = @{map 6} (fn vvsubst => fn quot => fn bsets => fn mrbnf => fn x => fn deads =>
       let
@@ -451,7 +469,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       let
         val (_, lthy) = Local_Theory.begin_nested lthy;
         val (picks, lthy) =
-          @{fold_map 4} (fn quot => fn psets => fn vvsubst => fn b => fn lthy =>
+          @{fold_map 3} (fn quot => fn psets => fn vvsubst => fn lthy =>
             let
               fun mk_Eps f =
                 let val f_T = fastype_of f;
@@ -487,8 +505,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
                   ))
                 )
               );
-            in mk_def_t false b qualify "pick" (length fs + 1) rhs lthy end
-          ) (#quotient_fps fp_res) psetss vvsubsts vvsubst_bs lthy;
+            in mk_def_t false (Binding.name ("vvsubst_" ^ short_type_name (fst (dest_Type (#T quot))))) qualify "pick" (length fs + 1) rhs lthy end
+          ) (#quotient_fps fp_res) psetss vvsubsts lthy;
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;

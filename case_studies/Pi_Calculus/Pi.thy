@@ -7,7 +7,7 @@ begin
 (* DATATYPE DECLARTION  *)
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "term" =
+binder_datatype (FVars_term: 'a) "term" =
   Zero
 | Sum "'a term" "'a term"
 | Par "'a term" "'a term" (infixl "\<parallel>" 300)
@@ -17,8 +17,8 @@ binder_datatype 'a "term" =
 | Inp 'a x::'a t::"'a term" binds x in t
 | Res x::'a t::"'a term" binds x in t
 for
-  vvsubst: vvsubst
-  tvsubst: tvsubst
+  map: vvsubst
+  subst: tvsubst
 
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)

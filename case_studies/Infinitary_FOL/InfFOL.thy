@@ -219,7 +219,7 @@ type_synonym var = k
 type_synonym ifol = "var ifol'"
 
 abbreviation (input) subst :: "ifol \<Rightarrow> (var \<Rightarrow> var) \<Rightarrow> ifol" ("_\<lbrakk>_\<rbrakk>" [600, 600] 400) where
-  "subst t \<rho> \<equiv> vvsubst_ifol' \<rho> t"
+  "subst t \<rho> \<equiv> map_ifol' \<rho> t"
 
 lift_definition kmember :: "'a \<Rightarrow> 'a set\<^sub>k \<Rightarrow> bool" (infix "\<in>\<^sub>k" 200) is "bmember" .
 lift_definition k1member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>1 \<Rightarrow> bool" (infix "\<in>\<^sub>k\<^sub>1" 200) is "bmember" .
@@ -310,13 +310,13 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | ConjE: "\<lbrakk> \<Delta> \<turnstile> Conj F ; f \<in>\<^sub>k\<^sub>1 F \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f"
 | NegI: "\<Delta>,f \<turnstile> \<bottom> \<Longrightarrow> \<Delta> \<turnstile> Neg f"
 | NegE: "\<lbrakk> \<Delta> \<turnstile> Neg f ; \<Delta> \<turnstile> f \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> \<bottom>"
-| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
+| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(set_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 
 lemma permute_vvsubst[equiv]:
   fixes f \<rho>::"k \<Rightarrow> k"
   assumes "bij f" "|supp f| <o |UNIV::k set|" "|supp \<rho>| <o |UNIV::k set|"
-  shows "permute_ifol' f (vvsubst_ifol' \<rho> x) = vvsubst_ifol' (\<lambda>x. f (\<rho> (inv f x))) (permute_ifol' f x)"
+  shows "permute_ifol' f (map_ifol' \<rho> x) = map_ifol' (\<lambda>x. f (\<rho> (inv f x))) (permute_ifol' f x)"
 proof -
   have "|supp (f \<circ> \<rho> \<circ> inv f)| <o |UNIV::k set|"
     using assms by (meson ifol'_pre.supp_comp_bound supp_inv_bound)
@@ -363,7 +363,7 @@ binder_inductive deduct
      apply (elim exE conjE)
     apply simp
     subgoal for \<Delta> f V
-      apply (rule exE[OF refresh[of V "\<Union>(FVars_ifol' ` set\<^sub>k \<Delta>) \<union> FVars_ifol' (All V f)", unfolded ifol'.set
+      apply (rule exE[OF refresh[of V "\<Union>(set_ifol' ` set\<^sub>k \<Delta>) \<union> set_ifol' (All V f)", unfolded ifol'.set
               Un_Diff Diff_idemp
               ]])
         apply blast
@@ -432,7 +432,7 @@ binder_inductive deduct
     subgoal premises prems for V f \<rho>
     proof -
       define X where "X \<equiv> set\<^sub>k\<^sub>2 V"
-      let ?O = "\<Union> (FVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FVars_ifol' f - set\<^sub>k\<^sub>2 V)"
+      let ?O = "\<Union> (set_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` set_ifol' f \<union> imsupp \<rho> \<union> X \<union> (set_ifol' f - set\<^sub>k\<^sub>2 V)"
       have osmall: "|?O| <o |UNIV::var set|"
         apply (intro infinite_class.Un_bound)
         apply (meson ifol'.set_bd_UNIV set\<^sub>k.set_bd var_class.UN_bound)
@@ -475,7 +475,7 @@ binder_inductive deduct
       moreover have "supp \<sigma> \<subseteq> X \<union> W'" using \<sigma>(2) unfolding id_on_def by (meson UnI1 UnI2 \<sigma>_def not_in_supp_alt subsetI)
       ultimately have \<sigma>_small: "|supp \<sigma>| <o |UNIV::var set|" using card_of_subset_bound by blast
 
-      define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` FVars_ifol' f then (\<rho> \<circ> \<sigma>) x else x"
+      define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` set_ifol' f then (\<rho> \<circ> \<sigma>) x else x"
       have "supp \<rho>' \<subseteq> supp (\<rho> \<circ> \<sigma>)" unfolding \<rho>'_def supp_def by auto
       then have \<rho>'_small: "|supp \<rho>'| <o |UNIV::var set|"
         by (meson \<sigma>_small card_of_subset_bound ifol'_pre.supp_comp_bound prems(3) ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd] var_set\<^sub>k\<^sub>2_class.large')
@@ -527,7 +527,7 @@ binder_inductive deduct
             apply (rule refl)
 
            apply (unfold set\<^sub>k\<^sub>2.set_map)
-           apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` FVars_ifol' f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
+           apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` set_ifol' f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
             apply (smt (verit, best) IntI \<rho>'_def not_in_supp_alt subset_iff)
            apply (unfold supp_def imsupp_def)
         using X_def \<sigma>_def apply auto[1]

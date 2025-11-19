@@ -6,13 +6,13 @@ datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 40)
 
 declare [[mrbnf_internals]]
 
-binder_datatype 'a terms =
+binder_datatype (FVars_terms: 'a) terms =
   Var 'a
 | App "'a terms" "'a terms"
 | Abs x::'a \<tau> t::"'a terms" binds x in t
 for
-  vvsubst: vvsubst
-  tvsubst: tvsubst
+  map: vvsubst
+  subst: tvsubst
 
 print_theorems
 

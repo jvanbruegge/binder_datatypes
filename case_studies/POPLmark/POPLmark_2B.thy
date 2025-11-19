@@ -15,7 +15,7 @@ print_theorems
 
 thm trm.subst
 
-abbreviation "tvsubst f1 f2 \<equiv> tvsubst_trm f2 f1"
+abbreviation "tvsubst f1 f2 \<equiv> subst_trm f2 f1"
 
 inductive "value" where
   "value (Abs x T t)"

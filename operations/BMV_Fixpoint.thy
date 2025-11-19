@@ -58,8 +58,11 @@ let
   (* Step 5: Define recursor locales *)  
   val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I fp_res lthy;
 
-  val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [@{binding vvsubst_FTerm}]
-    I fp_res (#QREC_fixed recursor_result) lthy;
+  val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [{
+    vvsubst = SOME @{binding vvsubst_FTerm},
+    psets = [],
+    rel = NONE
+  }] I fp_res (#QREC_fixed recursor_result) lthy;
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps fp_res))))) rec_mrbnf lthy;
 
 in lthy end
@@ -429,7 +432,7 @@ lemma not_is_VVr_Sb:
     done
   done
 
-abbreviation (input) "avoiding_set1 f1 f2 \<equiv> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2)"
+abbreviation (input) "avoiding_set1 f1 f2 \<equiv> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar Vrs_FType_1 f2)"
 abbreviation (input) "avoiding_set2 f1 \<equiv> SSupp VVr f1 \<union> IImsupp_FTerm2 f1"
 
 context
@@ -906,7 +909,7 @@ lemma FVars_tvsubst2:
   assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
     "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
     "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
-  shows "FTVars (tvsubst_FTerm \<rho>1 \<rho>2 t) = (\<Union>x\<in>FVars t. FTVars (\<rho>1 x)) \<union> (\<Union>x\<in>FTVars t. FVars_FType (\<rho>2 x))"
+  shows "FTVars (tvsubst_FTerm \<rho>1 \<rho>2 t) = (\<Union>x\<in>FVars t. FTVars (\<rho>1 x)) \<union> (\<Union>x\<in>FTVars t. Vrs_FType_1 (\<rho>2 x))"
   apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 \<rho>1 \<rho>2" "avoiding_set2 \<rho>1" _ t])
       apply ((rule infinite_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
         FTerm.FVars_bd_UNIVs
@@ -995,7 +998,7 @@ lemma IImsupp_tvsubst_subset:
   assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
     "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
     "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
-  shows "IImsupp VVr FTVars (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1') \<subseteq> IImsupp VVr FTVars \<rho>1 \<union> IImsupp TyVar FVars_FType \<rho>2 \<union> IImsupp VVr FTVars \<rho>1'"
+  shows "IImsupp VVr FTVars (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1') \<subseteq> IImsupp VVr FTVars \<rho>1 \<union> IImsupp TyVar Vrs_FType_1 \<rho>2 \<union> IImsupp VVr FTVars \<rho>1'"
   apply (rule subset_trans)
    apply (unfold IImsupp_def)[1]
    apply (rule UN_mono[OF _ subset_refl])
@@ -1017,13 +1020,13 @@ lemma IImsupp_tvsubst_subset:
       apply (erule UnI1 UnI2 | rule UnI1)+
     apply (rule FVars_VVr)
     (* repeated *)
-     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ FVars_FType _ _ \<rho>1'])
+     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ Vrs_FType_1 _ _ \<rho>1'])
      prefer 3
   apply (erule UnE)+
       apply (erule UnI1 UnI2 | rule UnI1)+
     apply (rule FType.Vrs_Inj FVars_VVr)+
     (* repeated *)
-     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ FVars_FType _ _ \<rho>1'])
+     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ Vrs_FType_1 _ _ \<rho>1'])
      prefer 3
   apply (erule UnE)+
       apply (erule UnI1 UnI2 | rule UnI1)+
@@ -1431,9 +1434,9 @@ lemma FTerm_subst:
   shows
     "tvsubst_FTerm f1 f2 (Var x) = f1 x"
     "tvsubst_FTerm f1 f2 (App t1 t2) = App (tvsubst_FTerm f1 f2 t1) (tvsubst_FTerm f1 f2 t2)"
-    "tvsubst_FTerm f1 f2 (TyApp t T) = TyApp (tvsubst_FTerm f1 f2 t) (tvsubst_FType f2 T)"
-    "x \<notin> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (tvsubst_FType f2 T) (tvsubst_FTerm f1 f2 t)"
-    "a \<notin> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2) \<Longrightarrow> tvsubst_FTerm f1 f2 (TyLam a t) = TyLam a (tvsubst_FTerm f1 f2 t)"
+    "tvsubst_FTerm f1 f2 (TyApp t T) = TyApp (tvsubst_FTerm f1 f2 t) (Sb_FType f2 T)"
+    "x \<notin> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (Sb_FType f2 T) (tvsubst_FTerm f1 f2 t)"
+    "a \<notin> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar Vrs_FType_1 f2) \<Longrightarrow> tvsubst_FTerm f1 f2 (TyLam a t) = TyLam a (tvsubst_FTerm f1 f2 t)"
       apply (unfold Var_def App_def TyApp_def Lam_def TyLam_def)
       apply (unfold meta_eq_to_obj_eq[OF VVr_def, THEN fun_cong, unfolded comp_def, symmetric])
       apply (rule tvsubst_VVr)

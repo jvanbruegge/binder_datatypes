@@ -4,10 +4,11 @@ begin
 
 declare [[mrbnf_internals]]
 declare [[ML_print_depth=1000]]
-binder_datatype 'a FType
+binder_datatype (Vrs_FType_1: 'a) FType
   = TyVar 'a
   | TyApp "'a FType" "'a FType"
   | TyAll a::'a t::"'a FType" binds a in t
+  for subst: Sb_FType
 
 (*
 SOps = { 'a FType }
@@ -15,10 +16,8 @@ L = 'a FType
 m = 1
 *)
 abbreviation Inj_FType_1 :: "'tyvar::var \<Rightarrow> 'tyvar FType" where "Inj_FType_1 \<equiv> TyVar"
-abbreviation Sb_FType :: "('tyvar::var \<Rightarrow> 'tyvar FType) \<Rightarrow> 'tyvar FType \<Rightarrow> 'tyvar FType" where "Sb_FType \<equiv> tvsubst_FType"
-abbreviation Vrs_FType_1 :: "'tyvar::var FType \<Rightarrow> 'tyvar set" where "Vrs_FType_1 \<equiv> FVars_FType"
 
-binder_datatype 'a LM =
+binder_datatype (FVars_LM: 'a) LM =
   Var 'a
   | Lst "'a list"
   | App "'a LM" "'a LM"
@@ -215,7 +214,7 @@ print_theorems
 lemma vvsubst_Sb:
   fixes f::"'a::var \<Rightarrow> 'a"
   assumes "|supp f| <o |UNIV::'a set|"
-  shows "vvsubst_LM f = Sb_LM f (Var \<circ> f)"
+  shows "map_LM f = Sb_LM f (Var \<circ> f)"
   apply (rule ext)
   subgoal for x
     apply (binder_induction x avoiding: "imsupp f" rule: LM.strong_induct)

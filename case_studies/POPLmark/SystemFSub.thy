@@ -11,12 +11,15 @@ declare supp_id_bound[simp]
 type_synonym label = string
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "typ" =
+binder_datatype (FVars_typ: 'a) "typ" =
     TyVar 'a
   | Top
   | Fun "'a typ" "'a typ"
   | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
   | TRec "(label, 'a typ) lfset"
+    for
+      map: vvsubst_typ
+      subst: tvsubst_typ
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]

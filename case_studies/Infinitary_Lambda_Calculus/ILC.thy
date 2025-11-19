@@ -49,8 +49,8 @@ binder_datatype (FFVars: 'a) iterm
   | iApp "'a iterm" "'a iterm stream"
   | iLam "(xs::'a) dstream" t::"'a iterm" binds xs in t
 for
-  vvsubst: ivvsubst
-  tvsubst: itvsubst
+  map: ivvsubst
+  subst: itvsubst
 
 lemma ex_inj_infinite_regular_var_iterm:
   "\<exists>f :: 'a :: countable \<Rightarrow> 'b :: var_iterm. inj f"

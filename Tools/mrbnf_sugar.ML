@@ -9,8 +9,9 @@ type spec = {
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding,
+  rel_b: binding,
   permute_b: binding option,
-  FVars_bs: binding option list
+  set_bs: binding option list
 };
 
 type mr_bnf = (MRBNF_Def.mrbnf, (BNF_Def.bnf, MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T) MRBNF_Util.either) MRBNF_Util.either
@@ -43,8 +44,9 @@ type spec = {
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding,
+  rel_b: binding,
   permute_b: binding option,
-  FVars_bs: binding option list
+  set_bs: binding option list
 };
 
 fun add_nesting_mrbnf_names Us =
@@ -80,13 +82,19 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     
     val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
+    val FVars_names = case #set_bs spec of
+      [x] => [SOME (the_default ("set_" ^ name) (Option.map Binding.name_of x))]
+      | _ => map_index (fn (i, b_opt) =>
+        SOME (the_default ("set" ^ string_of_int i ^ "_" ^ name) (Option.map Binding.name_of b_opt))
+      ) (take (length (#binding_rel spec)) (#set_bs spec));
+
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp fp [{
       T_name = name,
       pre_mrbnf = mrbnf,
       nrecs = #rec_vars spec,
       permute = Option.map Binding.name_of (#permute_b spec),
-      FVars = map (Option.map Binding.name_of) (take (length (#binding_rel spec)) (#FVars_bs spec))
+      FVars = FVars_names
     }] (map single (#binding_rel spec)) lthy;
   in ((res, fp_pre_T, mrsbnf, absinfo), lthy) end
 
@@ -207,7 +215,11 @@ fun create_binder_datatype co (spec : spec) lthy =
 
         val _ = clean_message lthy quiet_mode "  Creating renaming function and proving MRBNF axioms ...";
 
-        val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
+        val ((rec_mrbnf, vvsubst_res), lthy) = apfst hd (MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [{
+          vvsubst = SOME (#map_b spec),
+          rel = SOME (#rel_b spec),
+          psets = drop (length (#binding_rel spec)) (#set_bs spec)
+        }] I res (#QREC_fixed recursor_result) lthy);
         val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
       in (SOME {
         recursor_result = recursor_result,

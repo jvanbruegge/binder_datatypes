@@ -15,8 +15,8 @@ binder_datatype (FFVars: 'a) "term" =
 | App "'a term" "'a term"
 | Lam x::'a t::"'a term" binds x in t
 for
-  vvsubst: vvsubst
-  tvsubst: tvsubst
+  map: vvsubst
+  subst: tvsubst
 print_theorems
 
 (****************************)

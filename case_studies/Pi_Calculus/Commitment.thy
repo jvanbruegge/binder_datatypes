@@ -2,7 +2,7 @@ theory Commitment
 imports Pi
 begin
 
-binder_datatype 'var commit =
+binder_datatype (FVars_commit: 'var) commit =
     Finp 'var 'var "'var term"
   | Fout 'var 'var "'var term"
   | Bout 'var x::'var "(t::'var) term" binds x in t

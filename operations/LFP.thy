@@ -9,7 +9,7 @@ section \<open>Least Fixpoint (a.k.a. Datatype)\<close>
 theory LFP
   imports "HOL-Library.BNF_Axiomatization" "Binders.MRBNF_Composition"
 begin
-(*>*)
+  (*>*)
 
 unbundle cardinal_syntax
 
@@ -33,7 +33,7 @@ To build a witness scenario, let us assume
 \<close>
 
 declare [[mrbnf_internals]]
-(* "mrbnf_axiomatization" *)
+  (* "mrbnf_axiomatization" *)
 
 
 typedecl ('a, 'b1, 'b2, 'c, 'b) F1
@@ -66,7 +66,7 @@ in lthy end
 instantiation bd_type_F1 :: var_F1 begin
 instance
   apply standard
-  apply simp
+   apply simp
   using card_of_unique infinite_regular_card_order.Card_order infinite_regular_card_order_bd_F1
     infinite_regular_card_order_def regularCard_ordIso by blast
 end
@@ -74,7 +74,7 @@ end
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F1"
   map: F1map
   sets: 
-    live: F1set1 live: F1set2 live: F1set3 free: F1free bound: F1bound 
+  live: F1set1 live: F1set2 live: F1set3 free: F1free bound: F1bound 
   bd: bd_F1
   wits: wit1F1 wit2F1
   rel: F1rel
@@ -111,7 +111,7 @@ in lthy end
 instantiation bd_type_F2 :: var_F2 begin
 instance
   apply standard
-  apply simp
+   apply simp
   using card_of_unique infinite_regular_card_order.Card_order infinite_regular_card_order_bd_F2
     infinite_regular_card_order_def regularCard_ordIso by blast
 end
@@ -119,7 +119,7 @@ end
 mrbnf "('a, 'b1, 'b2, 'c, 'b) F2"
   map: F2map
   sets: 
-    live: F2set1 live: F2set2 live: F2set3 free: F2free bound: F2bound 
+  live: F2set1 live: F2set2 live: F2set3 free: F2free bound: F2bound 
   bd: bd_F2
   wits: witF2
   rel: F2rel
@@ -165,19 +165,19 @@ lemma F1map_congL:
   shows "\<lbrakk>\<forall>a \<in> F1set2 x. f a = a; \<forall>a \<in> F1set3 x. g a = a\<rbrakk> \<Longrightarrow> F1map id f g id id x = x"
   apply (rule trans)
    apply (rule F1.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
-     apply (rule refl)
-    apply (rule trans)
-     apply (erule bspec)
-     apply assumption
-    apply (rule sym)
-    apply (rule id_apply)
-   apply (rule trans)
-    apply (erule bspec)
-    apply assumption
-   apply (rule sym)
+       apply (rule refl)
+      apply (rule trans)
+       apply (erule bspec)
+       apply assumption
+      apply (rule sym)
+      apply (rule id_apply)
+     apply (rule trans)
+      apply (erule bspec)
+      apply assumption
+     apply (rule sym)
      apply (rule id_apply)
-  apply (rule refl)
-  apply (rule refl)
+    apply (rule refl)
+   apply (rule refl)
   apply (rule F1.map_id)
   done
 
@@ -206,19 +206,19 @@ lemma F2map_congL:
   shows "\<lbrakk>\<forall>a \<in> F2set2 x. f a = a; \<forall>a \<in> F2set3 x. g a = a\<rbrakk> \<Longrightarrow> F2map id f g id id x = x"
   apply (rule trans)
    apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
-     apply (rule refl)
-    apply (rule trans)
-     apply (erule bspec)
-     apply assumption
-    apply (rule sym)
-    apply (rule id_apply)
-   apply (rule trans)
-    apply (erule bspec)
-    apply assumption
-   apply (rule sym)
-   apply (rule id_apply)
-  apply (rule refl)
-  apply (rule refl)
+       apply (rule refl)
+      apply (rule trans)
+       apply (erule bspec)
+       apply assumption
+      apply (rule sym)
+      apply (rule id_apply)
+     apply (rule trans)
+      apply (erule bspec)
+      apply assumption
+     apply (rule sym)
+     apply (rule id_apply)
+    apply (rule refl)
+   apply (rule refl)
   apply (rule F2.map_id)
   done
 
@@ -255,7 +255,7 @@ lemma alg_not_empty:
   shows "alg B1 B2 s1 s2 \<Longrightarrow> B1 \<noteq> {} \<and> B2 \<noteq> {}"
   apply (rule conjI)
    apply (rule notI)
-  apply (hypsubst)
+   apply (hypsubst)
    apply (frule alg_F1set)
 
 (* ORELSE of the following three possibilities *)
@@ -491,7 +491,7 @@ abbreviation ASucFbd where "ASucFbd \<equiv> ( |UNIV| +c ctwo ) ^c SucFbd"
 lemma F1_in_bd5: "|{x. F1set1 x \<subseteq> A \<and> F1set2 x \<subseteq> B1 \<and> F1set3 x \<subseteq> B2 \<and> F1free x \<subseteq> (C :: 'c::var_F1 set) \<and> F1bound x \<subseteq> (D :: 'd::var_F1 set)}| \<le>o 
   (( |A| +c |B1| +c |B2| ) +c ctwo) ^c (bd_F1 +c |UNIV :: (bd_type_F1, bd_type_F1, bd_type_F1, 'c::var_F1, 'd::var_F1) F1 set| )"
   apply (rule ordLeq_transitive)
-  prefer 2
+   prefer 2
    apply (rule F1.in_bd[of A B1 B2])
   apply (rule card_of_mono1)
   apply (rule Collect_mono)
@@ -508,7 +508,7 @@ lemma F1_in_bd5: "|{x. F1set1 x \<subseteq> A \<and> F1set2 x \<subseteq> B1 \<a
 lemma F2_in_bd5: "|{x. F2set1 x \<subseteq> A \<and> F2set2 x \<subseteq> B1 \<and> F2set3 x \<subseteq> B2 \<and> F2free x \<subseteq> (C :: 'c::var_F2 set) \<and> F2bound x \<subseteq> (D :: 'd::var_F2 set)}| \<le>o 
   (( |A| +c |B1| +c |B2| ) +c ctwo) ^c (bd_F2 +c |UNIV :: (bd_type_F2, bd_type_F2, bd_type_F2, 'c::var_F2, 'd::var_F2) F2 set| )"
   apply (rule ordLeq_transitive)
-  prefer 2
+   prefer 2
    apply (rule F2.in_bd[of A B1 B2])
   apply (rule card_of_mono1)
   apply (rule Collect_mono)
@@ -685,7 +685,7 @@ lemma min_algs:
    apply (erule arg_cong)
 
   apply (rule image_cong)
-    apply (rule arg_cong2[of _ _ _ _ "F2in UNIV"])
+   apply (rule arg_cong2[of _ _ _ _ "F2in UNIV"])
     apply (rule SUP_cong)
      apply (rule refl)
     apply (drule bspec)
@@ -850,7 +850,7 @@ lemma alg_min_alg:
 
    apply (erule subset_trans)
    apply (erule UN_upper[OF underS_I])
-    apply assumption
+   apply assumption
 
 (**)
 
@@ -919,7 +919,7 @@ lemma alg_min_alg:
   apply (erule subset_trans)
   apply (rule UN_upper)
   apply (erule underS_I)
-   apply assumption
+  apply assumption
   done
 
 lemmas SucFbd_ASucFbd = ordLess_ordLeq_trans[OF
@@ -1489,13 +1489,13 @@ lemma init_unique_mor:
 
     apply (rule trans)
      apply (rule arg_cong[OF F1.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id]])
-       apply (rule refl)
-      apply (erule prop_restrict)
-      apply assumption
-     apply (erule prop_restrict)
-     apply assumption
-       apply (rule refl)
-       apply (rule refl)
+         apply (rule refl)
+        apply (erule prop_restrict)
+        apply assumption
+       apply (erule prop_restrict)
+       apply assumption
+      apply (rule refl)
+     apply (rule refl)
 
     apply (rule sym)
     apply (erule morE1)
@@ -1536,13 +1536,13 @@ lemma init_unique_mor:
 
    apply (rule trans)
     apply (rule arg_cong[OF F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id]])
-      apply (rule refl)
-     apply (erule prop_restrict)
-     apply assumption
-    apply (erule prop_restrict)
-    apply assumption
-      apply (rule refl)
-      apply (rule refl)
+        apply (rule refl)
+       apply (erule prop_restrict)
+       apply assumption
+      apply (erule prop_restrict)
+      apply assumption
+     apply (rule refl)
+    apply (rule refl)
 
    apply (rule sym)
    apply (erule morE2)
@@ -1589,13 +1589,13 @@ lemma init_unique_mor:
 
    apply (rule trans)
     apply (rule arg_cong[OF F1.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id]])
-      apply (rule refl)
-     apply (erule prop_restrict)
-     apply assumption
-    apply (erule prop_restrict)
-    apply assumption
-      apply (rule refl)
-      apply (rule refl)
+        apply (rule refl)
+       apply (erule prop_restrict)
+       apply assumption
+      apply (erule prop_restrict)
+      apply assumption
+     apply (rule refl)
+    apply (rule refl)
 
    apply (rule sym)
    apply (erule morE1)
@@ -1636,13 +1636,13 @@ lemma init_unique_mor:
 
   apply (rule trans)
    apply (rule arg_cong[OF F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id]])
-     apply (rule refl)
-    apply (erule prop_restrict)
-    apply assumption
-   apply (erule prop_restrict)
-   apply assumption
-     apply (rule refl)
-     apply (rule refl)
+       apply (rule refl)
+      apply (erule prop_restrict)
+      apply assumption
+     apply (erule prop_restrict)
+     apply assumption
+    apply (rule refl)
+   apply (rule refl)
 
   apply (rule sym)
   apply (erule morE2)
@@ -2259,7 +2259,7 @@ lemmas fst_rec1_pair = trans[OF conjunct1[OF fold_unique[OF
         trans[OF o_assoc[symmetric] trans[OF arg_cong2[of _ _ _ _ "(o)", OF refl
               trans[OF fold2_o_ctor2 convol_o]]], OF trans[OF fst_convol]]]]
     fold1_ctor, unfolded F1.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] 
-      F2.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] o_assoc, 
+    F2.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] o_assoc, 
     OF refl refl]
 
 lemmas fst_rec2_pair =
@@ -2269,7 +2269,7 @@ lemmas fst_rec2_pair =
         trans[OF o_assoc[symmetric] trans[OF arg_cong2[of _ _ _ _ "(o)", OF refl
               trans[OF fold2_o_ctor2 convol_o]]], OF trans[OF fst_convol]]]]
     fold2_ctor, unfolded F1.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] 
-      F2.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] o_assoc,
+    F2.map_comp0[OF ss_id bij_ss_id ss_id bij_ss_id, of id, unfolded id_o] o_assoc,
     OF refl refl]
 
 theorem rec1: "rec1 s1 s2 (ctor1 x) = s1 (F1map id (<id, rec1 s1 s2>) (<id, rec2 s1 s2>) id id x)"
@@ -2442,13 +2442,13 @@ theorem IF1map:
   apply (rule trans[OF o_apply])
   apply (rule trans[OF arg_cong[OF F1map_comp_id[OF v u]]])
   apply (rule trans[OF arg_cong[OF F1.map_cong0[OF v u v u]]])
-     apply (rule refl)
-    apply (rule trans[OF o_apply])
-    apply (rule id_apply)
-   apply (rule trans[OF o_apply])
-   apply (rule id_apply)
-     apply (rule refl)
-     apply (rule refl)
+       apply (rule refl)
+      apply (rule trans[OF o_apply])
+      apply (rule id_apply)
+     apply (rule trans[OF o_apply])
+     apply (rule id_apply)
+    apply (rule refl)
+   apply (rule refl)
   apply (rule sym[OF o_apply])
   done
 
@@ -2462,13 +2462,13 @@ theorem IF2map:
   apply (rule trans[OF o_apply])
   apply (rule trans[OF arg_cong[OF F2map_comp_id[OF v u]]])
   apply (rule trans[OF arg_cong[OF F2.map_cong0[OF v u v u]]])
-     apply (rule refl)
-    apply (rule trans[OF o_apply])
-    apply (rule id_apply)
-   apply (rule trans[OF o_apply])
-   apply (rule id_apply)
-     apply (rule refl)
-     apply (rule refl)
+       apply (rule refl)
+      apply (rule trans[OF o_apply])
+      apply (rule id_apply)
+     apply (rule trans[OF o_apply])
+     apply (rule id_apply)
+    apply (rule refl)
+   apply (rule refl)
   apply (rule sym[OF o_apply])
   done
 
@@ -2517,8 +2517,8 @@ theorem IF1map_comp:
   apply (rule sym)
   apply (rule conjunct1[OF IFmap_unique])
       apply (rule supp_comp_bound[OF v1 v2 infinite_UNIV])
-  apply (rule bij_comp[OF u1(1) u2(1)])
-  apply (rule supp_comp_bound[OF u1(2) u2(2) infinite_UNIV])
+     apply (rule bij_comp[OF u1(1) u2(1)])
+    apply (rule supp_comp_bound[OF u1(2) u2(2) infinite_UNIV])
    apply (rule ext)
    apply (rule trans[OF o_apply])
    apply (rule trans[OF o_apply])
@@ -2544,8 +2544,8 @@ theorem IF2map_comp:
   apply (rule sym)
   apply (tactic \<open>rtac @{context} (Thm.permute_prems 3 1 @{thm conjunct2[OF IFmap_unique]}) 1\<close>)
       apply (rule supp_comp_bound[OF v1 v2 infinite_UNIV])
-  apply (rule bij_comp[OF u1(1) u2(1)])
-  apply (rule supp_comp_bound[OF u1(2) u2(2) infinite_UNIV])
+     apply (rule bij_comp[OF u1(1) u2(1)])
+    apply (rule supp_comp_bound[OF u1(2) u2(2) infinite_UNIV])
    apply (rule ext)
    apply (rule trans[OF o_apply])
    apply (rule trans[OF o_apply])
@@ -2667,7 +2667,7 @@ theorem IF1free_simps:
   "IF1free (ctor1 x) = F1free x \<union> ((\<Union>a \<in> F1set2 x. IF1free a) \<union> (\<Union>a \<in> F1set3 x. IF2free a))"
   apply (rule trans[OF o_eq_dest[OF IF1free]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-  apply (rule trans[OF F1.set_map(4)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
+   apply (rule trans[OF F1.set_map(4)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule arg_cong[OF F1.set_map(2)[OF ss_id bij_ss_id]])
   apply (rule arg_cong[OF F1.set_map(3)[OF ss_id bij_ss_id]])
@@ -2677,7 +2677,7 @@ theorem IF1bound_simps:
   "IF1bound (ctor1 x) = F1bound x \<union> ((\<Union>a \<in> F1set2 x. IF1bound a) \<union> (\<Union>a \<in> F1set3 x. IF2bound a))"
   apply (rule trans[OF o_eq_dest[OF IF1bound]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-  apply (rule trans[OF F1.set_map(5)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
+   apply (rule trans[OF F1.set_map(5)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule arg_cong[OF F1.set_map(2)[OF ss_id bij_ss_id]])
   apply (rule arg_cong[OF F1.set_map(3)[OF ss_id bij_ss_id]])
@@ -2697,7 +2697,7 @@ theorem IF2free_simps:
   "IF2free (ctor2 x) = F2free x \<union> ((\<Union>a \<in> F2set2 x. IF1free a) \<union> (\<Union>a \<in> F2set3 x. IF2free a))"
   apply (rule trans[OF o_eq_dest[OF IF2free]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-  apply (rule trans[OF F2.set_map(4)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
+   apply (rule trans[OF F2.set_map(4)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule arg_cong[OF F2.set_map(2)[OF ss_id bij_ss_id]])
   apply (rule arg_cong[OF F2.set_map(3)[OF ss_id bij_ss_id]])
@@ -2707,7 +2707,7 @@ theorem IF2bound_simps:
   "IF2bound (ctor2 x) = F2bound x \<union> ((\<Union>a \<in> F2set2 x. IF1bound a) \<union> (\<Union>a \<in> F2set3 x. IF2bound a))"
   apply (rule trans[OF o_eq_dest[OF IF2bound]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-  apply (rule trans[OF F2.set_map(5)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
+   apply (rule trans[OF F2.set_map(5)[OF ss_id bij_ss_id] trans[OF fun_cong[OF Fun.image_id] id_apply]])
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule arg_cong[OF F2.set_map(2)[OF ss_id bij_ss_id]])
   apply (rule arg_cong[OF F2.set_map(3)[OF ss_id bij_ss_id]])
@@ -2740,25 +2740,22 @@ text \<open>The BNF conditions for IF\<close>
 
 lemma IFset_natural:
   fixes x :: "('a1, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF1" and y :: "('a1, 'c, 'd) IF2"
-  and v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+    and v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
   assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
   shows "f ` (IF1set x) = IF1set (IF1map f v u x) \<and> f ` (IF2set y) = IF2set (IF2map f v u y)"
   apply (rule ctor_induct[of _ _ x y])
-
    apply (rule trans)
     apply (rule image_cong)
      apply (rule IF1set_simps)
     apply (rule refl)
    apply (rule sym)
    apply (rule trans[OF arg_cong[of _ _ IF1set, OF IF1map_simps[OF v u]] trans[OF IF1set_simps]])
-
    apply (rule sym)
    apply (rule trans)
     apply (rule image_Un)
    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
     apply (rule sym)
     apply (rule F1.set_map(1)[OF v u])
-
    apply (rule trans)
     apply (rule image_Un)
    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
@@ -2774,7 +2771,6 @@ lemma IFset_natural:
       apply (rule F1.set_map(2)[OF v u])
      apply (rule refl)
     apply (rule UN_simps(10))
-
    apply (rule trans)
     apply (rule image_UN)
    apply (rule trans)
@@ -2787,26 +2783,21 @@ lemma IFset_natural:
      apply (rule F1.set_map(3)[OF v u])
     apply (rule refl)
    apply (rule UN_simps(10))
-
-
   apply (rule trans)
    apply (rule image_cong)
     apply (rule IF2set_simps)
    apply (rule refl)
   apply (rule sym)
   apply (rule trans[OF arg_cong[of _ _ IF2set, OF IF2map_simps[OF v u]] trans[OF IF2set_simps]])
-
   apply (rule sym)
   apply (rule trans)
    apply (rule image_Un)
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
    apply (rule sym)
    apply (rule F2.set_map(1)[OF v u])
-
   apply (rule trans)
    apply (rule image_Un)
   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-
    apply (rule trans)
     apply (rule image_UN)
    apply (rule trans)
@@ -2819,7 +2810,178 @@ lemma IFset_natural:
      apply (rule F2.set_map(2)[OF v u])
     apply (rule refl)
    apply (rule UN_simps(10))
+  apply (rule trans)
+   apply (rule image_UN)
+  apply (rule trans)
+   apply (rule SUP_cong)
+    apply (rule refl)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule SUP_cong)
+    apply (rule F2.set_map(3)[OF v u])
+   apply (rule refl)
+  apply (rule UN_simps(10))
+  done
 
+lemma IFfree_natural:
+  fixes x :: "('a1, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF1" and y :: "('a1, 'c, 'd) IF2"
+    and v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "v ` (IF1free x) = IF1free (IF1map f v u x) \<and> v ` (IF2free y) = IF2free (IF2map f v u y)"
+  apply (rule ctor_induct[of _ _ x y])
+   apply (rule trans)
+    apply (rule image_cong)
+     apply (rule IF1free_simps)
+    apply (rule refl)
+   apply (rule sym)
+   apply (rule trans[OF arg_cong[of _ _ IF1free, OF IF1map_simps[OF v u]] trans[OF IF1free_simps]])
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule image_Un)
+   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+    apply (rule sym)
+    apply (rule F1.set_map(4)[OF v u])
+   apply (rule trans)
+    apply (rule image_Un)
+   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+    apply (rule trans)
+     apply (rule image_UN)
+    apply (rule trans)
+     apply (rule SUP_cong)
+      apply (rule refl)
+     apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule SUP_cong)
+      apply (rule F1.set_map(2)[OF v u])
+     apply (rule refl)
+    apply (rule UN_simps(10))
+   apply (rule trans)
+    apply (rule image_UN)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule refl)
+    apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule F1.set_map(3)[OF v u])
+    apply (rule refl)
+   apply (rule UN_simps(10))
+  apply (rule trans)
+   apply (rule image_cong)
+    apply (rule IF2free_simps)
+   apply (rule refl)
+  apply (rule sym)
+  apply (rule trans[OF arg_cong[of _ _ IF2free, OF IF2map_simps[OF v u]] trans[OF IF2free_simps]])
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule image_Un)
+  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+   apply (rule sym)
+   apply (rule F2.set_map(4)[OF v u])
+  apply (rule trans)
+   apply (rule image_Un)
+  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+   apply (rule trans)
+    apply (rule image_UN)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule refl)
+    apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule F2.set_map(2)[OF v u])
+    apply (rule refl)
+   apply (rule UN_simps(10))
+  apply (rule trans)
+   apply (rule image_UN)
+  apply (rule trans)
+   apply (rule SUP_cong)
+    apply (rule refl)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule SUP_cong)
+    apply (rule F2.set_map(3)[OF v u])
+   apply (rule refl)
+  apply (rule UN_simps(10))
+  done
+
+lemma IFbound_natural:
+  fixes x :: "('a1, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF1" and y :: "('a1, 'c, 'd) IF2"
+    and v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "u ` (IF1bound x) = IF1bound (IF1map f v u x) \<and> u ` (IF2bound y) = IF2bound (IF2map f v u y)"
+  apply (rule ctor_induct[of _ _ x y])
+   apply (rule trans)
+    apply (rule image_cong)
+     apply (rule IF1bound_simps)
+    apply (rule refl)
+   apply (rule sym)
+   apply (rule trans[OF arg_cong[of _ _ IF1bound, OF IF1map_simps[OF v u]] trans[OF IF1bound_simps]])
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule image_Un)
+   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+    apply (rule sym)
+    apply (rule F1.set_map(5)[OF v u])
+   apply (rule trans)
+    apply (rule image_Un)
+   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+    apply (rule trans)
+     apply (rule image_UN)
+    apply (rule trans)
+     apply (rule SUP_cong)
+      apply (rule refl)
+     apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule SUP_cong)
+      apply (rule F1.set_map(2)[OF v u])
+     apply (rule refl)
+    apply (rule UN_simps(10))
+   apply (rule trans)
+    apply (rule image_UN)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule refl)
+    apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule F1.set_map(3)[OF v u])
+    apply (rule refl)
+   apply (rule UN_simps(10))
+  apply (rule trans)
+   apply (rule image_cong)
+    apply (rule IF2bound_simps)
+   apply (rule refl)
+  apply (rule sym)
+  apply (rule trans[OF arg_cong[of _ _ IF2bound, OF IF2map_simps[OF v u]] trans[OF IF2bound_simps]])
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule image_Un)
+  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+   apply (rule sym)
+   apply (rule F2.set_map(5)[OF v u])
+  apply (rule trans)
+   apply (rule image_Un)
+  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+   apply (rule trans)
+    apply (rule image_UN)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule refl)
+    apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>) (* IH *)
+   apply (rule sym)
+   apply (rule trans)
+    apply (rule SUP_cong)
+     apply (rule F2.set_map(2)[OF v u])
+    apply (rule refl)
+   apply (rule UN_simps(10))
   apply (rule trans)
    apply (rule image_UN)
   apply (rule trans)
@@ -2848,6 +3010,34 @@ theorem IF1set_natural:
   apply (rule IFset_natural[OF v u])
   done
 
+theorem IF1free_natural:
+  fixes v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "IF1free o (IF1map f v u) = image v o IF1free"
+  apply (rule ext)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule conjunct1)
+  apply (rule IFfree_natural[OF v u])
+  done
+
+theorem IF1bound_natural:
+  fixes v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "IF1bound o (IF1map f v u) = image u o IF1bound"
+  apply (rule ext)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule conjunct1)
+  apply (rule IFbound_natural[OF v u])
+  done
+
 theorem IF2set_natural: 
   fixes v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
   assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
@@ -2860,6 +3050,34 @@ theorem IF2set_natural:
    apply (rule o_apply)
   apply (rule conjunct2)
   apply (rule IFset_natural[OF v u])
+  done
+
+theorem IF2free_natural:
+  fixes v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "IF2free o (IF2map f v u) = image v o IF2free"
+  apply (rule ext)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule conjunct2)
+  apply (rule IFfree_natural[OF v u])
+  done
+
+theorem IF2bound_natural:
+  fixes v :: "'c::{var_F1, var_F2} \<Rightarrow> 'c" and u :: "'d::{var_F1, var_F2} \<Rightarrow> 'd"
+  assumes v: "|supp v| <o |UNIV :: 'c set|"  and u: "bij u" "|supp u| <o |UNIV :: 'd set|"
+  shows "IF2bound o (IF2map f v u) = image u o IF2bound"
+  apply (rule ext)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule o_apply)
+  apply (rule conjunct2)
+  apply (rule IFbound_natural[OF v u])
   done
 
 lemma IFmap_cong:   
@@ -3009,17 +3227,17 @@ theorem IF1map_cong:
   assumes v1: "|supp v1| <o |UNIV :: 'c set|"  and u1: "bij u1" "|supp u1| <o |UNIV :: 'd set|"
     and v2: "|supp v2| <o |UNIV :: 'c set|"  and u2: "bij u2" "|supp u2| <o |UNIV :: 'd set|"
   shows 
-  "(\<And>a. a \<in> IF1set x \<Longrightarrow> f a = g a) \<Longrightarrow> (\<And>a. a \<in> IF1free x \<Longrightarrow> v1 a = v2 a) \<Longrightarrow> (\<And>a. a \<in> IF1bound x \<Longrightarrow> u1 a = u2 a) \<Longrightarrow> 
+    "(\<And>a. a \<in> IF1set x \<Longrightarrow> f a = g a) \<Longrightarrow> (\<And>a. a \<in> IF1free x \<Longrightarrow> v1 a = v2 a) \<Longrightarrow> (\<And>a. a \<in> IF1bound x \<Longrightarrow> u1 a = u2 a) \<Longrightarrow> 
     IF1map f v1 u1 x = IF1map g v2 u2 x"
   apply (rule mp)
    apply (rule conjunct1)
    apply (rule IFmap_cong[OF v1 u1 v2 u2])
   apply (rule conjI)
-  apply (rule ballI)
-  apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
+   apply (rule ballI)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   apply (rule conjI)
-  apply (rule ballI)
-  apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
+   apply (rule ballI)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   apply (rule ballI)
   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   done
@@ -3030,17 +3248,17 @@ theorem IF2map_cong:
   assumes v1: "|supp v1| <o |UNIV :: 'c set|"  and u1: "bij u1" "|supp u1| <o |UNIV :: 'd set|"
     and v2: "|supp v2| <o |UNIV :: 'c set|"  and u2: "bij u2" "|supp u2| <o |UNIV :: 'd set|"
   shows 
-  "(\<And>a. a \<in> IF2set x \<Longrightarrow> f a = g a) \<Longrightarrow> (\<And>a. a \<in> IF2free x \<Longrightarrow> v1 a = v2 a) \<Longrightarrow> (\<And>a. a \<in> IF2bound x \<Longrightarrow> u1 a = u2 a) \<Longrightarrow> 
+    "(\<And>a. a \<in> IF2set x \<Longrightarrow> f a = g a) \<Longrightarrow> (\<And>a. a \<in> IF2free x \<Longrightarrow> v1 a = v2 a) \<Longrightarrow> (\<And>a. a \<in> IF2bound x \<Longrightarrow> u1 a = u2 a) \<Longrightarrow> 
     IF2map f v1 u1 x = IF2map g v2 u2 x"
   apply (rule mp)
    apply (rule conjunct2)
    apply (rule IFmap_cong[OF v1 u1 v2 u2])
   apply (rule conjI)
-  apply (rule ballI)
-  apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
+   apply (rule ballI)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   apply (rule conjI)
-  apply (rule ballI)
-  apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
+   apply (rule ballI)
+   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   apply (rule ballI)
   apply (tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
   done
@@ -3414,13 +3632,13 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
    apply (tactic \<open>dtac @{context} (@{thm in_IF2rel[THEN iffD1]}) 1\<close>)+
    apply (erule exE conjE CollectE)+
    apply (rule iffD2)
-    apply (rule F2.in_rel)
+    apply (rule F2.in_rel[OF ss_id bij_ss_id, unfolded F2.map_id])
    apply (rule exI)
    apply (rule conjI)
     apply (rule CollectI)
     apply (rule conjI)
      apply (rule ord_eq_le_trans)
-      apply (rule F2.set_map(1))
+      apply (rule F2.set_map(1)[OF ss_id bij_ss_id])
      apply (rule ord_eq_le_trans)
       apply (rule trans[OF fun_cong[OF Fun.image_id] id_apply])
      apply (rule subset_trans)
@@ -3429,7 +3647,7 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
 
     apply (rule conjI)
      apply (rule ord_eq_le_trans)
-      apply (rule F2.set_map(2))
+      apply (rule F2.set_map(2)[OF ss_id bij_ss_id])
      apply (rule image_subsetI)
      apply (rule CollectI)
      apply (rule case_prodI)
@@ -3447,7 +3665,7 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
      apply (rule refl)
 
     apply (rule ord_eq_le_trans)
-     apply (rule F2.set_map(3))
+     apply (rule F2.set_map(3)[OF ss_id bij_ss_id])
     apply (rule image_subsetI)
     apply (rule CollectI)
     apply (rule case_prodI)
@@ -3466,41 +3684,47 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
    apply (rule conjI)
 
     apply (rule trans)
-     apply (rule F2.map_comp)
+     apply (rule F2.map_comp[OF ss_id bij_ss_id ss_id bij_ss_id])
     apply (rule trans)
-     apply (rule F2.map_cong0)
-       apply (rule fun_cong[OF o_id])
-      apply (rule trans)
-       apply (rule o_apply)
-      apply (rule fst_conv)
-     apply (rule trans)
-      apply (rule o_apply)
-     apply (rule fst_conv)
+     apply (unfold id_o)
+     apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
+         apply (rule fun_cong[OF o_id])
+        apply (rule trans)
+         apply (rule o_apply)
+        apply (rule fst_conv)
+       apply (rule trans)
+        apply (rule o_apply)
+       apply (rule fst_conv)
+      apply (rule refl)
+     apply (rule refl)
     apply (rule iffD1[OF ctor2_diff])
     apply (rule trans)
      apply (rule sym)
-     apply (rule IF2map_simps)
+     apply (rule IF2map_simps[OF ss_id bij_ss_id])
     apply (erule trans[OF arg_cong[OF ctor2_dtor2]])
 
 
    apply (rule trans)
-    apply (rule F2.map_comp)
+    apply (rule F2.map_comp[OF ss_id bij_ss_id ss_id bij_ss_id])
    apply (rule trans)
-    apply (rule F2.map_cong0)
-      apply (rule fun_cong[OF o_id])
-     apply (rule trans)
-      apply (rule o_apply)
-     apply (rule snd_conv)
-    apply (rule trans)
-     apply (rule o_apply)
-    apply (rule snd_conv)
+    apply (unfold id_o)
+    apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
+        apply (rule fun_cong[OF o_id])
+       apply (rule trans)
+        apply (rule o_apply)
+       apply (rule snd_conv)
+      apply (rule trans)
+       apply (rule o_apply)
+      apply (rule snd_conv)
+     apply (rule refl)
+    apply (rule refl)
    apply (rule iffD1[OF ctor2_diff])
    apply (rule trans)
     apply (rule sym)
-    apply (rule IF2map_simps)
+    apply (rule IF2map_simps[OF ss_id bij_ss_id])
    apply (erule trans[OF arg_cong[OF ctor2_dtor2]])
 
-  apply (tactic \<open>dtac @{context} (@{thm F2.in_rel[THEN iffD1]}) 1\<close>)
+  apply (tactic \<open>dtac @{context} (@{thm F2.in_rel[OF ss_id bij_ss_id, unfolded F2.map_id, THEN iffD1]}) 1\<close>)
   apply (erule exE conjE CollectE)+
   apply (rule iffD2)
    apply (rule in_IF2rel)
@@ -3514,13 +3738,13 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
      apply (rule trans)
       apply (rule trans)
        apply (rule arg_cong[OF dtor2_ctor2])
-      apply (rule F2.set_map(1))
+      apply (rule F2.set_map(1)[OF ss_id bij_ss_id])
      apply (rule trans[OF fun_cong[OF Fun.image_id] id_apply])
     apply assumption
    apply (rule Un_least)
     apply (rule ord_eq_le_trans)
      apply (rule trans[OF arg_cong[OF dtor2_ctor2]])
-     apply (rule arg_cong[OF F2.set_map(2)])
+     apply (rule arg_cong[OF F2.set_map(2)[OF ss_id bij_ss_id]])
     apply (rule UN_least)
     apply (drule rev_subsetD)
      apply (erule image_mono)
@@ -3535,7 +3759,7 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
 
    apply (rule ord_eq_le_trans)
     apply (rule trans[OF arg_cong[OF dtor2_ctor2]])
-    apply (rule arg_cong[OF F2.set_map(3)])
+    apply (rule arg_cong[OF F2.set_map(3)[OF ss_id bij_ss_id]])
    apply (rule UN_least)
    apply (drule rev_subsetD)
     apply (erule image_mono)
@@ -3552,67 +3776,73 @@ lemma IF2rel_F2rel: "IF2rel R (ctor2 a) (ctor2 b) \<longleftrightarrow> F2rel R 
    apply (rule trans)
     apply (rule arg_cong[OF dtor2_ctor2])
    apply (rule trans)
-    apply (rule IF2map_simps)
+    apply (rule IF2map_simps[OF ss_id bij_ss_id])
    apply (rule iffD2)
     apply (rule ctor2_diff)
    apply (rule trans)
-    apply (rule F2.map_comp)
+    apply (rule F2.map_comp[OF ss_id bij_ss_id ss_id bij_ss_id])
    apply (rule trans)
-    apply (rule F2.map_cong0)
-      apply (rule fun_cong[OF o_id])
+    apply (unfold id_o)
+    apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
+        apply (rule fun_cong[OF o_id])
+       apply (rule trans[OF o_apply])
+       apply (drule rev_subsetD)
+        apply assumption
+       apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
+       apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
+       apply hypsubst
+       apply (tactic \<open>dtac @{context} (@{thm in_IF1rel[THEN iffD1]}) 1\<close>)
+       apply (drule someI_ex)
+       apply (erule conjE)+
+       apply assumption
+      apply (rule trans[OF o_apply])
+      apply (drule rev_subsetD)
+       apply assumption
+      apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
+      apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
+      apply hypsubst
+      apply (tactic \<open>dtac @{context} (@{thm in_IF2rel[THEN iffD1]}) 1\<close>)
+      apply (drule someI_ex)
+      apply (erule conjE)+
+      apply assumption
+     apply (rule refl)
+    apply (rule refl)
+   apply assumption
+
+  apply (rule trans)
+   apply (rule arg_cong[OF dtor2_ctor2])
+  apply (rule trans)
+   apply (rule IF2map_simps[OF ss_id bij_ss_id])
+  apply (rule iffD2)
+   apply (rule ctor2_diff)
+  apply (rule trans)
+   apply (rule F2.map_comp[OF ss_id bij_ss_id ss_id bij_ss_id])
+  apply (rule trans)
+   apply (unfold id_o)
+   apply (rule F2.map_cong0[OF ss_id bij_ss_id ss_id bij_ss_id])
+       apply (rule fun_cong[OF o_id])
+      apply (rule trans[OF o_apply])
+      apply (drule rev_subsetD)
+       apply assumption
+      apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
+      apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
+      apply hypsubst
+      apply (tactic \<open>dtac @{context} (@{thm in_IF1rel[THEN iffD1]}) 1\<close>)
+      apply (drule someI_ex)
+      apply (erule conjE)+
+      apply assumption
      apply (rule trans[OF o_apply])
      apply (drule rev_subsetD)
       apply assumption
      apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
      apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
      apply hypsubst
-     apply (tactic \<open>dtac @{context} (@{thm in_IF1rel[THEN iffD1]}) 1\<close>)
+     apply (tactic \<open>dtac @{context} (@{thm in_IF2rel[THEN iffD1]}) 1\<close>)
      apply (drule someI_ex)
      apply (erule conjE)+
      apply assumption
-    apply (rule trans[OF o_apply])
-    apply (drule rev_subsetD)
-     apply assumption
-    apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
-    apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
-    apply hypsubst
-    apply (tactic \<open>dtac @{context} (@{thm in_IF2rel[THEN iffD1]}) 1\<close>)
-    apply (drule someI_ex)
-    apply (erule conjE)+
-    apply assumption
-   apply assumption
-
-  apply (rule trans)
-   apply (rule arg_cong[OF dtor2_ctor2])
-  apply (rule trans)
-   apply (rule IF2map_simps)
-  apply (rule iffD2)
-   apply (rule ctor2_diff)
-  apply (rule trans)
-   apply (rule F2.map_comp)
-  apply (rule trans)
-   apply (rule F2.map_cong0)
-     apply (rule fun_cong[OF o_id])
-    apply (rule trans[OF o_apply])
-    apply (drule rev_subsetD)
-     apply assumption
-    apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
-    apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
-    apply hypsubst
-    apply (tactic \<open>dtac @{context} (@{thm in_IF1rel[THEN iffD1]}) 1\<close>)
-    apply (drule someI_ex)
-    apply (erule conjE)+
-    apply assumption
-   apply (rule trans[OF o_apply])
-   apply (drule rev_subsetD)
-    apply assumption
-   apply (drule ssubst_mem[OF surjective_pairing[symmetric]])
-   apply (erule CollectE case_prodE iffD1[OF prod.inject, elim_format] conjE)+
-   apply hypsubst
-   apply (tactic \<open>dtac @{context} (@{thm in_IF2rel[THEN iffD1]}) 1\<close>)
-   apply (drule someI_ex)
-   apply (erule conjE)+
-   apply assumption
+    apply (rule refl)
+   apply(rule refl)
   apply assumption
   done
 
@@ -3653,7 +3883,12 @@ lemma Irel_induct:
   done
 
 lemma le_IFrel_Comp:
-  "((IF1rel R OO IF1rel S) x1 y1 \<longrightarrow> IF1rel (R OO S) x1 y1) \<and>
+  fixes x1 :: "('a, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF1"
+    and y1 :: "('b, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF1"
+    and x2 :: "('a, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF2"
+    and y2 :: "('b, 'c::{var_F1,var_F2}, 'd::{var_F1,var_F2}) IF2"
+  shows
+    "((IF1rel R OO IF1rel S) x1 y1 \<longrightarrow> IF1rel (R OO S) x1 y1) \<and>
        ((IF2rel R OO IF2rel S) x2 y2 \<longrightarrow> IF2rel (R OO S) x2 y2)"
   apply (rule ctor_induct2[of _ _ x1 y1 x2 y2])
    apply (rule impI)
@@ -3691,18 +3926,21 @@ lemma le_IFrel_Comp:
   apply assumption
   done
 
-lemma le_IF1rel_Comp: "IF1rel R1 OO IF1rel R2 \<le> IF1rel (R1 OO R2)"
+lemma le_IF1rel_Comp: 
+  "IF1rel R1 OO IF1rel R2 \<le> IF1rel (R1 OO R2)"
   by (rule predicate2I) (erule mp[OF conjunct1[OF le_IFrel_Comp]])
 
 lemma le_IF2rel_Comp: "IF2rel R1 OO IF2rel R2 \<le> IF2rel (R1 OO R2)"
   by (rule predicate2I) (erule mp[OF conjunct2[OF le_IFrel_Comp]])
-
+    (*
 context includes lifting_syntax
 begin
 
 lemma fold_transfer:
-  "((F1rel R S T ===> S) ===> (F2rel R S T ===> T) ===> IF1rel R ===> S) fold1 fold1 \<and>
-  ((F1rel R S T ===> S) ===> (F2rel R S T ===> T) ===> IF2rel R ===> T) fold2 fold2"
+  "(((F1rel:: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> (_,_,_,'c::{var_F1,var_F2},'d::{var_F1,var_F2}) F1 \<Rightarrow> _) R S T ===> S)
+    ===> (F2rel R S T ===> T) ===> IF1rel R ===> S) fold1 fold1 \<and>
+  (((F1rel:: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> (_,_,_,'c::{var_F1,var_F2},'d::{var_F1,var_F2}) F1 \<Rightarrow> _) R S T ===> S) 
+    ===> (F2rel R S T ===> T) ===> IF2rel R ===> T) fold2 fold2"
   unfolding rel_fun_def_butlast all_conj_distrib[symmetric] imp_conjR[symmetric]
   unfolding rel_fun_iff_leq_vimage2p
   apply (rule allI impI)+
@@ -3728,9 +3966,11 @@ lemma fold_transfer:
   done
 
 end
+*)
 
-definition "IF1wit x = ctor1 (wit2_F1 x (ctor2 wit_F2))"
-definition "IF2wit = ctor2 wit_F2"
+
+definition "IF1wit x = ctor1 (wit2F1 x (ctor2 witF2))"
+definition "IF2wit = ctor2 witF2"
 
 lemma IF1wit: "x \<in> IF1set (IF1wit y) \<Longrightarrow> x = y"
   unfolding IF1wit_def
@@ -3754,48 +3994,68 @@ ML \<open>
     @{thms F1.map_comp0[symmetric] F2.map_comp0[symmetric]} @{thms F1.map_cong0 F2.map_cong0}
 \<close>
 
-mrbnf "('a, 'd, 'c) IF1"
+mrbnf "('a, 'c, 'd) IF1"
   map: IF1map
   sets: 
-    live: IF1set free: IF1free bound: IF1bound
+  live: IF1set free: IF1free bound: IF1bound
   bd: IFbd
   wits: IF1wit
   rel: IF1rel
-            apply -
-            apply (rule IF1map_id)
-           apply (rule IF1map_comp)
-          apply (erule IF1map_cong)
-         apply (rule IF1set_natural)
-        apply (rule IFbd_card_order)
-       apply (rule IFbd_cinfinite)
-      apply (rule IFbd_regularCard)
-     apply (rule IF1set_bd)
+  var_class: "{var_F1, var_F2}"
+              apply -
+              apply (rule IF1map_id)
+             apply (rule IF1map_comp; assumption)
+            apply (erule IF1map_cong; assumption)
+           apply (rule IF1set_natural; assumption)
+          apply (rule IF1free_natural; assumption)
+         apply (rule IF1bound_natural; assumption)
+        apply (subst infinite_regular_card_order_def)
+        apply (rule conjI)
+         apply (rule IFbd_card_order)
+        apply (rule conjI)
+         apply (rule IFbd_cinfinite)
+        apply (rule IFbd_regularCard)
+       apply (rule IF1set_bd)
+      apply (rule IF1free_bd)
+     apply (rule IF1bound_bd)
     apply (rule le_IF1rel_Comp)
-   apply (rule IF1rel_def[unfolded OO_Grp_alt mem_Collect_eq])
+  subgoal
+    apply (unfold IF1rel_def OO_Grp_alt mem_Collect_eq)
+    sorry
   apply (erule IF1wit)
   done
 
-mrbnf "('a, 'd, 'c) IF2"
+mrbnf "('a, 'c, 'd) IF2"
   map: IF2map
   sets: 
-    live: IF2set free: IF2free bound: IF2bound
+  live: IF2set free: IF2free bound: IF2bound
   bd: IFbd
   wits: IF2wit
   rel: IF2rel
-            apply -
-            apply (rule IF2map_id)
-           apply (rule IF2map_comp)
-          apply (erule IF2map_cong)
-         apply (rule IF2set_natural)
-        apply (rule IFbd_card_order)
-       apply (rule IFbd_cinfinite)
-      apply (rule IFbd_regularCard)
-     apply (rule IF2set_bd)
+  var_class: "{var_F1, var_F2}"
+              apply -
+              apply (rule IF2map_id)
+             apply (rule IF2map_comp; assumption)
+            apply (erule IF2map_cong; assumption)
+           apply (rule IF2set_natural; assumption)
+          apply (rule IF2free_natural; assumption)
+         apply (rule IF2bound_natural; assumption)
+        apply (subst infinite_regular_card_order_def)
+        apply (rule conjI)
+         apply (rule IFbd_card_order)
+        apply (rule conjI)
+         apply (rule IFbd_cinfinite)
+        apply (rule IFbd_regularCard)
+       apply (rule IF2set_bd)
+      apply (rule IF2free_bd)
+     apply (rule IF2bound_bd)
     apply (rule le_IF2rel_Comp)
-   apply (rule IF2rel_def[unfolded OO_Grp_alt mem_Collect_eq])
+  subgoal
+    apply (unfold IF2rel_def OO_Grp_alt mem_Collect_eq)
+    sorry
   apply (erule IF2wit)
   done
 
 (*<*)
 end
-(*>*)
+  (*>*)

@@ -81,6 +81,10 @@ fun mk_class_for_bound b bound lthy =
     let
       val (class, lthy) = Local_Theory.background_theory_result (fn thy =>
         let
+          (*Work around loss of qualification in "class" axioms by replicating it in the name*)
+          val b' = fold_rev Binding.prefix_name
+            (map (suffix "_" o fst) (filter snd (Binding.path_of b))) b;
+
           fun mk_assumption name term = ((Binding.name name, []), single (term, []));
           val large = mk_assumption "large" (HOLogic.mk_Trueprop (mk_ordLeq
             (mk_card_of (mk_Field bound))
@@ -90,7 +94,7 @@ fun mk_class_for_bound b bound lthy =
             mk_regularCard (mk_card_of (HOLogic.mk_UNIV (Term.aT @{sort type})))
           ))
       
-          val (class, lthy) = Class_Declaration.class b [] [] [
+          val (class, lthy) = Class_Declaration.class b' [] [] [
             Element.Assumes [large, regular]
           ] thy;
         in (class, Local_Theory.exit_global lthy) end

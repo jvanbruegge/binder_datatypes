@@ -45,6 +45,7 @@ session Tests in "tests" = Case_Studies +
   sessions
     System_Fsub
     Operations
+    Infinitary_Lambda_Calculus
   directories
     "fixtures"
   theories

@@ -2612,6 +2612,21 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
               |> map_index (fn (i, prem) => (i+1, trivial_fact prem));
           in fold_rev (fn (i,P) => fn thm => P RSN (i, thm)) iprems simp_thm end;
 
+        (* get rid of all SSupp, IImssupp, SSupp, and imsupp mentions: *)
+        val tidy =
+          (* unfold "x \<notin> {IImssupp,SSupp,imsupp} .." \<leadsto> "t = Var v \<or> ..." *)
+          Local_Defs.unfold lthy @{thms not_in_SSupp_fun_upd_Inj_iff not_in_IImsupp_fun_upd_Inj_iff not_in_imsupp_fun_upd_id_iff}
+          (* rewrite \<lbrakk> t = Var v \<or> ?A1; t = Var v \<or> ?A2 ... \<rbrakk> \<leadsto> \<lbrakk> t = Var \<or> (?A1 \<and> ...); ... \<rbrakk> *)
+          #> Local_Defs.unfold lthy @{thms atomize_conjL}
+          (* tidy up a bit *)
+          #> Local_Defs.unfold lthy @{thms int_SSupp_fun_upd_iff int_imsupp_id_fun_upd_iff int_IImsupp_fun_upd_iff Int_empty_right simp_thms(6) simp_thms(21,22) True_implies_equals}
+          #> (
+            let
+              val fold_tac = Local_Defs.fold_tac lthy @{thms conj_assoc disj_conj_distribL};
+              val unfold_tac = Local_Defs.unfold_tac lthy @{thms conj_assoc};
+            in (REPEAT (CHANGED fold_tac) THEN unfold_tac) #> Seq.hd end
+          ) #> Local_Defs.fold lthy @{thms atomize_conjL};
+
         (* adapt the simp theorems to the unary case: *)
         val adapt = map (
           (* specialize the simps with unary Sb *)
@@ -2621,6 +2636,7 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
           #> Local_Defs.unfold lthy @{thms SSupp_Inj IImsupp_Inj supp_id imsupp_id}
           (* discharge premises like "|{}| <o |UNIV|" etc. and tidy up *)
           #> discharge_trivial
+          #> tidy
           (* generalize Free variables t,v *)
           #> singleton (Variable.export lthy_names lthy)
         );

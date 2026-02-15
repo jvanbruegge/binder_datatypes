@@ -86,6 +86,31 @@ lemma IImsupp_type_copy: "type_definition Rep Abs UNIV \<Longrightarrow> IImsupp
 lemma notin_SSupp: "a \<notin> SSupp Inj f \<Longrightarrow> f a = Inj a"
   unfolding SSupp_def by blast
 
+lemma not_in_SSupp_fun_upd_Inj_iff:
+  \<open>u \<notin> SSupp Inj (Inj(v := t)) \<longleftrightarrow> t = Inj v \<or> u \<noteq> v\<close>
+  by (simp add: SSupp_def)
+
+lemma not_in_IImsupp_fun_upd_Inj_iff:
+  \<open>u \<notin> IImsupp Inj Set (Inj(v := t)) \<longleftrightarrow> t = Inj v \<or> u \<notin> Set t\<close>
+  by (simp add: IImsupp_def SSupp_def)
+
+lemma not_in_imsupp_fun_upd_id_iff:
+  \<open>u \<notin> imsupp (id(v := t)) \<longleftrightarrow> t = v \<or> (u \<noteq> v \<and> u \<noteq> t)\<close>
+  by (auto simp: imsupp_def supp_def)
+
+lemma int_SSupp_fun_upd_iff:
+  \<open>A \<inter> SSupp Inj (Inj(v := t)) = {} \<longleftrightarrow> t = Inj v \<or> v \<notin> A\<close>
+  by (auto simp: SSupp_def)
+
+lemma int_imsupp_id_fun_upd_iff:
+  \<open>A \<inter> imsupp (id(v := t)) = {} \<longleftrightarrow> t = v \<or> v \<notin> A \<and> t \<notin> A\<close>
+  by (simp add: imsupp_id_fun_upd)
+
+lemma int_IImsupp_fun_upd_iff:
+  \<open>A \<inter> IImsupp Inj Vrs (Inj(v := t)) = {} \<longleftrightarrow>
+   t = Inj v \<or> A \<inter> Vrs t = {}\<close>
+  by (simp add: IImsupp_def SSupp_def)
+
 lemma IImsupp_chain1:
   assumes "\<And>a. Vrs2 (Inj2 a) = {a}" "\<rho>1 = \<rho>' \<or> \<rho>1 = \<rho>2"
   shows "(\<Union>x\<in>SSupp Inj2 \<rho>1. \<Union>x\<in>Vrs2 (\<rho>' x). Vrs2 (\<rho>2 x)) \<subseteq> IImsupp Inj2 Vrs2 \<rho>2 \<union> IImsupp Inj2 Vrs2 \<rho>'"

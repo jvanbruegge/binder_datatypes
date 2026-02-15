@@ -2503,12 +2503,17 @@ local
   fun mk_Free N T lthy' = mk_Frees N [T] lthy' |>> the_single;
 
   fun drop_at j xs = (take j xs, drop (j+1) xs);
+
+  (* |Inj x| <o |UNIV| \<mapsto> (Inj, x) *)
+  fun dest_set_bd_UNIV (Trueprop $ (member $ (Pair $ (card_of $ (set $ x)) $ card_of_top) $ ordLess)) = (set, x)
+    | dest_set_bd_UNIV t = raise TERM("dest_set_bd_UNIV", [t])
 in
 fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
   let
     val Sb as Const (_, Sb_T) = #tvsubst result;
 
     val mrsbnf = #mrsbnf result;
+    val mrbnf  = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
 
@@ -2519,6 +2524,10 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
 
     val (delta_Ts, _) = fastype_of Sb |> binder_types |> split_last;
     val (id_Ts, Inj_Ts) = partition (op= o dest_funT) delta_Ts;
+
+    (* map Set to fact "|Set ?x| <o |UNIV|" *)
+    val set_bd_UNIV_tab = MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
+      |> map (`(Thm.prop_of #> dest_set_bd_UNIV #> fst #> dest_Const_name));
 
     (* construct the identities for RVrs and their respective unary Sb bindings *)
     val ids = map2 (fn T => fn N => (N, Const ("Fun.id", T)))
@@ -2562,10 +2571,56 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
           RS @{thm meta_fun_cong} (* t *)
           RS @{thm meta_fun_cong} (* x *);
 
+        (* map trivial premise to theorem that discharge it *)
+        fun trivial_fact prem = case prem |> HOLogic.dest_Trueprop of
+          (* |?A| <o |UNIV| *)
+          Const (@{const_name "Set.member"}, _) $
+            (Const (@{const_name "Pair"}, _) $
+              (Const (@{const_name "card_of"}, _) $ A) $
+              (Const (@{const_name "card_of"}, _) $ Const (@{const_name "top"}, _))) $
+            Const (@{const_name "ordLess"}, _) =>
+          (case A of
+            (* {} *)
+            Const (@{const_name "bot"}, _) => @{thm emp_bound}
+            (* supp (id(v := t)) *)
+          | Const (@{const_name "supp"}, _) $
+              (Const (@{const_name "fun_upd"}, _) $ Const (@{const_name "id"}, _) $ _ $ _) =>
+            @{thm supp_fun_upd_var}
+            (* SSupp Inj (Inj(v := t)) *)
+          | Const (@{const_name "SSupp"}, _) $ _ $ (Const (@{const_name "fun_upd"}, _) $ _ $ _ $ _) =>
+            @{thm SSupp_fun_upd_Inj_bound}
+            (* IImsupp Inj ?Set (Inj(v := t) *)
+          | Const (@{const_name "IImsupp"}, _) $ _ $ Set $
+              (Const (@{const_name "fun_upd"}, _) $ _ $ _ $ _) =>
+            the (AList.lookup op= set_bd_UNIV_tab (dest_Const_name Set)) RS
+            @{thm IImsupp_fun_upd_Inj_bound}
+            (* fallback (skip) *)
+          | _ => @{thm asm_rl}
+          )
+        (* ?x \<notin> {} *)
+        | Const (@{const_name "Not"}, _) $ (Const (@{const_name "Set.member"}, _) $
+            _ $ Const (@{const_name "bot"}, _)) =>
+          @{thm empty_iff[symmetric, unfolded simp_thms(13)]}
+        (* fallback (skip) *)
+        | _ => @{thm asm_rl};
+
+        fun discharge_trivial simp_thm =
+          let
+            (* discharge premises (reverse order in case we don't fully resolve it) *)
+            val iprems = Thm.prop_of simp_thm
+              |> Logic.strip_imp_prems
+              |> map_index (fn (i, prem) => (i+1, trivial_fact prem));
+          in fold_rev (fn (i,P) => fn thm => P RSN (i, thm)) iprems simp_thm end;
+
+        (* adapt the simp theorems to the unary case: *)
         val adapt = map (
           (* specialize the simps with unary Sb *)
           Drule.infer_instantiate' lthy cdeltas
           #> Local_Defs.fold lthy [def_expanded]
+          (* unfold trivial/unary supports *)
+          #> Local_Defs.unfold lthy @{thms SSupp_Inj IImsupp_Inj supp_id imsupp_id}
+          (* discharge premises like "|{}| <o |UNIV|" etc. and tidy up *)
+          #> discharge_trivial
           (* generalize Free variables t,v *)
           #> singleton (Variable.export lthy_names lthy)
         );

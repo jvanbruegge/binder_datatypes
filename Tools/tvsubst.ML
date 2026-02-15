@@ -29,6 +29,9 @@ sig
     -> MRSBNF_Def.mrsbnf -> MRBNF_Def.mrbnf -> thm -> thm -> thm list -> binding
     -> (Proof.context -> tactic) eta_model option list -> string -> local_theory
     -> tvsubst_result * local_theory
+
+  val create_tvsubst1_of_result: binding * string list -> tvsubst_result * thm list -> local_theory
+    -> (string * thm list) list * local_theory
 end
 
 structure TVSubst : TVSUBST =
@@ -2495,4 +2498,81 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     }: tvsubst_result;
 
   in (result, lthy) end;
+
+local
+  fun mk_Free N T lthy' = mk_Frees N [T] lthy' |>> the_single;
+
+  fun drop_at j xs = (take j xs, drop (j+1) xs);
+in
+fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
+  let
+    val Sb as Const (_, Sb_T) = #tvsubst result;
+
+    val mrsbnf = #mrsbnf result;
+
+    val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+
+    val RVrs = hd (BMV_Monad_Def.RVrs_of_bmv_monad bmv);
+    val Injs = hd (BMV_Monad_Def.Injs_of_bmv_monad bmv);
+
+    val n = length RVrs + length Injs;
+
+    val (delta_Ts, _) = fastype_of Sb |> binder_types |> split_last;
+    val (id_Ts, Inj_Ts) = partition (op= o dest_funT) delta_Ts;
+
+    (* construct the identities for RVrs and their respective unary Sb bindings *)
+    val ids = map2 (fn T => fn N => (N, Const ("Fun.id", T)))
+      id_Ts (take (length id_Ts) RVr_Ns);
+
+    (* construct the Injection ctors and their respective bindings *)
+    val Injs = map2 (fn T => dest_Const #> (fn (N, _) =>
+      (Long_Name.base_name N, Const (N, T)))
+    ) Inj_Ts Injs;
+
+    (* all together *)
+    val (Ns, trms) = split_list (ids @ Injs);
+
+    (* accumulate simplification theorems by index, name, and term: *)
+    fun alg k N trm (acc, lthy) =
+      let
+        val b = Binding.map_name (fn str => str ^ "_" ^ N) tvsubst_b;
+
+        (* "pure" terms surrounding the current delta term *)
+        val (pre, post) = drop_at k trms;
+
+        val (v_T, t_T) = fastype_of trm |> dest_funT;
+        val (t, (v, lthy_names)) = mk_Free "t" t_T lthy ||> mk_Free "v" v_T;
+
+        (* construct unary Sb definition: subst id... X{k}(v := t) Inj... *)
+        val upd = Quickcheck_Common.mk_fun_upd v_T t_T (v, t) trm;
+
+        val deltas  = pre @ upd :: post;
+        val cdeltas = map (SOME o Thm.cterm_of lthy) deltas;
+
+        val def = list_comb (Sb, deltas)
+          |> Term.absfree (dest_Free t)
+          |> Term.absfree (dest_Free v);
+
+        val ((_, (_, def_thm)), lthy) = Local_Theory.define
+          ((b, NoSyn), ((Thm.def_binding b, []), def)) lthy;
+
+        (* expand definition thm to make the Local_Defs.fold go through *)
+        val def_expanded = def_thm
+          RS @{thm meta_fun_cong} (* v *)
+          RS @{thm meta_fun_cong} (* t *)
+          RS @{thm meta_fun_cong} (* x *);
+
+        val adapt = map (
+          (* specialize the simps with unary Sb *)
+          Drule.infer_instantiate' lthy cdeltas
+          #> Local_Defs.fold lthy [def_expanded]
+          (* generalize Free variables t,v *)
+          #> singleton (Variable.export lthy_names lthy)
+        );
+
+      in (("subst_" ^ N, adapt simps) :: acc, lthy) end;
+
+  in @{fold 3} alg (0 upto n-1) Ns trms ([], lthy) end;
+end;
+
 end

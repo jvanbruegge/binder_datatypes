@@ -2544,13 +2544,14 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
     (* accumulate simplification theorems by index, name, and term: *)
     fun alg k N trm (acc, lthy) =
       let
+        val (_, lthy) = Local_Theory.begin_nested lthy;
         val b = Binding.map_name (fn str => str ^ "_" ^ N) tvsubst_b;
 
         (* "pure" terms surrounding the current delta term *)
         val (pre, post) = drop_at k trms;
 
         val (v_T, t_T) = fastype_of trm |> dest_funT;
-        val (t, (v, lthy_names)) = mk_Free "t" t_T lthy ||> mk_Free "v" v_T;
+        val (t, (v, names_lthy)) = mk_Free "t" t_T lthy ||> mk_Free "v" v_T;
 
         (* construct unary Sb definition: subst id... X{k}(v := t) Inj... *)
         val upd = Quickcheck_Common.mk_fun_upd v_T t_T (v, t) trm;
@@ -2637,11 +2638,12 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
           (* discharge premises like "|{}| <o |UNIV|" etc. and tidy up *)
           #> discharge_trivial
           #> tidy
-          (* generalize Free variables t,v *)
-          #> singleton (Variable.export lthy_names lthy)
+          #> singleton (Variable.export names_lthy lthy)
         );
+        val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+        val phi = Proof_Context.export_morphism old_lthy lthy;
 
-      in (("subst_" ^ N, adapt simps) :: acc, lthy) end;
+      in (("subst_" ^ N, adapt simps |> Morphism.fact phi) :: acc, lthy) end;
 
   in @{fold 3} alg (0 upto n-1) Ns trms ([], lthy) end;
 end;

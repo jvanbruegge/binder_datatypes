@@ -9,6 +9,7 @@ begin
 
 (* DATATYPE DECLARTION  *)
 
+declare [[ML_print_depth=10000]]
 declare [[mrbnf_internals]]
 binder_datatype (FFVars: 'a) "term" =
   Var 'a
@@ -19,7 +20,10 @@ for
   subst: tvsubst
 print_theorems
 
-locale HL_REC_term =
+print_locale term.HL_REC_term
+thm HL_REC_term_def
+
+locale xHL_REC_term =
   fixes Pmap :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
     and PFVars :: "'p \<Rightarrow> 'a set"
     and validP :: "'p \<Rightarrow> bool"
@@ -114,7 +118,7 @@ locale HL_REC_term =
     validU_UVar: "\<And>p x. validP p \<Longrightarrow> validU (UVar x p)" and
     validU_ULam: "\<And>p x t pu. validP p \<Longrightarrow> pred_fun validP validU pu \<Longrightarrow> validU (ULam x t pu p)" and
     validU_UApp: "\<And>p t1 pu1 t2 pu2. validP p \<Longrightarrow> pred_fun validP validU pu1 \<Longrightarrow> pred_fun validP validU pu2 \<Longrightarrow> validU (UApp t1 pu1 t2 pu2 p)"
-  begin
+begin
 
 definition "Uctor x = (case Rep_term_pre x of
     Inl a \<Rightarrow> UVar a
@@ -182,7 +186,7 @@ lemmas HL_REC_term_UFVars = HL_to_LL.REC_UFVars[folded HL_REC_term_def]
 end
 
 context fixes x :: "'a :: var" begin
-interpretation HL_REC_term
+interpretation xHL_REC_term
   where
   Pmap = "\<lambda>f (u :: unit). u" and
   PFVars = "\<lambda>(u :: unit). {}" and

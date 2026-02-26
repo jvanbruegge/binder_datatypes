@@ -1276,6 +1276,47 @@ fun create_binder_datatype co (spec : spec) lthy =
     val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_permute_commutes res)) tvsubst_opt;
     val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_Diffs res)) tvsubst_opt;
 
+    (*High-level recursor*)
+    (*Start Here*)
+
+    val (_, lthy) = Local_Theory.background_theory_result (fn thy =>
+      let
+        val (pT, names_lthy) = names_lthy
+          |> mk_TFrees 1 |>> the_single;    
+        val fTs = map (fn a => a --> a) vars;
+    
+        val (((Pmap, PFVarss), validP), names_lthy) = names_lthy
+          |> apfst hd o mk_Frees "Pmap" [fTs ---> pT --> pT]
+          ||>> mk_Frees "PFVars" (map (fn a => pT --> HOLogic.mk_setT a) vars)
+          ||>> apfst hd o mk_Frees "validP" [pT --> @{typ bool}]
+    
+        val termlike_goals = MRBNF_Recursor.mk_termlike_goals vars (map (mk_card_of o HOLogic.mk_UNIV) vars) NONE pT
+          Pmap PFVarss validP lthy |> @{print};
+        val param_goals = [("Pmap_comp0", [#map_comp0 termlike_goals]),
+          ("Pmap_cong_id", [#map_cong_id termlike_goals]),
+          ("PFVars_Pmap", #FVars_map termlike_goals)];
+    
+        val _ = termlike_goals |> #map_comp0 |> Syntax.pretty_term lthy |> @{print warning}
+    
+        val T_names = map (short_type_name o fst o dest_Type o #T) (#quotient_fps res);
+    
+        fun mk_lname s = qualify (Binding.prefix_name (s ^ "_") (Binding.conglomerate (map Binding.name T_names)));
+    
+        val (HL_REC_name, lthy) = Expression.add_locale (mk_lname "HL_REC") Binding.empty [] ([], []) [
+          Element.Fixes (map (fn t =>
+            let val (b, T) = dest_Free t;
+            in (Binding.name b, SOME T, NoSyn) end
+          ) ([Pmap] @ PFVarss @ [validP] (*@ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs*))),
+          Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
+            param_goals (*@ flat model_goalss*)
+          ))
+        ] thy;
+        
+        val _ = HL_REC_name |> @{print};
+        val thy = Local_Theory.exit_global lthy;
+
+    in (HL_REC_name, thy) end) lthy;
+
     val (sugar, lthy) = if co then
       let
         val (locale_name, lthy) = MRBNF_Corecursor.create_binding_corecursor I res lthy;

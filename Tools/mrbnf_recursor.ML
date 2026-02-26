@@ -16,6 +16,11 @@ sig
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> local_theory -> recursor_result * local_theory;
   val get_RECs: bool -> string -> local_theory -> term list;
+
+  val mk_termlike_goals: typ list -> term list ->
+    MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T option ->
+    typ -> term -> term list -> term ->
+    local_theory -> {FVars_map: term list, map_comp0: term, map_cong_id: term}
 end
 
 structure MRBNF_Recursor : MRBNF_RECURSOR =

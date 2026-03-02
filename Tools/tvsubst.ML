@@ -2625,7 +2625,8 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
             let
               val fold_tac = Local_Defs.fold_tac lthy @{thms conj_assoc disj_conj_distribL};
               val unfold_tac = Local_Defs.unfold_tac lthy @{thms conj_assoc};
-            in (REPEAT (CHANGED fold_tac) THEN unfold_tac) #> Seq.hd end
+              fun disjI_tac thm = Seq.single (@{thm disjI2} RS thm) handle THM _ => Seq.empty;
+            in EVERY [REPEAT (CHANGED fold_tac), unfold_tac, TRY disjI_tac] #> Seq.hd end
           ) #> Local_Defs.fold lthy @{thms atomize_conjL};
 
         (* adapt the simp theorems to the unary case: *)

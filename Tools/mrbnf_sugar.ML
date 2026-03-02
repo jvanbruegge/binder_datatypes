@@ -1270,10 +1270,12 @@ fun create_binder_datatype co (spec : spec) lthy =
 
           fun is_RVr (NT, x) =
             let
-              val Inj_count = fold (fn Ts => fn cnt =>
-                cnt + (if member (op=) Ts (TFree NT) then 1 else 0)
-              ) ctor_Ts 0;
-            in x = Free_Var andalso Inj_count <> 1 end;
+              val (Inj_count, arity) = fold (fn Ts => fn (cnt, arity) =>
+                (if member (op=) Ts (TFree NT)
+                  then (1 + cnt, arity orelse length Ts > 1)
+                  else (cnt, arity))
+              ) ctor_Ts (0, false);
+            in x = Free_Var andalso (Inj_count <> 1 orelse arity) end;
 
           val RVr_Ns = filter is_RVr (#vars spec)
             |> map ((fn N => String.extract (N, 1, NONE)) o fst o fst);

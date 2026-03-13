@@ -40,7 +40,8 @@ locale xHL_REC_term =
        |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
        bij g \<Longrightarrow>
        |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
-       Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d" and
+       Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d" 
+    and
     Pmap_cong_id: "\<And>d f. validP d \<Longrightarrow>
            bij f \<Longrightarrow>
            |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -49,13 +50,17 @@ locale xHL_REC_term =
     PFVars_Pmap: "\<And>d f. validP d \<Longrightarrow>
            bij f \<Longrightarrow>
            |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-           PFVars (Pmap f d) = f ` PFVars d" and
-    card_of_PFVars: "validP p \<Longrightarrow> |PFVars p| <o |UNIV :: 'a set|" and
+           PFVars (Pmap f d) = f ` PFVars d" 
+    and
+    card_of_PFVars: "validP p \<Longrightarrow> |PFVars p| <o |UNIV :: 'a set|" 
+    and
     validP_Pmap: "validP p \<Longrightarrow>
            bij f \<Longrightarrow>
            |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-           validP (Pmap f p)" and
-    card_of_avoiding_set: "|avoiding_set| <o |UNIV :: 'a set|" and
+           validP (Pmap f p)" 
+    and
+    card_of_avoiding_set: "|avoiding_set| <o |UNIV :: 'a set|" 
+    and
     Umap_comp: "\<And>d f g t.
        validU d \<Longrightarrow>
        bij f \<Longrightarrow>
@@ -63,30 +68,35 @@ locale xHL_REC_term =
        bij g \<Longrightarrow>
        |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
        Umap (f \<circ> g) t d =
-       (Umap f t \<circ> Umap g t) d" and
+       (Umap f t \<circ> Umap g t) d"
+    and
     Umap_cong_id: "\<And>d t f.
        validU d \<Longrightarrow>
        bij f \<Longrightarrow>
        |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
        (\<And>a. a \<in> UFVars t d \<Longrightarrow> f a = a) \<Longrightarrow>
-       Umap f t d = d" and
+       Umap f t d = d" 
+    and
     validU_Umap: "\<And>f t u.
        validU u \<Longrightarrow>
        bij f \<Longrightarrow>
        |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-       validU (Umap f t u)" and
+       validU (Umap f t u)" 
+    and
     Umap_UVar: "\<And>p x f. validP p \<Longrightarrow>
     bij f \<Longrightarrow>
     |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
     imsupp f \<inter> avoiding_set = {} \<Longrightarrow>
-    Umap f (Var x) (UVar x p) = UVar (f x) (Pmap f p)" and
+    Umap f (Var x) (UVar x p) = UVar (f x) (Pmap f p)" 
+    and
     Umap_ULam: "\<And>p x t pu f. validP p \<Longrightarrow>
     bij f \<Longrightarrow>
     |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
     imsupp f \<inter> avoiding_set = {} \<Longrightarrow>
     pred_fun validP validU pu \<Longrightarrow>
     Umap f (Lam x t) (ULam x t pu p) = ULam (f x) (permute_term f t)
-      (\<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined) (Pmap f p)" and
+      (\<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined) (Pmap f p)" 
+    and
     Umap_UApp: "\<And>p t1 pu1 t2 pu2 f. validP p \<Longrightarrow>
     bij f \<Longrightarrow>
     |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -98,23 +108,23 @@ locale xHL_REC_term =
       (\<lambda>p. if validP p then Umap f t1 (pu1 (Pmap (inv f) p)) else undefined)
       (permute_term f t2)
       (\<lambda>p. if validP p then Umap f t2 (pu2 (Pmap (inv f) p)) else undefined) (Pmap f p)"
-   and
-   UFVars_UVar: "\<And>p x. validP p \<Longrightarrow>
-   UFVars (Var x) (UVar x p) \<subseteq> FFVars (Var x) \<union> PFVars p \<union> avoiding_set"
-   and
-   UFVars_ULam: "\<And>p x t pu. validP p \<Longrightarrow>
-   pred_fun validP validU pu \<Longrightarrow>
-   {x} \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
-   (\<And>p. validP p \<Longrightarrow> UFVars t (pu p) \<subseteq> FFVars t \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
-   UFVars (Lam x t) (ULam x t pu p) \<subseteq> FFVars (Lam x t) \<union> PFVars p \<union> avoiding_set"
-   and
-   UFVars_UApp: "\<And>p t1 pu1 t2 pu2. validP p \<Longrightarrow>
-   pred_fun validP validU pu1 \<Longrightarrow>
-   pred_fun validP validU pu2 \<Longrightarrow>
-   (\<And>p. validP p \<Longrightarrow> UFVars t1 (pu1 p) \<subseteq> FFVars t1 \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
-   (\<And>p. validP p \<Longrightarrow> UFVars t2 (pu2 p) \<subseteq> FFVars t2 \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
-   UFVars (App t1 t2) (UApp t1 pu1 t2 pu2 p) \<subseteq> FFVars (App t1 t2) \<union> PFVars p \<union> avoiding_set"
-  and
+    and
+    UFVars_UVar: "\<And>p x. validP p \<Longrightarrow>
+    UFVars (Var x) (UVar x p) \<subseteq> FFVars (Var x) \<union> PFVars p \<union> avoiding_set"
+    and
+    UFVars_ULam: "\<And>p x t pu. validP p \<Longrightarrow>
+    pred_fun validP validU pu \<Longrightarrow>
+    {x} \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
+    (\<And>p. validP p \<Longrightarrow> UFVars t (pu p) \<subseteq> FFVars t \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
+    UFVars (Lam x t) (ULam x t pu p) \<subseteq> FFVars (Lam x t) \<union> PFVars p \<union> avoiding_set"
+    and
+    UFVars_UApp: "\<And>p t1 pu1 t2 pu2. validP p \<Longrightarrow>
+    pred_fun validP validU pu1 \<Longrightarrow>
+    pred_fun validP validU pu2 \<Longrightarrow>
+    (\<And>p. validP p \<Longrightarrow> UFVars t1 (pu1 p) \<subseteq> FFVars t1 \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
+    (\<And>p. validP p \<Longrightarrow> UFVars t2 (pu2 p) \<subseteq> FFVars t2 \<union> PFVars p \<union> avoiding_set) \<Longrightarrow>
+    UFVars (App t1 t2) (UApp t1 pu1 t2 pu2 p) \<subseteq> FFVars (App t1 t2) \<union> PFVars p \<union> avoiding_set"
+    and
     validU_UVar: "\<And>p x. validP p \<Longrightarrow> validU (UVar x p)" and
     validU_ULam: "\<And>p x t pu. validP p \<Longrightarrow> pred_fun validP validU pu \<Longrightarrow> validU (ULam x t pu p)" and
     validU_UApp: "\<And>p t1 pu1 t2 pu2. validP p \<Longrightarrow> pred_fun validP validU pu1 \<Longrightarrow> pred_fun validP validU pu2 \<Longrightarrow> validU (UApp t1 pu1 t2 pu2 p)"
@@ -136,48 +146,160 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
   apply (rule Umap_comp; assumption)
       apply (rule Umap_cong_id; assumption)
   subgoal for f y p
-    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def
-    apply (auto simp: Var_def[symmetric] Lam_def[symmetric] App_def[symmetric]
-       Abs_term_pre_inverse
-       split: sum.splits intro!: Umap_UVar Umap_ULam Umap_UApp)
+    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def
+    apply (cases "Rep_term_pre y")
+    subgoal for x
+      apply (simp only: sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case
+        Abs_term_pre_inverse[OF UNIV_I] Var_def[symmetric])
+      apply (rule Umap_UVar; assumption)
+      done
+    subgoal for x
+      apply (cases x)
+      subgoal for x'
+        apply (simp only: map_sum.simps sum_set_simps sum.case
+ Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left Ball_def empty_iff simp_thms Un_empty_right prod.set_map UN_singleton
+          Abs_term_pre_inverse[OF UNIV_I] App_def[symmetric] id_apply fst_conv snd_conv map_prod_simp prod.case)
+        apply (cases x')
+        subgoal for a b c
+          apply (cases a)
+          subgoal for a' a''
+            apply (simp only:fsts.simps Un_iff snds.simps prod.case fst_conv snd_conv imp_disjL simp_thms all_conj_distrib map_prod_simp id_apply
+              Abs_term_pre_inverse[OF UNIV_I] App_def[symmetric])
+            apply (erule conjE)
+            apply (rule Umap_UApp; assumption)
+            done
+          done
+        done
+      subgoal for x'
+        apply (simp only: map_sum.simps sum_set_simps sum.case
+ Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left Ball_def empty_iff simp_thms Un_empty_right prod.set_map UN_singleton
+          Abs_term_pre_inverse[OF UNIV_I] Lam_def[symmetric] id_apply fst_conv snd_conv map_prod_simp prod.case)
+        apply (cases x')
+        subgoal for a b c
+          apply (simp only:fsts.simps Un_iff snds.simps prod.case fst_conv snd_conv imp_disjL simp_thms all_conj_distrib map_prod_simp id_apply
+              Abs_term_pre_inverse[OF UNIV_I] Lam_def[symmetric])
+          apply (rule Umap_ULam; assumption)
+          done
+        done
+      done
     done
   subgoal for y p
-    unfolding Uctor_def map_term_pre_def term_pre.pred_set set1_term_pre_def set2_term_pre_def set3_term_pre_def set4_term_pre_def
-    apply (auto simp: Var_def[symmetric] Lam_def[symmetric] App_def[symmetric]
-       Abs_term_pre_inverse
-       split: sum.splits 
-       del: subsetI simp del: term.set
-       intro!: UFVars_UVar UFVars_ULam UFVars_UApp)
+    unfolding Uctor_def map_term_pre_def term_pre.pred_set set1_term_pre_def set2_term_pre_def 
+      set3_term_pre_def set4_term_pre_def
+    apply (simp only: Ball_def)
+    apply (tactic\<open>resolve_tac @{context} [BNF_FP_Util.mk_absumprodE @{thm type_definition_term_pre} [1,2,2] |> infer_instantiate' @{context} [SOME (Thm.cterm_of @{context} @{term y})]] 1\<close>)
+      apply (simp only: sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
+        Abs_term_pre_inverse[OF UNIV_I] Var_def[symmetric]
+        sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
+        Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
+        prod.set_map UN_singleton)
+      apply (rule UFVars_UVar; assumption)
+      apply (simp only: sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
+        Abs_term_pre_inverse[OF UNIV_I] App_def[symmetric]
+        sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
+        Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
+        prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
+              imp_disjL all_conj_distrib)
+    apply (erule conjE)+
+     apply (rule UFVars_UApp; assumption?)
+    apply (erule thin_rl)
+      apply (drule meta_spec)+
+      apply (drule meta_mp)
+       apply (assumption)
+      apply (erule meta_mp)
+      apply (simp only: prod.collapse simp_thms)
+    apply (erule thin_rl)
+      apply (drule meta_spec)+
+      apply (drule meta_mp)
+       apply (assumption)
+      apply (erule meta_mp)
+     apply (simp only: prod.collapse simp_thms)
+      apply (simp only: sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
+        Abs_term_pre_inverse[OF UNIV_I] Lam_def[symmetric]
+        sum_set_simps  Union_insert Union_empty
+        Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
+        prod.set_map UN_singleton split_beta Un_iff prod_set_simps
+              imp_disjL all_conj_distrib insert_iff)
+    apply (rule UFVars_ULam; assumption?)
+    apply (erule thin_rl)
+      apply (drule meta_spec)+
+      apply (drule meta_mp)
+       apply (assumption)
+      apply (erule meta_mp)
+    apply (simp only: prod.collapse simp_thms)
     done
    apply (rule validU_Umap; assumption)
   subgoal for y p
-    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def
-        apply (auto simp: Var_def[symmetric] Lam_def[symmetric] App_def[symmetric]
-       Abs_term_pre_inverse
-       split: sum.splits intro!: validU_UVar validU_ULam validU_UApp)
+    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def
+    apply (cases "Rep_term_pre y")
+    subgoal for x
+      apply (simp only: sum.case validU_UVar)
+      done
+    subgoal for x
+      apply (cases x)
+      subgoal for x'
+        apply (simp only: map_sum.simps sum_set_simps sum.case
+ Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left Ball_def empty_iff simp_thms Un_empty_right prod.set_map UN_singleton)
+        apply (cases x')
+        subgoal for a b c
+          apply (cases a)
+          subgoal for a' a''
+            apply (simp only:fsts.simps Un_iff snds.simps prod.case fst_conv snd_conv imp_disjL simp_thms all_conj_distrib)
+            apply (erule conjE)
+            apply(rule validU_UApp)
+               apply assumption+
+            done
+          done
+        done
+      subgoal for x'
+        apply (simp only: map_sum.simps sum_set_simps sum.case
+ Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left Ball_def empty_iff simp_thms Un_empty_right prod.set_map UN_singleton)
+        apply (cases x')
+        subgoal for a b c
+          apply (simp only:fsts.simps Un_iff snds.simps prod.case fst_conv snd_conv imp_disjL simp_thms all_conj_distrib)
+          apply(rule validU_ULam)
+             apply assumption+
+          done
+        done
+      done
     done
   done
 
 definition HL_REC_term where "HL_REC_term = HL_to_LL.REC_term"
 
 lemma HL_REC_term_Var: "validP p \<Longrightarrow> HL_REC_term (Var x) p = UVar x p"
-  unfolding Var_def HL_REC_term_def
-  apply (subst HL_to_LL.REC_ctor)
-  apply (auto simp: Uctor_def map_term_pre_def set2_term_pre_def Abs_term_pre_inverse noclash_term_def)
+  unfolding Var_def HL_REC_term_def 
+  apply (subst  HL_to_LL.REC_ctor)
+  unfolding noclash_term_def Uctor_def map_term_pre_def comp_def set2_term_pre_def Abs_term_pre_inverse[OF Set.UNIV_I] map_sum.simps sum_set_simps singleton_iff empty_iff
+      Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left id_apply sum.case
+     apply assumption
+  apply (rule refl)+
   done
 
 lemma HL_REC_term_Lam: "validP p \<Longrightarrow> {x} \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
   HL_REC_term (Lam x t) p = ULam x t (\<lambda>p. if validP p then HL_REC_term t p else undefined) p"
   unfolding Lam_def HL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
-  apply (auto simp: Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def set4_term_pre_def Abs_term_pre_inverse noclash_term_def)
+  apply assumption
+  unfolding Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def
+    set4_term_pre_def noclash_term_def Int_Un_distrib comp_def Abs_term_pre_inverse[OF UNIV_I]
+    map_sum.simps sum_set_simps Union_empty Un_empty_left Un_empty_right Union_insert  
+    Union_Un_distrib prod_set_simps image_empty Int_empty_right map_prod_simp id_apply 
+    apply assumption
+   apply (rule refl)
+  apply (simp only: sum.case prod.case fst_conv snd_conv id_def)
   done
 
 lemma HL_REC_term_App: "validP p \<Longrightarrow>
   HL_REC_term (App t1 t2) p = UApp t1 (\<lambda>p. if validP p then HL_REC_term t1 p else undefined) t2 (\<lambda>p. if validP p then HL_REC_term t2 p else undefined) p"
   unfolding App_def HL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
-  apply (auto simp: Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def set4_term_pre_def Abs_term_pre_inverse noclash_term_def)
+     apply assumption
+  unfolding Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def set4_term_pre_def
+    Abs_term_pre_inverse[OF Set.UNIV_I] noclash_term_def comp_def map_sum.simps sum_set_simps
+    Union_empty Un_empty_left Un_empty_right Union_insert prod_set_simps image_empty Int_empty_right
+    map_prod_simp id_apply sum.case prod.case fst_conv snd_conv Int_empty_left
+  apply (rule refl)+
   done
 
 lemmas HL_REC_term_swap = HL_to_LL.REC_swap[folded HL_REC_term_def]

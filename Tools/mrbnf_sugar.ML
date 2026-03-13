@@ -1277,7 +1277,6 @@ fun create_binder_datatype co (spec : spec) lthy =
     val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_Diffs res)) tvsubst_opt;
 
     (*High-level recursor*)
-    (*Start Here*)
 
     val (_, lthy) = Local_Theory.background_theory_result (fn thy =>
       let
@@ -1285,18 +1284,273 @@ fun create_binder_datatype co (spec : spec) lthy =
           |> mk_TFrees 1 |>> the_single;    
         val fTs = map (fn a => a --> a) vars;
     
-        val (((Pmap, PFVarss), validP), names_lthy) = names_lthy
+        val ((((Pmap, PFVarss), validP), avoiding_sets), names_lthy) = names_lthy
           |> apfst hd o mk_Frees "Pmap" [fTs ---> pT --> pT]
           ||>> mk_Frees "PFVars" (map (fn a => pT --> HOLogic.mk_setT a) vars)
           ||>> apfst hd o mk_Frees "validP" [pT --> @{typ bool}]
-    
-        val termlike_goals = MRBNF_Recursor.mk_termlike_goals vars (map (mk_card_of o HOLogic.mk_UNIV) vars) NONE pT
-          Pmap PFVarss validP lthy |> @{print};
-        val param_goals = [("Pmap_comp0", [#map_comp0 termlike_goals]),
+          ||>> mk_Frees "avoiding_set" (map HOLogic.mk_setT vars)
+
+        val (uT, names_lthy) = names_lthy
+          |> mk_TFrees 1 |>> the_single;
+
+        val (((Umap, UFVarss), validU), names_lthy) = names_lthy
+          |> apfst hd o mk_Frees "Umap" [fTs ---> qT --> uT --> uT]
+          ||>> mk_Frees "UFVars" (map (fn a => qT --> uT --> HOLogic.mk_setT a) vars)
+          ||>> apfst hd o mk_Frees "validU" [uT --> @{typ bool}]
+
+        val qTs = map #T (#quotient_fps res);
+        val ctor_arg_tyss = map (fn (ctor_term, _) =>
+          fst (Term.strip_type (fastype_of ctor_term))
+        ) ctors;
+        fun mk_Uctor_arg_tys Ts = flat (map (fn T =>
+          if member (op=) qTs T then [T, pT --> uT] else [T]
+        ) Ts);
+        val Uctor_tyss = map (fn Ts => mk_Uctor_arg_tys Ts ---> pT --> uT) ctor_arg_tyss;
+        val (Uctors, names_lthy) = fold_map (fn (name, ty) => fn lthy =>
+          lthy |> apfst hd o mk_Frees name [ty]
+        ) (map (fn name => "U" ^ name) ctor_names ~~ Uctor_tyss) names_lthy;
+
+        val bds = map (mk_card_of o HOLogic.mk_UNIV) vars;
+
+        val (p, _) = lthy |> apfst hd o mk_Frees "p" [pT];
+        val (fs, _) = lthy |> mk_Frees "f" fTs;
+        val (t, _) = lthy |> apfst hd o mk_Frees "t" [qT];
+        val (u, _) = lthy |> apfst hd o mk_Frees "u" [uT];
+
+        (* Helper functions *)
+        fun mk_f_prems fs bds = flat (map2 (fn f => fn bd => map HOLogic.mk_Trueprop [mk_bij f,
+          mk_ordLess (mk_card_of (mk_supp f)) bd]) fs bds);
+
+        fun mk_imsupp_prems fs avoiding_sets = map2 (fn f => fn A =>
+          HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, A))
+        ) fs avoiding_sets;
+
+        fun mk_pred_fun P Q =
+          let
+            val PT = fastype_of P;
+            val QT = fastype_of Q;
+            val fT = domain_type PT --> domain_type QT;
+          in Const (@{const_name pred_fun}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
+
+        fun mk_pred_fun_prems validP validU pus = map (fn pu =>
+          HOLogic.mk_Trueprop (mk_pred_fun validP validU $ pu)
+        ) pus;
+
+        val Ts' = snd (dest_Type qT);
+        val rrename = Term.subst_atomic_types (Ts' ~~ (vars @ passives)) (#permute quotient);
+
+        fun is_rec_T T = member (op=) qTs T;
+
+        fun mk_pus arg_tys = lthy |> mk_Frees "pu"
+          (map_filter (fn T => if is_rec_T T then SOME (pT --> uT) else NONE) arg_tys);
+
+        fun mk_uctor_args args arg_tys pus = rev (fst (fold (fn (arg, T) => fn (acc, pus_left) =>
+          if is_rec_T T then (hd pus_left :: arg :: acc, tl pus_left)
+          else (arg :: acc, pus_left)
+        ) (args ~~ arg_tys) ([], pus)));
+
+        fun lookup_var_index T =
+          case find_index (curry (op=) T) vars of
+            ~1 => error ("lookup_var_index: type " ^ @{make_string} T ^ " not found in vars")
+          | i => i;
+
+        fun rename_nonrec_arg arg =
+          nth fs (lookup_var_index (fastype_of arg)) $ arg;
+
+        fun mk_guarded_rec_lambda Pmap_inv t pu =
+          let
+            val (p', _) = lthy |> apfst hd o mk_Frees "p" [pT];
+          in
+            Term.absfree (dest_Free p') (
+              BNF_FP_Util.mk_If (validP $ p')
+                (Term.list_comb (Umap, fs) $ t $ (pu $ (Pmap_inv $ p')))
+                (BNF_GFP_Util.mk_undefined uT)
+            )
+          end;
+
+        fun mk_ctor_setup (_, ctor_term, Uctor, arg_tys, _) =
+          let
+            val (args, _) = lthy |> mk_Frees "x" arg_tys;
+            val (pus, _) = mk_pus arg_tys;
+            val uctor_args = mk_uctor_args args arg_tys pus;
+            val ctor_app = Term.list_comb (ctor_term, args);
+            val Uctor_app = Term.list_comb (Uctor, uctor_args @ [p]);
+            val pred_fun_prems = mk_pred_fun_prems validP validU pus;
+          in (args, pus, ctor_app, Uctor_app, pred_fun_prems) end;
+
+        val f_prems = mk_f_prems fs bds;
+        val imsupp_prems = mk_imsupp_prems fs avoiding_sets;
+
+        fun is_bound_spec_arg (TFree x) = (case AList.lookup (op=) (#vars spec) x of
+              SOME MRBNF_Def.Bound_Var => true | _ => false)
+          | is_bound_spec_arg _ = false;
+
+        val ctor_infos = map (fn ((((ctor_name, (ctor_term, _)), Uctor), arg_tys), (_, spec_tys)) =>
+          (ctor_name, ctor_term, Uctor, arg_tys, map is_bound_spec_arg spec_tys)
+        ) ((((ctor_names ~~ ctors) ~~ Uctors) ~~ ctor_arg_tyss) ~~ #ctors spec);
+
+        (* P-side goals *)
+        val termlike_goals = MRBNF_Recursor.mk_termlike_goals vars bds NONE pT
+          Pmap PFVarss validP lthy;
+
+        val small_PFVars_goals = map2 (fn FVars => fn bd =>
+          Logic.all p (Logic.mk_implies (HOLogic.mk_Trueprop (validP $ p), HOLogic.mk_Trueprop (
+            mk_ordLess (mk_card_of (FVars $ p)) bd
+          )))
+        ) PFVarss bds;
+
+        val valid_Pmap_goal = fold_rev Logic.all (fs @ [p]) (Logic.mk_implies (
+          HOLogic.mk_Trueprop (validP $ p), fold_rev (curry Logic.mk_implies) (
+            f_prems
+          ) (HOLogic.mk_Trueprop (validP $ (Term.list_comb (Pmap, fs) $ p)))
+        ));
+
+        val small_avoiding_set_goals = map2 (fn A => fn bd => HOLogic.mk_Trueprop (mk_ordLess
+          (mk_card_of A) bd
+        )) avoiding_sets bds;
+
+        (* U-side generic goals *)
+        val u_termlike_goals = MRBNF_Recursor.mk_termlike_goals vars bds (SOME quotient) uT
+          Umap UFVarss validU lthy;
+
+        val validU_Umap_goal = fold_rev Logic.all (fs @ [t, u]) (Logic.mk_implies (
+          HOLogic.mk_Trueprop (validU $ u), fold_rev (curry Logic.mk_implies) (
+            f_prems
+          ) (HOLogic.mk_Trueprop (validU $ (Term.list_comb (Umap, fs) $ t $ u)))
+        ));
+
+        (* U-side constructor goals *)
+        fun mk_Umap_ctor_goal (info as (_, _, Uctor, arg_tys, _)) =
+          let
+            val (args, pus, ctor_app, Uctor_app, pred_fun_prems) = mk_ctor_setup info;
+            val lhs = Term.list_comb (Umap, fs) $ ctor_app $ Uctor_app;
+
+            val Pmap_inv = Term.list_comb (Pmap, map mk_inv fs);
+            val Uctor_rhs_args = rev (fst (fold (fn (arg, T) => fn (acc, pus_left) =>
+              if is_rec_T T then
+                let
+                  val pu = hd pus_left;
+                  val renamed_arg = Term.list_comb (rrename, fs) $ arg;
+                  val guarded_pu = mk_guarded_rec_lambda Pmap_inv arg pu;
+                in (guarded_pu :: renamed_arg :: acc, tl pus_left) end
+              else
+                (rename_nonrec_arg arg :: acc, pus_left)
+            ) (args ~~ arg_tys) ([], pus)));
+
+            val rhs = Term.list_comb (Uctor, Uctor_rhs_args @ [Term.list_comb (Pmap, fs) $ p]);
+          in
+            fold_rev Logic.all (fs @ args @ pus @ [p]) (Logic.mk_implies (
+              HOLogic.mk_Trueprop (validP $ p), fold_rev (curry Logic.mk_implies) (
+                f_prems @ imsupp_prems @ pred_fun_prems
+              ) (mk_Trueprop_eq (lhs, rhs))
+            ))
+          end;
+
+        val Umap_ctor_goals = map mk_Umap_ctor_goal ctor_infos;
+
+        (* UFVars goals *)
+        val FVarss_quot = #FVarss quotient;
+
+        fun mk_UFVars_ctor_goals (info as (_, _, _, arg_tys, is_bounds)) =
+          let
+            val (args, pus, ctor_app, Uctor_app, pred_fun_prems) = mk_ctor_setup info;
+
+            val rec_arg_pus = rev (fst (fold (fn (arg, T) => fn (acc, pus_left) =>
+              if is_rec_T T then ((arg, hd pus_left) :: acc, tl pus_left)
+              else (acc, pus_left)
+            ) (args ~~ arg_tys) ([], pus)));
+
+            val bound_args = map_filter (fn (arg, is_bound) =>
+              if is_bound then SOME (arg, lookup_var_index (fastype_of arg))
+              else NONE
+            ) (args ~~ is_bounds);
+          in
+            @{map 4} (fn (UFVars_i, var_i) => fn FVars_i => fn PFVars_i => fn avoiding_set_i =>
+              let
+                val sort_idx = lookup_var_index var_i;
+
+                val int_empty_prems = map_filter (fn (arg, i) =>
+                  if i = sort_idx then
+                    SOME (HOLogic.mk_Trueprop (mk_int_empty (
+                      mk_singleton arg,
+                      mk_Un (PFVars_i $ p, avoiding_set_i)
+                    )))
+                  else NONE
+                ) bound_args;
+
+                val subset_prems = map (fn (t_arg, pu_arg) =>
+                  Logic.all p (Logic.mk_implies (
+                    HOLogic.mk_Trueprop (validP $ p),
+                    HOLogic.mk_Trueprop (mk_leq
+                      (UFVars_i $ t_arg $ (pu_arg $ p))
+                      (mk_Un (mk_Un (FVars_i $ t_arg, PFVars_i $ p), avoiding_set_i))
+                    )
+                  ))
+                ) rec_arg_pus;
+
+                val concl = HOLogic.mk_Trueprop (mk_leq
+                  (UFVars_i $ ctor_app $ Uctor_app)
+                  (mk_Un (mk_Un (FVars_i $ ctor_app, PFVars_i $ p), avoiding_set_i))
+                );
+              in
+                fold_rev Logic.all (args @ pus @ [p]) (Logic.mk_implies (
+                  HOLogic.mk_Trueprop (validP $ p), fold_rev (curry Logic.mk_implies) (
+                    pred_fun_prems @ int_empty_prems @ subset_prems
+                  ) concl
+                ))
+              end
+            ) (UFVarss ~~ vars) FVarss_quot PFVarss avoiding_sets
+          end;
+
+        val UFVars_ctor_goalss = map mk_UFVars_ctor_goals ctor_infos;
+
+        (* validU goals *)
+        val validU_ctor_goals = map (fn info =>
+          let
+            val (args, pus, _, Uctor_app, pred_fun_prems) = mk_ctor_setup info;
+          in
+            fold_rev Logic.all (args @ pus @ [p]) (Logic.mk_implies (
+              HOLogic.mk_Trueprop (validP $ p), fold_rev (curry Logic.mk_implies) pred_fun_prems (
+                HOLogic.mk_Trueprop (validU $ Uctor_app)
+              )
+            ))
+          end
+        ) ctor_infos;
+
+        (* Named goal lists *)
+        val p_goals = [
+          ("Pmap_comp0", [#map_comp0 termlike_goals]),
           ("Pmap_cong_id", [#map_cong_id termlike_goals]),
-          ("PFVars_Pmap", #FVars_map termlike_goals)];
-    
-        val _ = termlike_goals |> #map_comp0 |> Syntax.pretty_term lthy |> @{print warning}
+          ("PFVars_Pmap", #FVars_map termlike_goals),
+          ("small_PFVars", small_PFVars_goals),
+          ("valid_Pmap", [valid_Pmap_goal]),
+          ("small_avoiding_sets", small_avoiding_set_goals)
+        ];
+
+        val u_generic_goals = [
+          ("Umap_comp0", [#map_comp0 u_termlike_goals]),
+          ("Umap_cong_id", [#map_cong_id u_termlike_goals]),
+          ("valid_Umap", [validU_Umap_goal])
+        ];
+
+        val u_ctor_goals = map2 (fn (ctor_name, _, _, _, _) => fn goal =>
+          ("Umap_U" ^ ctor_name, [goal])
+        ) ctor_infos Umap_ctor_goals;
+
+        val UFVars_goals = map2 (fn (ctor_name, _, _, _, _) => fn goals =>
+          ("UFVars_U" ^ ctor_name, goals)
+        ) ctor_infos UFVars_ctor_goalss;
+
+        val validU_goals = map2 (fn (ctor_name, _, _, _, _) => fn goal =>
+          ("validU_U" ^ ctor_name, [goal])
+        ) ctor_infos validU_ctor_goals;
+
+        val param_goals =
+          p_goals @
+          u_generic_goals @
+          u_ctor_goals @
+          UFVars_goals @
+          validU_goals;
     
         val T_names = map (short_type_name o fst o dest_Type o #T) (#quotient_fps res);
     
@@ -1306,13 +1560,12 @@ fun create_binder_datatype co (spec : spec) lthy =
           Element.Fixes (map (fn t =>
             let val (b, T) = dest_Free t;
             in (Binding.name b, SOME T, NoSyn) end
-          ) ([Pmap] @ PFVarss @ [validP] (*@ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs*))),
+          ) ([Pmap] @ PFVarss @ [validP] @ avoiding_sets @ [Umap] @ UFVarss @ Uctors @ [validU])),
           Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
             param_goals (*@ flat model_goalss*)
           ))
         ] thy;
         
-        val _ = HL_REC_name |> @{print};
         val thy = Local_Theory.exit_global lthy;
 
     in (HL_REC_name, thy) end) lthy;

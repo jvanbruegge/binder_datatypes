@@ -2827,7 +2827,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       ]) end
     ) permutes zs FVarsss alpha_bijs TT_total_abs_eq_iffs;
 
-    val TT_fresh_injects = @{map 8} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor =>
+    val TT_fresh_injects = @{map 10} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn TT_inject0 => fn permute_cong =>
       let
         val card_hyps = map (fn A =>
           let val bd = fastype_of A |> HOLogic.dest_setT |> HOLogic.mk_UNIV |> mk_card_of in
@@ -2844,11 +2844,69 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         val concl = mk_gen_inject imsupp_prems x y bsetss bfsetss rec_sets deads mrbnf ctor;
 
         val goal = Logic.list_implies (card_hyps @ mk_avoids_hyps x @ mk_avoids_hyps y, concl);
+
+        val pre_set_bd_UNIVs = MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf;
+        val bound_set_bd_offset =
+          length pre_set_bd_UNIVs - length bsetss - length (flat bfsetss) - length rec_sets;
+        val bd_thms = maps MRBNF_Def.set_bd_of_mrbnf mrbnfs @ pre_set_bd_UNIVs @ flat FVars_bd_UNIVs;
       in
-        Goal.prove_sorry lthy (names (As @ [x, y])) [] goal
-          (HEADGOAL o Skip_Proof.cheat_tac o #context)
+        Goal.prove_sorry lthy (names (As @ [x, y])) [] goal (fn {context=ctxt, ...} => EVERY
+          ((HEADGOAL o EVERY')
+             [EqSubst.eqsubst_tac ctxt [0] [TT_inject0],
+              rtac ctxt @{thm iffI[symmetric]},
+              REPEAT_DETERM o etac ctxt @{thm exE},
+              REPEAT_DETERM o etac ctxt @{thm conjE},
+              Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+               EVERY1 (map (fn (_, ct) =>
+                 rtac ctxt (infer_instantiate' ctxt [NONE, SOME ct] @{thm exI})
+               ) params)
+              ) ctxt,
+              REPEAT_DETERM o FIRST' [rtac ctxt @{thm conjI}, assume_tac ctxt],
+              REPEAT_DETERM o etac ctxt @{thm exE},
+              REPEAT_DETERM o etac ctxt @{thm conjE},
+              rotate_tac (5 * nvars)] ::
+
+          maps (fn set_bd_UNIV =>
+            [HEADGOAL (forward_tac ctxt [set_bd_UNIV RSN (2, @{thm ex_avoiding_bij[rotated 4]})]),
+             (REPEAT_DETERM o HEADGOAL) (assume_tac ctxt ORELSE'
+              resolve_tac ctxt (@{thms UN_bound Un_bound infinite_UNIV ordLeq_ordLess_trans[OF card_of_diff]} @ bd_thms)),
+             HEADGOAL (rotate_tac 1)]
+          ) (pre_set_bd_UNIVs |> drop bound_set_bd_offset |> take nvars |> @{print}) @
+
+          [(HEADGOAL o EVERY')
+             [dresolve_tac ctxt @{thms sym},
+              Subgoal.FOCUS_PARAMS_FIXED (HEADGOAL o hyp_subst_tac_thin true o #context) ctxt],
+
+           (REPEAT_DETERM o HEADGOAL) (eresolve_tac ctxt @{thms exE conjE}),
+           HEADGOAL (Subgoal.FOCUS_PARAMS (fn {params, ...} =>
+             (HEADGOAL o EVERY' o map (fn (_, g) =>
+               resolve_tac ctxt [infer_instantiate' ctxt [NONE, SOME g] @{thm exI}]
+             )) (drop nvars params)
+           ) ctxt),
+
+           (REPEAT_DETERM o HEADGOAL) (rtac ctxt @{thm conjI} THEN' assume_tac ctxt),
+
+           HEADGOAL (Subgoal.FOCUS_PARAMS_FIXED (fn {context=ctxt, ...} =>
+             HEADGOAL (REPEAT_DETERM_N nvars o
+               (EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf) THEN_ALL_NEW
+                FIRST' [resolve_tac ctxt @{thms supp_id_bound bij_id}, assume_tac ctxt, K all_tac]))
+           ) ctxt),
+
+           HEADGOAL (rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf)),
+
+           (REPEAT_DETERM o HEADGOAL o FIRST')
+            [resolve_tac ctxt @{thms supp_id_bound bij_id refl},
+             assume_tac ctxt,
+             etac ctxt @{thm fresh_agree_on_top} THEN_ALL_NEW assume_tac ctxt,
+             etac ctxt @{thm fresh_agree_on_bound} THEN_ALL_NEW assume_tac ctxt,
+             resolve_tac ctxt [permute_cong],
+             etac ctxt @{thm fresh_agree_on},
+             rtac ctxt @{thm UnI2[where B="_ \<union> _", folded Un_assoc]},
+             rtac ctxt @{thm equalityD2[THEN set_mp, OF Un_Diff_cancel2]},
+             etac ctxt @{thm UnI1},
+             etac ctxt @{thm UnI1[OF UN_I]} THEN_ALL_NEW assume_tac ctxt] ]))
       end
-    ) xs ys bound_setsss bfree_setsss rec_setss deadss mrbnfs ctors;
+    ) xs ys bound_setsss bfree_setsss rec_setss deadss mrbnfs ctors TT_inject0s permute_congs;
 
     val permute_cong_ids = map (fn thm => Local_Defs.unfold0 lthy (@{thm id_apply} :: permute_ids) (thm OF (
       replicate (2 * nvars) @{thm _} @ flat (replicate nvars @{thms bij_id supp_id_bound})

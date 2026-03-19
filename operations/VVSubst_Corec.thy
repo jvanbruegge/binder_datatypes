@@ -41,12 +41,19 @@ lemma TT_fresh_inject:
   apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)
   apply (rule term_pre.map_cong0; (rule supp_id_bound bij_id refl | assumption)?)
 
-   apply ((rule fresh_agree_on_bound; assumption) | (erule fresh_agree_on_top; assumption))+
+   apply (
+    (rule supp_id_bound bij_id refl) |
+    assumption |
+    (rule fresh_agree_on_bound; assumption) |
+    (erule fresh_agree_on_top; assumption) |
+    rule permute_congs |
+    erule fresh_agree_on |
+    rule UnI2[where B="_ \<union> _", folded Un_assoc] |
+    erule in_FVars_or_bound |
+    rule equalityD2[THEN set_mp, OF Un_Diff_cancel2] |
+    erule UnI1
+  )+
 
-  apply (rule permute_congs; (assumption)?)
-  apply ((erule fresh_agree_on; assumption?),
-      (rule UnI2[where B="_ \<union> _", folded Un_assoc])?
-      , erule in_FVars_or_bound; assumption)+
   done
 
 type_synonym 'a U = "'a term \<times> ('a \<Rightarrow> 'a)"

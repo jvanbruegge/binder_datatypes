@@ -8,66 +8,45 @@ lemma insert_subset_Collect: "insert x A \<subseteq> Collect P \<longleftrightar
 lemma TT_fresh_inject:
   fixes A::"'a::covar set"
   assumes "|A| <o |UNIV::'a set|" "set2_term_pre x \<inter> A = {}"
-  shows "set2_term_pre y \<inter> A = {} \<Longrightarrow> term_ctor x = term_ctor y \<longleftrightarrow> (\<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and>
-    id_on (\<Union>(FVars_term ` set3_term_pre x) - set2_term_pre x) f \<and> imsupp f \<inter> A = {}
-    \<and> map_term_pre id f (permute_term f) id x = y)"
-  apply (rule trans)
-   apply (rule TT_inject0s)
+  shows "set2_term_pre y \<inter> A = {} \<Longrightarrow> term_ctor x = term_ctor y \<longleftrightarrow>
+   (\<exists>f. bij f \<and>
+        |supp f| <o |UNIV::'a set| \<and>
+        id_on (\<Union>(FVars_term ` set3_term_pre x) - set2_term_pre x) f \<and>
+        imsupp f \<inter> A = {} \<and>
+        map_term_pre id f (permute_term f) id x = y)"
+  apply (subst TT_inject0s)
   apply (rule iffI[symmetric])
    apply (erule exE conjE)+
    apply (rule exI)
    apply ((rule conjI)?, assumption)+
+
   apply (erule exE conjE)+
-  apply (frule ex_avoiding_bij[rotated 4, of _ _ "set2_term_pre x" A])
-         apply (rule term_pre.set_bd_UNIV)
+
+  apply (rotate_tac 3)
+
+  apply (frule ex_avoiding_bij[rotated 4, OF _ term_pre.set_bd_UNIV(2)])
         apply (rule assms)+
       apply assumption+
-    apply (rule infinite_UNIV)
-   apply (rule ordLeq_ordLess_trans[OF card_of_diff])
+    apply (rule Un_bound infinite_UNIV ordLeq_ordLess_trans[OF card_of_diff] term_pre.set_bd FVars_bd_UNIVs term_pre.set_bd_UNIV)+
    apply (rule var_class.UN_bound)
-    apply (rule ordLess_ordLeq_trans)
-     apply (rule term_pre.set_bd)
-    apply (rule var_class.large')
-   apply (rule FVars_bd_UNIVs)
-  apply (erule exE conjE)+
-  apply (rotate_tac 4)
-  apply (rule exI)
-  apply (rule conjI, assumption)+
-  apply hypsubst_thin
-  apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)
-  apply (rule term_pre.map_cong0)
-           apply (rule supp_id_bound bij_id refl | assumption)+
-    apply (erule allE)
-    apply (erule mp)
-    apply (rule conjI)
-     apply (erule UnI2)
-    apply (rotate_tac 4)
-    apply (drule iffD1[OF disjoint_iff])
-    apply (erule allE)
-    apply (erule mp)
-    apply (erule imageI)
+    apply (rule term_pre.set_bd FVars_bd_UNIVs term_pre.set_bd_UNIV)+
+  apply (rotate_tac 1)
 
-    apply (rule permute_congs)
-        apply assumption+
-   apply (rule case_split[of "_ \<in> _", rotated])
-    apply (rule trans)
-     apply (erule id_onD)
-     apply (rule DiffI)
-      apply (rule UN_I)
-       apply assumption+
-    apply (rule sym)
-    apply (erule id_onD)
-    apply (rule DiffI UN_I | assumption)+
-   apply (erule allE)
-   apply (erule mp)
-   apply (rule conjI)
-  apply (erule UnI2)
-    apply (rotate_tac 4)
-    apply (drule iffD1[OF disjoint_iff])
-    apply (erule allE)
-    apply (erule mp)
-   apply (erule imageI)
-  apply (rule refl)
+  apply (erule exE conjE)+
+  apply (drule sym, hypsubst_thin)
+
+  apply (rule_tac x=ga in exI)
+  apply (rule conjI, assumption)+
+
+  apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)
+  apply (rule term_pre.map_cong0; (rule supp_id_bound bij_id refl | assumption)?)
+
+   apply ((rule fresh_agree_on_bound; assumption) | (erule fresh_agree_on_top; assumption))+
+
+  apply (rule permute_congs; (assumption)?)
+  apply ((erule fresh_agree_on; assumption?),
+      (rule UnI2[where B="_ \<union> _", folded Un_assoc])?
+      , erule in_FVars_or_bound; assumption)+
   done
 
 type_synonym 'a U = "'a term \<times> ('a \<Rightarrow> 'a)"

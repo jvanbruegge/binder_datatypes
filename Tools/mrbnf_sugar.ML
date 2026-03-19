@@ -1565,7 +1565,49 @@ fun create_binder_datatype co (spec : spec) lthy =
             param_goals (*@ flat model_goalss*)
           ))
         ] thy;
-        
+
+        (* Define Uctor inside the locale *)
+        val Uctor_preT =
+          let val (pn, pTs) = dest_Type (domain_type (fastype_of quotient_ctor))
+          in Type (pn, map (fn T =>
+            if member (op=) qTs T then HOLogic.mk_prodT (T, pT --> uT) else T
+          ) pTs) end;
+
+        val Uctor_repT =
+          let
+            val info_abs_Ts = snd (dest_Type (#abs_type (fst info)))
+            val Uctor_preT_Ts = snd (dest_Type Uctor_preT)
+          in Term.typ_subst_atomic (info_abs_Ts ~~ Uctor_preT_Ts) (#rep_type (fst info)) end;
+
+        val Uctor_rep = Const (#Rep_name (fst info), Uctor_preT --> Uctor_repT);
+
+        val Uctor_branches = map2 (fn Uctor_i => fn orig_tys =>
+          let
+            val (tuple_elems, uctor_argss) = split_list (map_index (fn (j, orig_T) =>
+              if member (op=) qTs orig_T then
+                let
+                  val t_free = Free ("t" ^ string_of_int j, orig_T)
+                  val pu_free = Free ("pu" ^ string_of_int j, pT --> uT)
+                in (HOLogic.pair_const orig_T (pT --> uT) $ t_free $ pu_free, [t_free, pu_free]) end
+              else
+                let val x_free = Free ("x" ^ string_of_int j, orig_T)
+                in (x_free, [x_free]) end
+            ) orig_tys)
+            val uctor_args = flat uctor_argss
+            val body = Term.list_comb (Uctor_i, uctor_args)
+            val tuple = mk_tuple_balanced tuple_elems
+          in HOLogic.tupled_lambda tuple body end
+        ) Uctors ctor_arg_tyss;
+
+        val Uctor_case_fn = Balanced_Tree.make mk_case_sum Uctor_branches;
+        val Uctor_x = Free ("x", Uctor_preT);
+        val Uctor_rhs = lambda Uctor_x (Uctor_case_fn $ (Uctor_rep $ Uctor_x));
+
+        val ((_, (_, _)), lthy) = Local_Theory.define
+          ((Binding.name "Uctor", NoSyn),
+           ((Thm.def_binding (Binding.name "Uctor"), []), Uctor_rhs)) lthy;
+
+        val _ = HL_REC_name |> @{print};
         val thy = Local_Theory.exit_global lthy;
 
     in (HL_REC_name, thy) end) lthy;

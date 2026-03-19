@@ -22,6 +22,7 @@ print_theorems
 
 print_locale term.HL_REC_term
 thm HL_REC_term_def
+thm HL_REC_term.Uctor_def
 
 locale xHL_REC_term =
   fixes Pmap :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"

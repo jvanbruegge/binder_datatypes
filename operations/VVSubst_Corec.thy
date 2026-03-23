@@ -35,24 +35,20 @@ lemma TT_fresh_inject:
   apply (erule exE conjE)+
   apply (drule sym, hypsubst_thin)
 
-  apply (rule_tac x=ga in exI)
+  apply (rename_tac f g)
+  apply (rule_tac x=g in exI)
   apply (rule conjI, assumption)+
 
   apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)
   apply (rule term_pre.map_cong0; (rule supp_id_bound bij_id refl | assumption)?)
 
    apply (
-    (rule supp_id_bound bij_id refl) |
-    assumption |
-    (rule fresh_agree_on_bound; assumption) |
-    (erule fresh_agree_on_top; assumption) |
-    rule permute_congs |
-    erule fresh_agree_on |
-    rule UnI2[where B="_ \<union> _", folded Un_assoc] |
-    erule in_FVars_or_bound |
-    rule equalityD2[THEN set_mp, OF Un_Diff_cancel2] |
-    erule UnI1
-  )+
+     rule permute_congs refl supp_id_bound bij_id |
+     (rule fresh_agree_on_bound; assumption) |
+     (erule fresh_agree_on_top; assumption) |
+     erule fresh_agree_on |
+     simp only: Un_Diff_cancel Un_Diff_cancel2 Un_Diff Un_assoc UnI1 UnI2 Un_left_commute UN_I
+   )+
 
   done
 

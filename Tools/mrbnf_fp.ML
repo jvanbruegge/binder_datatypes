@@ -2827,7 +2827,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       ]) end
     ) permutes zs FVarsss alpha_bijs TT_total_abs_eq_iffs;
 
-    val TT_fresh_injects = @{map 10} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn TT_inject0 => fn permute_cong =>
+    val TT_fresh_injects = @{map 9} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn TT_inject0 =>
       let
         val card_hyps = map (fn A =>
           let val bd = fastype_of A |> HOLogic.dest_setT |> HOLogic.mk_UNIV |> mk_card_of in
@@ -2849,6 +2849,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         val bound_set_bd_offset =
           length pre_set_bd_UNIVs - length bsetss - length (flat bfsetss) - length rec_sets;
         val bd_thms = maps MRBNF_Def.set_bd_of_mrbnf mrbnfs @ pre_set_bd_UNIVs @ flat FVars_bd_UNIVs;
+
+        val mem_simps = @{thms Un_Diff_cancel Un_Diff_cancel2 Un_Diff Un_assoc UnI1 UnI2 Un_left_commute UN_I};
       in
         Goal.prove_sorry lthy (names (As @ [x, y])) [] goal (fn {context=ctxt, ...} => EVERY
           ((HEADGOAL o EVERY')
@@ -2871,7 +2873,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
              (REPEAT_DETERM o HEADGOAL) (assume_tac ctxt ORELSE'
               resolve_tac ctxt (@{thms UN_bound Un_bound infinite_UNIV ordLeq_ordLess_trans[OF card_of_diff]} @ bd_thms)),
              HEADGOAL (rotate_tac 1)]
-          ) (pre_set_bd_UNIVs |> drop bound_set_bd_offset |> take nvars |> @{print}) @
+          ) (pre_set_bd_UNIVs |> drop bound_set_bd_offset |> take nvars) @
 
           [(HEADGOAL o EVERY')
              [dresolve_tac ctxt @{thms sym},
@@ -2895,18 +2897,13 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
            HEADGOAL (rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf)),
 
            (REPEAT_DETERM o HEADGOAL o FIRST')
-            [resolve_tac ctxt @{thms supp_id_bound bij_id refl},
-             assume_tac ctxt,
-             etac ctxt @{thm fresh_agree_on_top} THEN_ALL_NEW assume_tac ctxt,
+            [resolve_tac ctxt (permute_congs @ @{thms refl supp_id_bound bij_id}),
              etac ctxt @{thm fresh_agree_on_bound} THEN_ALL_NEW assume_tac ctxt,
-             resolve_tac ctxt [permute_cong],
+             etac ctxt @{thm fresh_agree_on_top} THEN_ALL_NEW assume_tac ctxt,
              etac ctxt @{thm fresh_agree_on},
-             rtac ctxt @{thm UnI2[where B="_ \<union> _", folded Un_assoc]},
-             rtac ctxt @{thm equalityD2[THEN set_mp, OF Un_Diff_cancel2]},
-             etac ctxt @{thm UnI1},
-             etac ctxt @{thm UnI1[OF UN_I]} THEN_ALL_NEW assume_tac ctxt] ]))
+             SOLVED' (MRBNF_Util.asm_simp_only_tac ctxt mem_simps)] ]))
       end
-    ) xs ys bound_setsss bfree_setsss rec_setss deadss mrbnfs ctors TT_inject0s permute_congs;
+    ) xs ys bound_setsss bfree_setsss rec_setss deadss mrbnfs ctors TT_inject0s;
 
     val permute_cong_ids = map (fn thm => Local_Defs.unfold0 lthy (@{thm id_apply} :: permute_ids) (thm OF (
       replicate (2 * nvars) @{thm _} @ flat (replicate nvars @{thms bij_id supp_id_bound})

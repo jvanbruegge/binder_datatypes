@@ -455,11 +455,6 @@ lemma fresh_agree_on:
   shows "g z = f z"
   using assms by (cases \<open>z \<in> B\<close>) (auto simp: id_on_def)
 
-lemma in_FVars_or_bound:
-  assumes \<open>x \<in> R\<close> \<open>z \<in> f x\<close>
-  shows \<open>z \<in> (\<Union> (f ` R) - B) \<union> B\<close>
-  using assms by blast
-
 
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

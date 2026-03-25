@@ -2623,11 +2623,15 @@ fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) (result, simps) lthy =
           #> Local_Defs.unfold lthy @{thms int_SSupp_fun_upd_iff int_imsupp_id_fun_upd_iff int_IImsupp_fun_upd_iff Int_empty_right simp_thms(6) simp_thms(21,22) True_implies_equals}
           #> (
             let
-              val fold_tac = Local_Defs.fold_tac lthy @{thms conj_assoc disj_conj_distribL};
-              val unfold_tac = Local_Defs.unfold_tac lthy @{thms conj_assoc};
-              fun disjI_tac thm = Seq.single (@{thm disjI2} RS thm) handle THM _ => Seq.empty;
-            in EVERY [REPEAT (CHANGED fold_tac), unfold_tac, TRY disjI_tac] #> Seq.hd end
-          ) #> Local_Defs.fold lthy @{thms atomize_conjL};
+              fun RS_tac thm = TRY (fn thm' => Seq.single (thm RS thm') handle THM _ => Seq.empty)
+
+              val tac = EVERY
+                [REPEAT (CHANGED (Local_Defs.fold_tac lthy @{thms conj_assoc disj_conj_distribL})),
+                 Local_Defs.unfold_tac lthy @{thms conj_assoc},
+                 RS_tac @{thm disjI2},
+                 RS_tac @{thm conjI}]
+            in REPEAT (CHANGED tac) #> Seq.hd end
+          );
 
         (* adapt the simp theorems to the unary case: *)
         val adapt = map (

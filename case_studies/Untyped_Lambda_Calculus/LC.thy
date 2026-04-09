@@ -21,8 +21,15 @@ for
 print_theorems
 
 print_locale term.HL_REC_term
-thm HL_REC_term_def
+thm HL_REC_term.HL_REC_term_def
 thm HL_REC_term.Uctor_def
+thm HL_REC_term.HL_REC_term_Var
+thm HL_REC_term.HL_REC_term_App
+thm HL_REC_term.HL_REC_term_Lam
+thm HL_REC_term.HL_REC_term_swap
+thm HL_REC_term.HL_REC_term_UFVars
+
+print_locale REC_term
 
 locale xHL_REC_term =
   fixes Pmap :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
@@ -137,8 +144,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
   apply (rule Umap_comp; assumption)
   apply (rule Umap_cong_id; assumption)
   subgoal for f y p
-    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def
-    apply (unfold Ball_def)
+    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def Ball_def
     apply (tactic\<open>resolve_tac @{context} [BNF_FP_Util.mk_absumprodE @{thm type_definition_term_pre} [1,2,2] |> infer_instantiate' @{context} [SOME (Thm.cterm_of @{context} @{term y})]] 1\<close>)
     apply hypsubst_thin
       apply (unfold sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
@@ -170,8 +176,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
     done
   subgoal for y p
     unfolding Uctor_def map_term_pre_def term_pre.pred_set set1_term_pre_def set2_term_pre_def
-      set3_term_pre_def set4_term_pre_def
-    apply (unfold Ball_def)
+      set3_term_pre_def set4_term_pre_def Ball_def
     apply (tactic\<open>resolve_tac @{context} [BNF_FP_Util.mk_absumprodE @{thm type_definition_term_pre} [1,2,2] |> infer_instantiate' @{context} [SOME (Thm.cterm_of @{context} @{term y})]] 1\<close>)
     apply hypsubst_thin
       apply (unfold sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
@@ -189,20 +194,17 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
               imp_disjL all_conj_distrib)
     apply (erule conjE)+
     apply (rule UFVars_UApp; assumption?)
-    apply (erule thin_rl)
-      apply (drule meta_spec)+
-      apply (drule meta_mp)
-       apply (assumption)
-      apply (erule meta_mp)
-    apply (unfold prod.collapse simp_thms)
-    apply (rule TrueI)
-    apply (erule thin_rl)
-      apply (drule meta_spec)+
-      apply (drule meta_mp)
-       apply (assumption)
-      apply (erule meta_mp)
-    apply (unfold prod.collapse simp_thms)
-    apply (rule TrueI)
+      apply (erule thin_rl)
+    subgoal premises prems
+      apply (rule prems)+
+      apply (unfold prod.collapse simp_thms)
+      apply (rule TrueI)
+      done
+    subgoal premises prems
+      apply (rule prems)+
+      apply (unfold prod.collapse simp_thms)
+      apply (rule TrueI)
+      done
     apply hypsubst_thin
       apply (unfold sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
         Abs_term_pre_inverse[OF UNIV_I] Lam_def[symmetric]
@@ -212,17 +214,15 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
               imp_disjL all_conj_distrib insert_iff Int_Un_distrib[symmetric])
     apply (rule UFVars_ULam; assumption?)
     apply (erule thin_rl)
-      apply (drule meta_spec)+
-      apply (drule meta_mp)
-      apply (assumption)
-      apply (erule meta_mp)
-    apply (unfold prod.collapse simp_thms)
-    apply (rule TrueI)
+    subgoal premises prems
+      apply (rule prems)+
+      apply (unfold prod.collapse simp_thms)
+      apply (rule TrueI)
+      done
     done
   apply (rule validU_Umap; assumption)
   subgoal for y p
-    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def
-    apply (unfold Ball_def)
+    unfolding Uctor_def map_term_pre_def term_pre.pred_set set3_term_pre_def set4_term_pre_def comp_def Ball_def
     apply (tactic\<open>resolve_tac @{context} [BNF_FP_Util.mk_absumprodE @{thm type_definition_term_pre} [1,2,2] |> infer_instantiate' @{context} [SOME (Thm.cterm_of @{context} @{term y})]] 1\<close>)
     apply hypsubst_thin
       apply (unfold sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
@@ -254,10 +254,10 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
     done
   done
 
-definition HL_REC_term where "HL_REC_term = HL_to_LL.REC_term"
+definition xHL_REC_term where "xHL_REC_term = HL_to_LL.REC_term"
 
-lemma HL_REC_term_Var: "validP p \<Longrightarrow> HL_REC_term (Var x) p = UVar x p"
-  unfolding Var_def HL_REC_term_def
+lemma xHL_REC_term_Var: "validP p \<Longrightarrow> xHL_REC_term (Var x) p = UVar x p"
+  unfolding Var_def xHL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
   unfolding noclash_term_def Uctor_def map_term_pre_def comp_def set2_term_pre_def Abs_term_pre_inverse[OF Set.UNIV_I] map_sum.simps sum_set_simps singleton_iff empty_iff
     Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left id_apply sum.case
@@ -265,9 +265,9 @@ lemma HL_REC_term_Var: "validP p \<Longrightarrow> HL_REC_term (Var x) p = UVar 
   apply (rule refl)+
   done
 
-lemma HL_REC_term_Lam: "validP p \<Longrightarrow> {x} \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
-  HL_REC_term (Lam x t) p = ULam x t (\<lambda>p. if validP p then HL_REC_term t p else undefined) p"
-  unfolding Lam_def HL_REC_term_def
+lemma xHL_REC_term_Lam: "validP p \<Longrightarrow> {x} \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
+  xHL_REC_term (Lam x t) p = ULam x t (\<lambda>p. if validP p then xHL_REC_term t p else undefined) p"
+  unfolding Lam_def xHL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
   apply assumption
   unfolding Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def
@@ -280,11 +280,11 @@ lemma HL_REC_term_Lam: "validP p \<Longrightarrow> {x} \<inter> (PFVars p \<unio
   apply (rule refl)
   done
 
-lemma HL_REC_term_App: "validP p \<Longrightarrow>
-  HL_REC_term (App t1 t2) p = UApp
-    t1 (\<lambda>p. if validP p then HL_REC_term t1 p else undefined)
-    t2 (\<lambda>p. if validP p then HL_REC_term t2 p else undefined) p"
-  unfolding App_def HL_REC_term_def
+lemma xHL_REC_term_App: "validP p \<Longrightarrow>
+  xHL_REC_term (App t1 t2) p = UApp
+    t1 (\<lambda>p. if validP p then xHL_REC_term t1 p else undefined)
+    t2 (\<lambda>p. if validP p then xHL_REC_term t2 p else undefined) p"
+  unfolding App_def xHL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
   apply assumption
   unfolding Uctor_def map_term_pre_def set1_term_pre_def set2_term_pre_def set3_term_pre_def set4_term_pre_def
@@ -294,8 +294,8 @@ lemma HL_REC_term_App: "validP p \<Longrightarrow>
   apply (rule refl)+
   done
 
-lemmas HL_REC_term_swap = HL_to_LL.REC_swap[folded HL_REC_term_def]
-lemmas HL_REC_term_UFVars = HL_to_LL.REC_UFVars[folded HL_REC_term_def]
+lemmas xHL_REC_term_swap = HL_to_LL.REC_swap[folded xHL_REC_term_def]
+lemmas xHL_REC_term_UFVars = HL_to_LL.REC_UFVars[folded xHL_REC_term_def]
 
 end
 
@@ -316,10 +316,10 @@ interpretation xHL_REC_term
   apply (auto dest: notin_imsupp simp: in_imsupp)
   done
 
-definition "count t = HL_REC_term t ()"
+definition "count t = xHL_REC_term t ()"
 lemmas count_simps[where p = "()", folded count_def, simplified] =
-  HL_REC_term_Var HL_REC_term_Lam HL_REC_term_App
-lemmas count_swap = HL_REC_term_swap[where p="()", folded count_def, simplified]
+  xHL_REC_term_Var xHL_REC_term_Lam xHL_REC_term_App
+lemmas count_swap = xHL_REC_term_swap[where p="()", folded count_def, simplified]
 
 end
 

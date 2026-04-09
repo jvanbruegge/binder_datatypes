@@ -12,6 +12,8 @@ sig
   val chop_f_prems: 'a list -> 'a list list;
   val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
+  val mk_f_prems: term list -> term list -> term list;
+  val mk_pred_fun: term -> term -> term;
 
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> local_theory -> recursor_result * local_theory;
@@ -21,6 +23,15 @@ sig
     MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T option ->
     typ -> term -> term list -> term ->
     local_theory -> {FVars_map: term list, map_comp0: term, map_cong_id: term}
+
+val mk_params: Proof.context ->
+      (xstring * term list) list ->
+        {PFVars_Pmap: thm list,
+         Pmap_comp0: thm,
+         Pmap_cong_id: thm,
+         small_PFVarss: thm list,
+         small_avoiding_sets: thm list, valid_Pmap: thm}
+
 end
 
 structure MRBNF_Recursor : MRBNF_RECURSOR =
@@ -486,6 +497,15 @@ fun every_other [] = []
   | every_other [x] = [x]
   | every_other (x::_::xs) = x::every_other xs
 
+fun mk_params lthy param_goals = {
+  Pmap_comp0 = hd (Proof_Context.get_thms lthy (fst (nth param_goals 0))),
+  Pmap_cong_id = hd (Proof_Context.get_thms lthy (fst (nth param_goals 1))),
+  PFVars_Pmap = Proof_Context.get_thms lthy (fst (nth param_goals 2)),
+  small_PFVarss = Proof_Context.get_thms lthy (fst (nth param_goals 3)),
+  valid_Pmap = hd (Proof_Context.get_thms lthy (fst (nth param_goals 4))),
+  small_avoiding_sets = Proof_Context.get_thms lthy (fst (nth param_goals 5))
+};
+
 fun create_binding_recursor qualify fp_res no_defs_lthy =
   let
     val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []))
@@ -728,15 +748,6 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
     ) (mk_names "UFVars" (1 upto length uTs)) Umaps UFVarsss Uctors (#quotient_fps fp_res) uTs validUs (#pre_mrbnfs fp_res) ys us ts
       (case names_opt of SOME xs => xs | NONE => map (fst o dest_Free) Umaps);
 
-    fun mk_params lthy param_goals = {
-      Pmap_comp0 = hd (Proof_Context.get_thms lthy (fst (nth param_goals 0))),
-      Pmap_cong_id = hd (Proof_Context.get_thms lthy (fst (nth param_goals 1))),
-      PFVars_Pmap = Proof_Context.get_thms lthy (fst (nth param_goals 2)),
-      small_PFVarss = Proof_Context.get_thms lthy (fst (nth param_goals 3)),
-      valid_Pmap = hd (Proof_Context.get_thms lthy (fst (nth param_goals 4))),
-      small_avoiding_sets = Proof_Context.get_thms lthy (fst (nth param_goals 5))
-    };
-
     fun mk_model_axiomss lthy = map (fn [Umap_comp0, Umap_cong_id, Umap_Uctor, Umap_subsets, valid_Umap, valid_Uctor] => {
       Umap_comp0 = hd (Proof_Context.get_thms lthy (fst Umap_comp0)),
       Umap_cong_id = hd (Proof_Context.get_thms lthy (fst Umap_cong_id)),
@@ -774,7 +785,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         val (name, lthy) = Expression.add_locale (mk_lname "REC_internal") Binding.empty [] ([], []) [
           Element.Fixes (map (fn t =>
             let val (b, T) = dest_Free t;
-            in (Binding.name b, SOME T, NoSyn) end
+            in (Binding.name b |> @{print}, SOME T, NoSyn) end
           ) (rs @ [Pmap] @ PFVarss @ [validP] @ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs)),
           Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
             flat r_goalss @ param_goals @ flat model_goalss

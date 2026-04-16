@@ -7,7 +7,7 @@ theory LC
   "Case_Studies.More_List"
 begin
 
-(* DATATYPE DECLARATION  *)
+(* DATATYPE DECLARATION *)
 
 declare [[ML_print_depth=10000]]
 declare [[mrbnf_internals]]
@@ -31,6 +31,8 @@ thm HL_REC_term.HL_REC_term_UFVars
 
 print_locale REC_term
 
+(* No longer needed as it is generalized and implemented into mrbnf_sugar.ml *)
+
 locale xHL_REC_term =
   fixes Pmap :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
     and PFVars :: "'p \<Rightarrow> 'a set"
@@ -44,45 +46,45 @@ locale xHL_REC_term =
     and validU :: "'u \<Rightarrow> bool"
   assumes
     Pmap_comp: "\<And>d f g. validP d \<Longrightarrow>
-       bij f \<Longrightarrow>
-       |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-       bij g \<Longrightarrow>
-       |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
-       Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d"
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      bij g \<Longrightarrow>
+      |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
+      Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d"
     and Pmap_cong_id: "\<And>d f. validP d \<Longrightarrow>
-           bij f \<Longrightarrow>
-           |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-           (\<And>a. a \<in> PFVars d \<Longrightarrow> f a = a) \<Longrightarrow>
-           Pmap f d = d"
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      (\<And>a. a \<in> PFVars d \<Longrightarrow> f a = a) \<Longrightarrow>
+      Pmap f d = d"
     and PFVars_Pmap: "\<And>d f. validP d \<Longrightarrow>
-           bij f \<Longrightarrow>
-           |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-           PFVars (Pmap f d) = f ` PFVars d"
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      PFVars (Pmap f d) = f ` PFVars d"
     and card_of_PFVars: "validP p \<Longrightarrow> |PFVars p| <o |UNIV :: 'a set|"
     and validP_Pmap: "validP p \<Longrightarrow>
-           bij f \<Longrightarrow>
-           |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-           validP (Pmap f p)"
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      validP (Pmap f p)"
     and card_of_avoiding_set: "|avoiding_set| <o |UNIV :: 'a set|"
     and Umap_comp: "\<And>d f g t.
-       validU d \<Longrightarrow>
-       bij f \<Longrightarrow>
-       |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-       bij g \<Longrightarrow>
-       |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
-       Umap (f \<circ> g) t d =
-       (Umap f t \<circ> Umap g t) d"
+      validU d \<Longrightarrow>
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      bij g \<Longrightarrow>
+      |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
+      Umap (f \<circ> g) t d =
+      (Umap f t \<circ> Umap g t) d"
     and Umap_cong_id: "\<And>d t f.
-       validU d \<Longrightarrow>
-       bij f \<Longrightarrow>
-       |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-       (\<And>a. a \<in> UFVars t d \<Longrightarrow> f a = a) \<Longrightarrow>
-       Umap f t d = d"
+      validU d \<Longrightarrow>
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      (\<And>a. a \<in> UFVars t d \<Longrightarrow> f a = a) \<Longrightarrow>
+      Umap f t d = d"
     and validU_Umap: "\<And>f t u.
-       validU u \<Longrightarrow>
-       bij f \<Longrightarrow>
-       |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
-       validU (Umap f t u)"
+      validU u \<Longrightarrow>
+      bij f \<Longrightarrow>
+      |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+      validU (Umap f t u)"
     and Umap_UVar: "\<And>p x f. validP p \<Longrightarrow>
       bij f \<Longrightarrow>
       |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -152,7 +154,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule Umap_UVar; assumption)
     apply hypsubst_thin
@@ -161,7 +163,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule Umap_UApp; assumption)
     apply hypsubst_thin
@@ -170,7 +172,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule Umap_ULam; assumption)
     done
@@ -191,7 +193,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply (erule conjE)+
     apply (rule UFVars_UApp; assumption?)
       apply (erule thin_rl)
@@ -208,10 +210,10 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
     apply hypsubst_thin
       apply (unfold sum.case map_sum.simps id_apply fst_conv snd_conv map_prod_simp prod.case comp_def
         Abs_term_pre_inverse[OF UNIV_I] Lam_def[symmetric]
-        sum_set_simps  Union_insert Union_empty
+        sum_set_simps Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta Un_iff prod_set_simps
-              imp_disjL all_conj_distrib insert_iff Int_Un_distrib[symmetric])
+        imp_disjL all_conj_distrib insert_iff Int_Un_distrib[symmetric])
     apply (rule UFVars_ULam; assumption?)
     apply (erule thin_rl)
     subgoal premises prems
@@ -230,7 +232,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule validU_UVar; assumption)
     apply hypsubst_thin
@@ -239,7 +241,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule validU_UApp; assumption)
     apply hypsubst_thin
@@ -248,7 +250,7 @@ interpretation HL_to_LL: REC_term Pmap PFVars validP avoiding_set Umap UFVars Uc
         sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
         Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
         prod.set_map UN_singleton split_beta fsts.simps Un_iff snds.simps
-              imp_disjL all_conj_distrib)
+        imp_disjL all_conj_distrib)
     apply ((erule conjE)+)?
     apply (rule validU_ULam; assumption)
     done
@@ -259,8 +261,10 @@ definition xHL_REC_term where "xHL_REC_term = HL_to_LL.REC_term"
 lemma xHL_REC_term_Var: "validP p \<Longrightarrow> xHL_REC_term (Var x) p = UVar x p"
   unfolding Var_def xHL_REC_term_def
   apply (subst HL_to_LL.REC_ctor)
-  unfolding noclash_term_def Uctor_def map_term_pre_def comp_def set2_term_pre_def Abs_term_pre_inverse[OF Set.UNIV_I] map_sum.simps sum_set_simps singleton_iff empty_iff
-    Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left id_apply sum.case
+  unfolding noclash_term_def Uctor_def map_term_pre_def comp_def set2_term_pre_def
+    Abs_term_pre_inverse[OF Set.UNIV_I] map_sum.simps sum_set_simps singleton_iff empty_iff
+    Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty Int_empty_left Un_empty_left
+    id_apply sum.case
   apply assumption
   apply (rule refl)+
   done

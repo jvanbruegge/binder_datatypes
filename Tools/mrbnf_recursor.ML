@@ -785,7 +785,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         val (name, lthy) = Expression.add_locale (mk_lname "REC_internal") Binding.empty [] ([], []) [
           Element.Fixes (map (fn t =>
             let val (b, T) = dest_Free t;
-            in (Binding.name b |> @{print}, SOME T, NoSyn) end
+            in (Binding.name b, SOME T, NoSyn) end
           ) (rs @ [Pmap] @ PFVarss @ [validP] @ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs)),
           Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
             flat r_goalss @ param_goals @ flat model_goalss

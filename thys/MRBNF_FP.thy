@@ -425,6 +425,37 @@ lemma type_copy_Abs_o_Rep_o: "type_definition Rep Abs UNIV \<Longrightarrow> Abs
 lemma type_copy_Map_Sb: "type_definition Rep Abs UNIV \<Longrightarrow> type_definition Rep' Abs' UNIV \<Longrightarrow> Map \<circ> Sb = Sb' \<circ> Map \<Longrightarrow> Abs' \<circ> Map \<circ> Rep \<circ> (Abs \<circ> Sb \<circ> Rep) = Abs' \<circ> Sb' \<circ> Rep' \<circ> (Abs' \<circ> Map \<circ> Rep)"
   by (metis (no_types, lifting) rewriteR_comp_comp type_copy_Rep_o_Abs_o)
 
+(*fresh_inject helpers*)
+
+lemma fresh_agree_on_bound:
+  assumes
+    "\<forall>a. a \<in> imsupp f - A \<union> C \<and> f a \<notin> A \<longrightarrow> g a = f a"
+    "f ` C \<inter> A = {}"
+    "z \<in> C"
+  shows "g z = f z"
+  using assms by auto
+
+lemma fresh_agree_on_top:
+  assumes
+    "\<forall>a. a \<in> imsupp f - A \<union> C \<and> f a \<notin> A \<longrightarrow> g a = f a"
+    "id_on (B - C \<union> D) g"
+    "id_on (B - C \<union> D) f"
+    "f ` C \<inter> A = {}"
+    "z \<in> B"
+  shows "g z = f z"
+  using assms by (cases \<open>z \<in> C\<close>) (auto simp: id_on_def)
+
+lemma fresh_agree_on:
+  assumes
+    "\<forall>a. a \<in> imsupp f - A \<union> B \<and> f a \<notin> A \<longrightarrow> g a = f a"
+    "id_on I g"
+    "id_on I f"
+    "f ` B \<inter> A = {}"
+    "z \<in> I \<union> B"
+  shows "g z = f z"
+  using assms by (cases \<open>z \<in> B\<close>) (auto simp: id_on_def)
+
+
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 

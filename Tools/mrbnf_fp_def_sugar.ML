@@ -9,6 +9,7 @@ sig
     inner: 'a,
 
     inject: thm,
+    fresh_inject: thm,
     permute_ctor: thm,
     permute_id0: thm,
     permute_id: thm,
@@ -120,6 +121,7 @@ type 'a fp_result_T = {
   inner: 'a,
 
   inject: thm,
+  fresh_inject: thm,
   permute_ctor: thm,
   permute_id0: thm,
   permute_id: thm,
@@ -132,9 +134,9 @@ type 'a fp_result_T = {
   card_of_FVars_bound_UNIVs: thm list
 };
 
-fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inject, permute_ctor,
-  permute_id0, permute_id, permute_comp0, permute_comp, FVars_ctors, FVars_permutes, FVars_intross,
-  card_of_FVars_bounds, card_of_FVars_bound_UNIVs } = {
+fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inject, fresh_inject,
+  permute_ctor, permute_id0, permute_id, permute_comp0, permute_comp, FVars_ctors, FVars_permutes,
+  FVars_intross, card_of_FVars_bounds, card_of_FVars_bound_UNIVs } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
   permute = Morphism.term phi permute,
@@ -142,6 +144,7 @@ fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inje
   noclash = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) noclash,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
+  fresh_inject = Morphism.thm phi fresh_inject,
   permute_ctor = Morphism.thm phi permute_ctor,
   permute_id0 = Morphism.thm phi permute_id0,
   permute_id = Morphism.thm phi permute_id,
@@ -340,7 +343,8 @@ fun note_fp_result (fp_res : fp_result) lthy =
       ("rep_abs", [#rep_abs (#inner quot)]),
       ("rep_abs_sym", [#rep_abs_sym (#inner quot)]),
       ("abs_ctor", [#abs_ctor (#inner quot)]),
-      ("TT_inject0", [#inject quot])
+      ("TT_inject0", [#inject quot]),
+      ("fresh_inject", [#fresh_inject quot])
     ];
 
     fun note_always (quot : quotient_result fp_result_T) = [

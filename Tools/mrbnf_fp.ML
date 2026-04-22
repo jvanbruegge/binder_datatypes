@@ -1823,6 +1823,32 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
     )) As;
 
     val nbfrees = map (fn xs => length (fold (union (op=)) xs [])) bound_freesss;
+
+    fun mk_map_permute mrbnf deads fs permutes =
+      let
+        val nbounds = map length (hd raw_bound_setsss);
+        val rec_bound_fss = @{map 4} (fn nbound => fn f => fn rec_boundss => fst o fold_map (fn rec_bounds => fn hs =>
+          if length rec_bounds = 0 then (NONE, hs)
+          else if length rec_bounds = nbound then (SOME f, hs) else (SOME (hd hs), tl hs)
+        ) rec_boundss) nbounds fs rec_boundsss hss;
+
+        val rec_ts = map2 (fn (permute, _) => fn rec_bound_fs =>
+          if forall (fn NONE => true | _ => false) rec_bound_fs then
+            HOLogic.id_const (Term.body_type (fastype_of permute))
+          else Term.list_comb (permute, map2 (fn g =>
+            fn NONE => HOLogic.id_const (fst (Term.dest_funT (fastype_of g)))
+             | SOME f => f
+          ) fs rec_bound_fs)
+        ) (replicate_rec permutes) (transpose rec_bound_fss);
+        val bfree_fs= flat (map2 replicate nbfrees fs);
+      in
+        MRBNF_Def.mk_map_comb_of_mrbnf deads
+          (map HOLogic.id_const plives @ rec_ts)
+          (map HOLogic.id_const pbounds @ flat (map2 (fn bounds => replicate (length bounds)) (hd raw_bound_setsss) fs))
+          (map (HOLogic.id_const o fst o Term.dest_funT o fastype_of) fs @ map HOLogic.id_const pfrees @ bfree_fs)
+          mrbnf
+      end;
+
     val raw_refreshs = @{map 9} (fn alpha => fn alpha_intro => fn raw => fn mrbnf => fn deads => fn bound_setss => fn bfree_setss => fn rec_sets => fn x =>
       let
         val goal = HOLogic.mk_Trueprop (mk_ex ("y", fastype_of x) (fold_rev (curry HOLogic.mk_conj)
@@ -1888,28 +1914,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
               Subgoal.FOCUS_PARAMS (fn {context=ctxt, params=hs, ...} =>
                 let
                   val gs = map (Thm.term_of o snd) params;
-                  val hss = fst (fold_map (chop o length) hss (map (Thm.term_of o snd) hs));
-                  val nbounds = map length (hd raw_bound_setsss);
-                  val rec_bound_fss = @{map 4} (fn nbound => fn f => fn rec_boundss => fst o fold_map (fn rec_bounds => fn hs =>
-                    if length rec_bounds = 0 then (NONE, hs)
-                    else if length rec_bounds = nbound then (SOME f, hs) else (SOME (hd hs), tl hs)
-                  ) rec_boundss) nbounds gs rec_boundsss hss;
 
-                  val rec_ts = map2 (fn (permute, _) => fn rec_bound_fs =>
-                    if forall (fn NONE => true | _ => false) rec_bound_fs then
-                      HOLogic.id_const (Term.body_type (fastype_of permute))
-                    else Term.list_comb (permute, map2 (fn g =>
-                      fn NONE => HOLogic.id_const (fst (Term.dest_funT (fastype_of g)))
-                       | SOME f => f
-                    ) gs rec_bound_fs)
-                  ) (replicate_rec permute_raws) (transpose rec_bound_fss);
-                  val bfree_fs = flat (map2 replicate nbfrees gs);
-
-                  val map_t = MRBNF_Def.mk_map_comb_of_mrbnf deads
-                    (map HOLogic.id_const plives @ rec_ts)
-                    (map HOLogic.id_const pbounds @ flat (map2 (fn bounds => replicate (length bounds)) (hd raw_bound_setsss) gs))
-                    (map (HOLogic.id_const o fst o Term.dest_funT o fastype_of) fs @ map HOLogic.id_const pfrees @ bfree_fs)
-                    mrbnf $ x;
+                  val map_t = mk_map_permute mrbnf deads gs permute_raws $ x;
                 in EVERY1 [
                   rtac ctxt (infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt map_t)] exI),
                   REPEAT_DETERM o EVERY' [
@@ -2213,7 +2219,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
     val (ys, _) = lthy
       |> mk_Frees "y" (map fastype_of xs);
 
-    val TT_inject0s = @{map 9} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn raw =>
+    fun mk_gen_inject extra_prems x y bsetss bfsetss rec_sets deads mrbnf ctor =
       let
         val id_on_prems = @{map 6} (fn f => fn bsets => fn bfsets => fn bfree_boundss => fn rec_boundss => fn FVars_raws => mk_id_on (foldl1 mk_Un (
           map2 (fn bfset => fn bfree_bounds =>
@@ -2242,34 +2248,19 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             else ([], hs) end
         ) rec_boundss rec_sets (replicate_rec FVars) hs)) fs bsetss rec_boundsss (transpose FVarsss) hss));
 
-        (* TODO: remove code duplication *)
-        val nbounds = map length (hd raw_bound_setsss);
-        val rec_bound_fss = @{map 4} (fn nbound => fn f => fn rec_boundss => fst o fold_map (fn rec_bounds => fn hs =>
-          if length rec_bounds = 0 then (NONE, hs)
-          else if length rec_bounds = nbound then (SOME f, hs) else (SOME (hd hs), tl hs)
-        ) rec_boundss) nbounds fs rec_boundsss hss;
-
-        val rec_ts = map2 (fn (permute, _) => fn rec_bound_fs =>
-          if forall (fn NONE => true | _ => false) rec_bound_fs then
-            HOLogic.id_const (Term.body_type (fastype_of permute))
-          else Term.list_comb (permute, map2 (fn g =>
-            fn NONE => HOLogic.id_const (fst (Term.dest_funT (fastype_of g)))
-             | SOME f => f
-          ) fs rec_bound_fs)
-        ) (replicate_rec permutes) (transpose rec_bound_fss);
-        val bfree_fs = flat (map2 replicate nbfrees fs);
-
-        val map_t = MRBNF_Def.mk_map_comb_of_mrbnf deads
-          (map HOLogic.id_const plives @ rec_ts)
-          (map HOLogic.id_const pbounds @ flat (map2 (fn bounds => replicate (length bounds)) (hd raw_bound_setsss) fs))
-          (map (HOLogic.id_const o fst o Term.dest_funT o fastype_of) fs @ map HOLogic.id_const pfrees @ bfree_fs)
-          mrbnf $ x;
+        val map_t = mk_map_permute mrbnf deads fs permutes $ x;
 
         val rhs = fold_rev (mk_ex o dest_Free) (fs @ flat hss) (fold_rev (curry HOLogic.mk_conj)
-          (map HOLogic.dest_Trueprop f_prems @ id_on_prems @ h_prems)
+          (map HOLogic.dest_Trueprop f_prems @ id_on_prems @ extra_prems @ h_prems)
           (HOLogic.mk_eq (map_t, y))
         );
-        val goal = mk_Trueprop_eq (HOLogic.mk_eq (fst ctor $ x, fst ctor $ y), rhs);
+      in
+        mk_Trueprop_eq (HOLogic.mk_eq (fst ctor $ x, fst ctor $ y), rhs)
+      end;
+
+    val TT_inject0s = @{map 9} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn raw =>
+      let
+        val goal = mk_gen_inject [] x y bsetss bfsetss rec_sets deads mrbnf ctor;
       in Goal.prove_sorry lthy (names [x, y]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         K (Local_Defs.unfold_tac ctxt (snd ctor :: map snd permutes)),
         rtac ctxt trans,
@@ -2836,6 +2827,84 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       ]) end
     ) permutes zs FVarsss alpha_bijs TT_total_abs_eq_iffs;
 
+    val TT_fresh_injects = @{map 9} (fn x => fn y => fn bsetss => fn bfsetss => fn rec_sets => fn deads => fn mrbnf => fn ctor => fn TT_inject0 =>
+      let
+        val card_hyps = map (fn A =>
+          let val bd = fastype_of A |> HOLogic.dest_setT |> HOLogic.mk_UNIV |> mk_card_of in
+            mk_ordLess (mk_card_of A) bd |> HOLogic.mk_Trueprop
+          end
+        ) As;
+
+        fun mk_avoids_hyps z = map2 (fn A => fn bsets =>
+          mk_int_empty (foldl1 mk_Un (map (fn s => s $ z) bsets), A) |> HOLogic.mk_Trueprop
+        ) As bsetss;
+
+        val imsupp_prems = map2 (fn f => fn A => mk_int_empty (mk_imsupp f, A)) fs As;
+
+        val concl = mk_gen_inject imsupp_prems x y bsetss bfsetss rec_sets deads mrbnf ctor;
+
+        val goal = Logic.list_implies (card_hyps @ mk_avoids_hyps x @ mk_avoids_hyps y, concl);
+
+        val pre_set_bd_UNIVs = MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf;
+        val bound_set_bd_offset =
+          length pre_set_bd_UNIVs - length bsetss - length (flat bfsetss) - length rec_sets;
+        val bd_thms = maps MRBNF_Def.set_bd_of_mrbnf mrbnfs @ pre_set_bd_UNIVs @ flat FVars_bd_UNIVs;
+
+        val mem_simps = @{thms Un_Diff_cancel Un_Diff_cancel2 Un_Diff Un_assoc UnI1 UnI2 Un_left_commute UN_I};
+      in
+        Goal.prove_sorry lthy (names (As @ [x, y])) [] goal (fn {context=ctxt, ...} => EVERY
+          ((HEADGOAL o EVERY')
+             [EqSubst.eqsubst_tac ctxt [0] [TT_inject0],
+              rtac ctxt @{thm iffI[symmetric]},
+              REPEAT_DETERM o etac ctxt @{thm exE},
+              REPEAT_DETERM o etac ctxt @{thm conjE},
+              Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+               EVERY1 (map (fn (_, ct) =>
+                 rtac ctxt (infer_instantiate' ctxt [NONE, SOME ct] @{thm exI})
+               ) params)
+              ) ctxt,
+              REPEAT_DETERM o FIRST' [rtac ctxt @{thm conjI}, assume_tac ctxt],
+              REPEAT_DETERM o etac ctxt @{thm exE},
+              REPEAT_DETERM o etac ctxt @{thm conjE},
+              rotate_tac (5 * nvars)] ::
+
+          maps (fn set_bd_UNIV =>
+            [HEADGOAL (forward_tac ctxt [set_bd_UNIV RSN (2, @{thm ex_avoiding_bij[rotated 4]})]),
+             (REPEAT_DETERM o HEADGOAL) (assume_tac ctxt ORELSE'
+              resolve_tac ctxt (@{thms UN_bound Un_bound infinite_UNIV ordLeq_ordLess_trans[OF card_of_diff]} @ bd_thms)),
+             HEADGOAL (rotate_tac 1)]
+          ) (pre_set_bd_UNIVs |> drop bound_set_bd_offset |> take nvars) @
+
+          [(HEADGOAL o EVERY')
+             [dresolve_tac ctxt @{thms sym},
+              Subgoal.FOCUS_PARAMS_FIXED (HEADGOAL o hyp_subst_tac_thin true o #context) ctxt],
+
+           (REPEAT_DETERM o HEADGOAL) (eresolve_tac ctxt @{thms exE conjE}),
+           HEADGOAL (Subgoal.FOCUS_PARAMS (fn {params, ...} =>
+             (HEADGOAL o EVERY' o map (fn (_, g) =>
+               resolve_tac ctxt [infer_instantiate' ctxt [NONE, SOME g] @{thm exI}]
+             )) (drop nvars params)
+           ) ctxt),
+
+           (REPEAT_DETERM o HEADGOAL) (rtac ctxt @{thm conjI} THEN' assume_tac ctxt),
+
+           HEADGOAL (Subgoal.FOCUS_PARAMS_FIXED (fn {context=ctxt, ...} =>
+             HEADGOAL (REPEAT_DETERM_N nvars o
+               (EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf) THEN_ALL_NEW
+                FIRST' [resolve_tac ctxt @{thms supp_id_bound bij_id}, assume_tac ctxt, K all_tac]))
+           ) ctxt),
+
+           HEADGOAL (rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf)),
+
+           (REPEAT_DETERM o HEADGOAL o FIRST')
+            [resolve_tac ctxt (permute_congs @ @{thms refl supp_id_bound bij_id}),
+             etac ctxt @{thm fresh_agree_on_bound} THEN_ALL_NEW assume_tac ctxt,
+             etac ctxt @{thm fresh_agree_on_top} THEN_ALL_NEW assume_tac ctxt,
+             etac ctxt @{thm fresh_agree_on},
+             SOLVED' (MRBNF_Util.asm_simp_only_tac ctxt mem_simps)] ]))
+      end
+    ) xs ys bound_setsss bfree_setsss rec_setss deadss mrbnfs ctors TT_inject0s;
+
     val permute_cong_ids = map (fn thm => Local_Defs.unfold0 lthy (@{thm id_apply} :: permute_ids) (thm OF (
       replicate (2 * nvars) @{thm _} @ flat (replicate nvars @{thms bij_id supp_id_bound})
     ))) permute_congs;
@@ -2893,6 +2962,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         FVarss = map fst (nth FVars_rawss i),
         noclash = nth raw_noclashs i,
         inject = #inject raw,
+        fresh_inject = #inject raw,
         permute_ctor = snd (nth permute_raws i),
         permute_id0 = nth permute_raw_id0s i,
         permute_id = nth permute_raw_ids i,
@@ -2928,6 +2998,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         FVarss = map fst (nth FVarsss i),
         noclash = nth noclashs i,
         inject = nth TT_inject0s i,
+        fresh_inject = nth TT_fresh_injects i,
         permute_ctor = nth permute_simps i,
         permute_id0 = nth permute_id0s i,
         permute_id = nth permute_ids i,

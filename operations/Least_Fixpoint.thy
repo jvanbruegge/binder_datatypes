@@ -6634,6 +6634,123 @@ lemma permute_congs:
 
 lemmas permute_cong_ids = permute_congs[OF _ _ _ _ bij_id supp_id_bound bij_id supp_id_bound, unfolded permute_ids id_apply]
 
+lemma TT_fresh_injects:
+  fixes A1 :: "'a::var set" and A2 :: "'b::var set"
+  assumes
+    "|A1| <o |UNIV :: 'a set|"
+    "|A2| <o |UNIV :: 'b set|"
+  shows
+    "set5_T1_pre x \<inter> A1 = {} \<Longrightarrow> set6_T1_pre x \<inter> A2 = {} \<Longrightarrow>
+     set5_T1_pre y \<inter> A1 = {} \<Longrightarrow> set6_T1_pre y \<inter> A2 = {} \<Longrightarrow>
+     T1_ctor x = T1_ctor y \<longleftrightarrow>
+     (\<exists>f1 f2.
+        bij f1 \<and>
+        |supp f1| <o |UNIV :: 'a set| \<and>
+        bij f2 \<and> |supp f2| <o |UNIV :: 'b set| \<and>
+        id_on ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_T21 ` set11_T1_pre x) - set5_T1_pre x)) f1 \<and>
+        id_on (\<Union>(FVars_T12 ` set9_T1_pre x) - set6_T1_pre x) f2 \<and>
+        imsupp f1 \<inter> A1 = {} \<and>
+        imsupp f2 \<inter> A2 = {} \<and>
+        map_T1_pre id id id id f1 f2 f1 id (permute_T1 f1 f2) id (permute_T2 f1 id) x = y)"
+
+    "set5_T2_pre x2 \<inter> A1 = {} \<Longrightarrow> set6_T2_pre x2 \<inter> A2 = {} \<Longrightarrow>
+     set5_T2_pre y2 \<inter> A1 = {} \<Longrightarrow> set6_T2_pre y2 \<inter> A2 = {} \<Longrightarrow>
+     T2_ctor x2 = T2_ctor y2 \<longleftrightarrow>
+     (\<exists>f1 f2.
+        bij f1 \<and>
+        |supp f1| <o |UNIV :: 'a set| \<and>
+        bij f2 \<and> |supp f2| <o |UNIV :: 'b set| \<and>
+        id_on ((set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_T21 ` set11_T2_pre x2) - set5_T2_pre x2)) f1 \<and>
+        id_on (\<Union>(FVars_T12 ` set9_T2_pre x2) - set6_T2_pre x2) f2 \<and>
+        imsupp f1 \<inter> A1 = {} \<and>
+        imsupp f2 \<inter> A2 = {} \<and>
+        map_T2_pre id id id id f1 f2 f1 id (permute_T1 f1 f2) id (permute_T2 f1 id) x2 = y2)"
+  subgoal
+    (* reduce to quasi-injectivity *)
+    apply (subst TT_inject0s)
+    apply (rule iffI[symmetric])
+     (* discharge trivial direction: ignore fresh imsupp side-conditions*)
+     apply (elim exE conjE)
+     apply (intro exI)
+     apply ((rule conjI)?, assumption)+
+
+    apply (erule exE conjE)+
+
+    (* rotate id_on terms to the front *)
+    apply (rotate_tac 8)
+
+    (* map set_bd_UNIV \<Rightarrow> *)
+    apply (frule ex_avoiding_bij[rotated 4, OF _ T1_pre.set_bd_UNIV(5)])
+          apply (assumption | rule assms infinite_UNIV T1_pre.Un_bound ordLeq_ordLess_trans[OF card_of_diff] var_class.UN_bound T1_pre.set_bd_UNIV FVars_bd_UNIVs)+
+    apply (rotate_tac 1)
+
+    apply (frule ex_avoiding_bij[rotated 4, OF _ T1_pre.set_bd_UNIV(6)])
+          apply (assumption | rule assms infinite_UNIV T1_pre.Un_bound ordLeq_ordLess_trans[OF card_of_diff] var_class.UN_bound T1_pre.set_bd_UNIV FVars_bd_UNIVs)+
+    apply (rotate_tac 1) (* leaves map ... x = y at the front *)
+
+    apply (erule exE conjE)+
+    apply (drule sym, hypsubst_thin) (* substitute y *)
+
+    apply (rename_tac f1 f2 g1 g2)
+    apply (rule_tac x=g1 in exI)
+    apply (rule_tac x=g2 in exI)
+    apply (rule conjI, assumption)+
+
+    apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
+    apply (rule T1_pre.map_cong0; (rule supp_id_bound bij_id refl | assumption)?)
+
+    (* bash congruences *)
+    by (
+      (* trivial side-conditions and permute_cong *)
+      rule permute_congs refl supp_id_bound bij_id |
+      (* agrees on bound variables *)
+      (rule fresh_agree_on_bound; assumption) |
+      (* agrees on top *)
+      (erule fresh_agree_on_top; assumption) |
+      (* recurssive free vars *)
+      erule fresh_agree_on |
+      (* membership conditions *)
+      simp only: Un_Diff_cancel Un_Diff_cancel2 Un_Diff Un_assoc UnI1 UnI2 Un_left_commute UN_I
+    )+
+  subgoal (* same tactic *)
+    apply (subst TT_inject0s)
+    apply (rule iffI[symmetric])
+     apply (elim exE conjE)
+     apply (intro exI)
+     apply ((rule conjI)?, assumption)+
+    apply (erule exE conjE)+
+
+    apply (rotate_tac 8)
+
+    apply (frule ex_avoiding_bij[rotated 4, OF _ T2_pre.set_bd_UNIV(5)])
+          apply (assumption | rule assms infinite_UNIV T2_pre.Un_bound ordLeq_ordLess_trans[OF card_of_diff] var_class.UN_bound T2_pre.set_bd_UNIV FVars_bd_UNIVs)+
+    apply (rotate_tac 1)
+
+    apply (frule ex_avoiding_bij[rotated 4, OF _ T2_pre.set_bd_UNIV(6)])
+          apply (assumption | rule assms infinite_UNIV T2_pre.Un_bound ordLeq_ordLess_trans[OF card_of_diff] var_class.UN_bound T2_pre.set_bd_UNIV FVars_bd_UNIVs)+
+    apply (rotate_tac 1)
+
+    apply (erule exE conjE)+
+    apply (drule sym, hypsubst_thin)
+
+    apply (rename_tac f1 f2 g1 g2)
+    apply (rule_tac x=g1 in exI)
+    apply (rule_tac x=g2 in exI)
+    apply (rule conjI, assumption)+
+
+    apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
+    apply (rule T2_pre.map_cong0; (rule supp_id_bound bij_id refl | assumption)?)
+
+    by (
+      rule permute_congs refl supp_id_bound bij_id |
+      (rule fresh_agree_on_bound; assumption) |
+      (erule fresh_agree_on_top; assumption) |
+      erule fresh_agree_on |
+      simp only: Un_Diff_cancel Un_Diff_cancel2 Un_Diff Un_assoc UnI1 UnI2 Un_left_commute UN_I
+    )+
+
+  done
+
 lemma nnoclash_noclashs:
   "noclash_T1 x = noclash_raw_T1 (map_T1_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x)"
   "noclash_T2 x2 = noclash_raw_T2 (map_T2_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x2)"
@@ -6714,6 +6831,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
           @{thm noclash_T1_def}
        ),
        inject = @{thm TT_inject0s(1)},
+       fresh_inject = @{thm TT_fresh_injects(1)},
        permute_ctor = @{thm permute_simps(1)},
        permute_id0 = @{thm permute_id0s(1)},
        permute_id = @{thm permute_ids(1)},
@@ -6757,6 +6875,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
          @{thm noclash_T2_def}
        ),
        inject = @{thm TT_inject0s(2)},
+       fresh_inject = @{thm TT_fresh_injects(2)},
        permute_ctor = @{thm permute_simps(2)},
        permute_id0 = @{thm permute_id0s(2)},
        permute_id = @{thm permute_ids(2)},
@@ -6802,6 +6921,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
       @{thm noclash_raw_T1_def}
    ),
    inject = @{thm raw_T1.inject},
+   fresh_inject = @{thm raw_T1.inject},
    permute_ctor = @{thm permute_raw_simps(1)},
    permute_id0 = @{thm permute_raw_id0s(1)},
    permute_id = @{thm permute_raw_ids(1)},
@@ -6838,6 +6958,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      @{thm noclash_raw_T2_def}
    ),
    inject = @{thm raw_T2.inject},
+   fresh_inject = @{thm raw_T2.inject},
    permute_ctor = @{thm permute_raw_simps(2)},
    permute_id0 = @{thm permute_raw_id0s(2)},
    permute_id = @{thm permute_raw_ids(2)},

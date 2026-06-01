@@ -29,7 +29,7 @@ thm HL_REC_term.HL_REC_term_Lam
 thm HL_REC_term.HL_REC_term_swap
 thm HL_REC_term.HL_REC_term_UFVars
 
-print_locale REC_term
+print_locale! REC_term
 
 (* No longer needed as it is generalized and implemented into mrbnf_sugar.ml *)
 

@@ -126,7 +126,7 @@ fun define_vvsubst_consts qualify vvsubst_bss (fp_res : MRBNF_FP_Def_Sugar.fp_re
               foldl1 mk_Un (pset $ x :: map2 (fn rset => mk_UNION (rset $ x)) rec_sets (replicate_rec sets))
             )) sets psets (#raw_fps fp_res) rec_setss xs;
 
-            val lthy = snd (Function.add_function
+            val lthy = snd (Function.add_function {verbose=false}
               (map (fn f => (Binding.concealed (Binding.name (fst (dest_Free f))), NONE, NoSyn)) sets)
               (map (fn eq => (((Binding.concealed Binding.empty, []), eq), [], [])) eqs)
               Function_Common.default_config (fn ctxt => EVERY1 [

@@ -49,7 +49,7 @@ type mrbnf_fp_model = {
 fun primrec int fixes specs lthy: (term list * thm list * thm list list) * local_theory =
   let
     val ((_, (terms, defs, (_, simpss))), lthy) =
-      BNF_LFP_Rec_Sugar.primrec_simple int fixes specs lthy;
+      BNF_LFP_Rec_Sugar.primrec_simple {verbose=int} fixes specs lthy;
   in
     ((terms, defs, simpss), lthy)
   end;
@@ -58,7 +58,7 @@ fun primcorec int fixes specs lthy: (term list * thm list * thm list list) * loc
     val decl = fixes |> Free o apfst Binding.name_of o fst o hd;
     val specs' = map (pair (Binding.empty, [])) specs;
   in
-    BNF_GFP_Rec_Sugar.primcorec_ursive int true [] fixes specs' (replicate (length specs) NONE) lthy
+    BNF_GFP_Rec_Sugar.primcorec_ursive {verbose=int, auto=true} [] fixes specs' (replicate (length specs) NONE) lthy
     |> (fn (goalss, after_qed, lthy) => lthy
       |> after_qed (map (fn [] => [] | _ => error "\"auto\" failed") goalss))
     |> `(fn lthy: local_theory => nth (Spec_Rules.retrieve lthy decl) 1

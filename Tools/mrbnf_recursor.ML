@@ -319,7 +319,7 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) fp_bs
             (Const (@{const_name undefined}, uT))
         )) uTs model_consts lhss map_ts;
 
-        val lthy = snd (Function.add_function
+        val lthy = snd (Function.add_function {verbose=false}
           (map (fn f => (Binding.concealed (Binding.name (fst (dest_Free f))), NONE, NoSyn)) fs)
           (map (fn eq => (((Binding.concealed Binding.empty, []), eq), [], [])) eqs)
           Function_Common.default_config (mk_f_pat_complete_tac (map #inject (#raw_fps fp_res))) lthy

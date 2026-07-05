@@ -482,7 +482,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                               split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
                               disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single] conj_assoc
                             } ctxt)
-                            addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
+                            |> fold Simplifier.add_proc [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
                           )
                         in Simplifier.asm_full_simp_tac simpset end
                       ],

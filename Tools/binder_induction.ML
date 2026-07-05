@@ -465,6 +465,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   ]
                 ],
                 Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
+                  (* the induction machinery may left-associate the conclusion's conjunctions,
+                     while the case hypothesis (IH) keeps them right-associated; normalise so
+                     they match and resolution does not fail for goals with >= 2 conjuncts *)
+                  K (Local_Defs.unfold0_tac ctxt @{thms conj_assoc}),
                   DETERM o resolve_tac ctxt (IH :: repeat_mp IH),
                   IF_UNSOLVED o EVERY' [
                     K (Local_Defs.unfold0_tac ctxt @{thms notin_Un Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),

@@ -530,7 +530,12 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = (case MRBNF_Def.mrbnf_of lthy (fst (dest_Type (#T sugar))) of
             SOME mrbnf => [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf] | NONE => [])
           | UNIV_cinfinite_of_mr_bnf _ = []
-        val infinite_UNIVs = map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs));
+        (* fallback appended after the MRBNF-derived facts (so those win): a `var`-sort type has
+           infinite UNIV by the class axiom alone, covering a bound-variable type the walk above
+           doesn't reach, e.g. one nested in a plain `set`/`prod` container *)
+        val infinite_UNIVs =
+          map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs))
+          @ [@{thm cinfinite_imp_infinite} OF [@{thm var_class.UNIV_cinfinite}]];
 
         val supp_smallss = transpose (map (fn supp_smalls => prove_missing supp_smalls
           (fn ctxt => fn mr_bnfs => K (EVERY1 [

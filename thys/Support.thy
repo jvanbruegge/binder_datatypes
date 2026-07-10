@@ -111,6 +111,10 @@ lemma int_IImsupp_fun_upd_iff:
    t = Inj v \<or> A \<inter> Vrs t = {}\<close>
   by (simp add: IImsupp_def SSupp_def)
 
+lemma fun_upd_comp_inv:
+  \<open>bij g \<Longrightarrow> (h \<circ> f(v := t)) \<circ> inv g = (h \<circ> f \<circ> inv g)(g v := h t)\<close>
+  by (rule ext) (auto simp: bij_inv_eq_iff)
+
 lemma IImsupp_chain1:
   assumes "\<And>a. Vrs2 (Inj2 a) = {a}" "\<rho>1 = \<rho>' \<or> \<rho>1 = \<rho>2"
   shows "(\<Union>x\<in>SSupp Inj2 \<rho>1. \<Union>x\<in>Vrs2 (\<rho>' x). Vrs2 (\<rho>2 x)) \<subseteq> IImsupp Inj2 Vrs2 \<rho>2 \<union> IImsupp Inj2 Vrs2 \<rho>'"

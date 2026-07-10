@@ -1265,22 +1265,23 @@ fun create_binder_datatype co (spec : spec) lthy =
         NONE => (NONE, lthy)
       | SOME tvsubst =>
         let
-          (* prepare spec (we need the original tv names for RVrs) *)
-          val ctor_Ts = map snd (#ctors spec);
+          (* A binding-related free var gets a renaming (RVr) delta in Sb iff it has no
+             eta ctor; mirror the eta condition of tvsubst_model (single-arg ctor whose
+             var occurs in no other ctor, nested occurrences included). We need the
+             original tv names from the spec for the RVr binding names. *)
+          fun has_eta NT = #ctors spec
+            |> map_index I
+            |> exists (fn (i, (_, tys)) => tys = [TFree NT] andalso
+                not (member (op=) (fold Term.add_tfreesT
+                  (maps snd (nth_drop i (#ctors spec))) []) NT));
 
           fun is_RVr (NT, x) =
-            let
-              val (Inj_count, arity) = fold (fn Ts => fn (cnt, arity) =>
-                (if member (op=) Ts (TFree NT)
-                  then (1 + cnt, arity orelse length Ts > 1)
-                  else (cnt, arity))
-              ) ctor_Ts (0, false);
-            in x = Free_Var andalso (Inj_count <> 1 orelse arity) end;
+            x = Free_Var andalso member (op=) frees (TFree NT) andalso not (has_eta NT);
 
           val RVr_Ns = filter is_RVr (#vars spec)
             |> map ((fn N => String.extract (N, 1, NONE)) o fst o fst);
         in
-          TVSubst.create_tvsubst1_of_result (#tvsubst_b spec, RVr_Ns) tvsubst lthy
+          TVSubst.create_tvsubst1_of_result (#tvsubst_b spec, RVr_Ns) (tvsubst, permute_simps) lthy
           |> apfst SOME
         end);
 
@@ -1363,9 +1364,7 @@ fun create_binder_datatype co (spec : spec) lthy =
         ("IImsupp_permute_commute", #IImsupp_permute_commutes res, []),
         ("IImsupp_Diff", #IImsupp_Diffs res, []),
         ("tvsubst_permute", [#tvsubst_permute res], [])
-      ]) tvsubst_opt) @ the_default [] (Option.map (map (fn (N, tvsubst1_simps) =>
-        (N, tvsubst1_simps, simp)
-      )) tvsubst1_opt))
+      ]) tvsubst_opt) @ the_default [] tvsubst1_opt)
         |> filter_out (null o #2)
         |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])

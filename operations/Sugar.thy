@@ -716,6 +716,133 @@ lemma T1_inject'[simp]:
   apply (rule exI bij_id supp_id_bound id_on_id conjI | assumption)+
   done
 
+lemma T1_fresh_injects:
+  fixes A1::"'var::var set" and A2::"'tyvar::var set"
+    and t t' u u'::"('var, 'tyvar::var, 'a::var, 'b) T1"
+    and ts ts'::"('var \<times> unit) list"
+  assumes "|A1| <o |UNIV::'var set|" and "|A2| <o |UNIV::'tyvar set|"
+  shows
+    "a \<notin> A1 \<Longrightarrow> c \<notin> A1 \<Longrightarrow> (BFree_T1 a ts = BFree_T1 c ts') = (\<exists>f. bij (f::'var \<Rightarrow> 'var) \<and>
+       |supp f| <o |UNIV::'var set| \<and> id_on (\<Union>(Basic_BNFs.fsts ` set ts) - {a}) f \<and>
+       imsupp f \<inter> A1 = {} \<and> f a = c \<and> map (map_prod f id) ts = ts')"
+    "x \<notin> A1 \<Longrightarrow> y \<notin> A1 \<Longrightarrow> (Lam_T1 x t = Lam_T1 y t') = (\<exists>f. bij (f::'var \<Rightarrow> 'var) \<and>
+       |supp f| <o |UNIV::'var set| \<and> id_on (FVars_T11 t - {x}) f \<and>
+       imsupp f \<inter> A1 = {} \<and> f x = y \<and> permute_T1 f id t = t')"
+    "b \<notin> A2 \<Longrightarrow> d \<notin> A2 \<Longrightarrow> (TyLam_T1 b u = TyLam_T1 d u') = (\<exists>f. bij (f::'tyvar \<Rightarrow> 'tyvar) \<and>
+       |supp f| <o |UNIV::'tyvar set| \<and> id_on (FVars_T12 u - {b}) f \<and>
+       imsupp f \<inter> A2 = {} \<and> f b = d \<and> permute_T1 id f u = u')"
+  (* REPEAT_DETERM: one block per constructor that binds a variable (cf. `injects` in mrbnf_sugar);
+     the avoiding sets of TT_fresh_injects need no explicit instantiation: they are fixed by
+     unification when the card side conditions are discharged, in sort order, below *)
+  subgoal
+    apply (unfold BFree_T1_def)
+    apply (subst TT_fresh_injects(1)) (* ML: #fresh_inject quot *)
+         (* REPEAT_DETERM nvars times: card side conditions, in sort order *)
+         apply (rule assms)     (* sort bound in this ctor: card assumption *)
+        (* ORELSE *)
+        apply (rule emp_bound)  (* unbound sort: avoiding set becomes {} *)
+        (* END REPEAT_DETERM *)
+       (* the same rewrite set that lifts TT_inject0s to `inject` *)
+       apply (unfold map_T1_pre_def comp_def set5_T1_pre_def set7_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I]
+      sum.set_map UN_empty UN_empty2 Un_empty_left Un_empty_right prod.set_map UN_singleton UN_single
+      set9_T1_pre_def sum_set_simps prod_set_simps empty_Diff list.set_map set11_T1_pre_def sum.map_id0
+      prod.map_id0 map_sum.simps map_prod_simp set6_T1_pre_def Diff_empty Abs_T1_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject
+      )
+       (* REPEAT_DETERM 2 * nvars times (LHS args, then RHS args): freshness side conditions *)
+       apply (rule iffD2[OF disjoint_single], assumption)  (* bound sort *)
+      (* ORELSE *)
+      apply (rule Int_empty_right)                         (* unbound sort *)
+      (* repeated *)
+     apply (rule iffD2[OF disjoint_single], assumption)
+    apply (rule Int_empty_right)
+    (* END REPEAT_DETERM *)
+    apply (rule iffI)
+     (* low-level to high-level: witness is the bound sort's bijection f1 *)
+     apply (erule exE conjE)+
+     apply (rule exI)
+     apply (rule conjI[rotated])+
+          (* no recursive argument under the binder: pure reassembly *)
+          apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    (* high-level to low-level: f1 := f, unbound sorts get id *)
+    apply (erule exE conjE)+
+    apply (rule exI)+
+    apply (rule conjI[rotated])+
+            apply (rule supp_id_bound bij_id id_on_empty id_on_id Int_empty_right | assumption)+
+    done
+  (* repeated (recursive argument under the binder: extra permute_congs step) *)
+  subgoal
+    apply (unfold Lam_T1_def)
+    apply (subst TT_fresh_injects(1))
+         apply (rule assms)
+        apply (rule emp_bound)
+       apply (unfold map_T1_pre_def comp_def set5_T1_pre_def set7_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I]
+      sum.set_map UN_empty UN_empty2 Un_empty_left Un_empty_right prod.set_map UN_singleton UN_single
+      set9_T1_pre_def sum_set_simps prod_set_simps empty_Diff list.set_map set11_T1_pre_def sum.map_id0
+      prod.map_id0 map_sum.simps map_prod_simp set6_T1_pre_def Diff_empty Abs_T1_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject
+      )
+       apply (rule iffD2[OF disjoint_single], assumption)
+      apply (rule Int_empty_right)
+     apply (rule iffD2[OF disjoint_single], assumption)
+    apply (rule Int_empty_right)
+    apply (rule iffI)
+     apply (erule exE conjE)+
+     apply (rule exI)
+     apply (rule conjI[rotated])+
+         apply hypsubst_thin
+         (* collapse permute_T1 f1 f2 to permute_T1 f1 id: f2 is id_on all free variables
+            of the unbound sort (its binder set is empty) *)
+         apply (rule permute_congs[rotated -2])
+                  (* REPEAT_DETERM nvars times, in sort order: agreement on FVars *)
+                  apply (rule refl)   (* witnessed sort *)
+                 (* ORELSE: unbound sort *)
+                 apply (rule trans[OF id_apply])
+                 apply (rule sym)
+                 apply (erule id_onD)
+                 apply assumption
+                 (* END REPEAT_DETERM *)
+                apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    apply (erule exE conjE)+
+    apply (rule exI)+
+    apply (rule conjI[rotated])+
+           apply (rule supp_id_bound bij_id id_on_empty id_on_id Int_empty_right | assumption)+
+    done
+  (* repeated (second sort bound: emp_bound/assms and the agreement goals in swapped order) *)
+  subgoal
+    apply (unfold TyLam_T1_def)
+    apply (subst TT_fresh_injects(1))
+         apply (rule emp_bound)
+        apply (rule assms)
+       apply (unfold map_T1_pre_def comp_def set5_T1_pre_def set7_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I]
+      sum.set_map UN_empty UN_empty2 Un_empty_left Un_empty_right prod.set_map UN_singleton UN_single
+      set9_T1_pre_def sum_set_simps prod_set_simps empty_Diff list.set_map set11_T1_pre_def sum.map_id0
+      prod.map_id0 map_sum.simps map_prod_simp set6_T1_pre_def Diff_empty Abs_T1_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject
+      )
+       apply (rule Int_empty_right)
+      apply (rule iffD2[OF disjoint_single], assumption)
+     apply (rule Int_empty_right)
+    apply (rule iffD2[OF disjoint_single], assumption)
+    apply (rule iffI)
+     apply (erule exE conjE)+
+     apply (rule exI)
+     apply (rule conjI[rotated])+
+         apply hypsubst_thin
+         apply (rule permute_congs[rotated -2])
+                  apply (rule trans[OF id_apply])
+                  apply (rule sym)
+                  apply (erule id_onD)
+                  apply assumption
+                 apply (rule refl)
+                apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    apply (erule exE conjE)+
+    apply (rule exI)+
+    apply (rule conjI[rotated])+
+           apply (rule supp_id_bound bij_id id_on_empty id_on_id Int_empty_right | assumption)+
+    done
+  done
+
 abbreviation eta11 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T1_pre" where
   "eta11 x \<equiv> Abs_T1_pre (Inl (Inl (Inl x)))"
 abbreviation eta12 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T1_pre" where

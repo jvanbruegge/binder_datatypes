@@ -522,15 +522,15 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
-                SELECT_GOAL (mk_auto_tac (ctxt
-                  addsimps (simp_thms @ defs @ fprems)
+                SELECT_GOAL (mk_auto_tac ((ctxt
+                  |> Simplifier.add_simps (simp_thms @ defs @ fprems))
                   addSIs (ex_f :: id_onI @ intro_thms)
                   addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
-          val small_ctxt = ctxt addsimps small_thms addIs small_thms;
+          val small_ctxt = (ctxt |> Simplifier.add_simps small_thms) addIs small_thms;
         in
           HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
+          SELECT_GOAL (auto_tac (small_ctxt |> Simplifier.add_simps [hd defs])) THEN'
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'

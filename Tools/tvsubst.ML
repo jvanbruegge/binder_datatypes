@@ -29,6 +29,9 @@ sig
     -> MRSBNF_Def.mrsbnf -> MRBNF_Def.mrbnf -> thm -> thm -> thm list -> binding
     -> (Proof.context -> tactic) eta_model option list -> string -> local_theory
     -> tvsubst_result * local_theory
+
+  val create_tvsubst1_of_result: binding * string list -> (tvsubst_result * thm list) * thm list -> local_theory
+    -> (string * thm list * Token.src list) list * local_theory
 end
 
 structure TVSubst : TVSUBST =
@@ -2495,4 +2498,246 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     }: tvsubst_result;
 
   in (result, lthy) end;
+
+local
+  fun mk_Free N T lthy' = mk_Frees N [T] lthy' |>> the_single;
+
+  fun drop_at j xs = (take j xs, drop (j+1) xs);
+
+  (* |Inj x| <o |UNIV| \<mapsto> (Inj, x) *)
+  fun dest_set_bd_UNIV (Trueprop $ (member $ (Pair $ (card_of $ (set $ x)) $ card_of_top) $ ordLess)) = (set, x)
+    | dest_set_bd_UNIV t = raise TERM("dest_set_bd_UNIV", [t]);
+
+  fun permute_of_type T lthy = fst (dest_Type T)
+    |> MRBNF_FP_Def_Sugar.fp_result_of lthy
+    |> the
+    |> #quotient_fps
+    |> hd
+    |> #permute
+in
+fun create_tvsubst1_of_result (tvsubst_b, RVr_Ns) ((result, simps), permute_simps) lthy =
+  let
+    val Sb as Const (_, Sb_T) = #tvsubst result;
+
+    val mrsbnf = #mrsbnf result;
+    val mrbnf  = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
+
+    val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+
+    val RVrs = hd (BMV_Monad_Def.RVrs_of_bmv_monad bmv);
+    val Injs = hd (BMV_Monad_Def.Injs_of_bmv_monad bmv);
+
+    val n = length RVrs + length Injs;
+
+    val (delta_Ts, op_T) = fastype_of Sb |> binder_types |> split_last;
+
+    val (id_Ts, Inj_Ts) = partition (op= o dest_funT) delta_Ts;
+
+    (* map Set to fact "|Set ?x| <o |UNIV|" *)
+    val set_bd_UNIV_tab = MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
+      |> map (`(Thm.prop_of #> dest_set_bd_UNIV #> fst #> dest_Const_name));
+
+    (* construct the identities for RVrs and their respective unary Sb bindings *)
+    val _ = length id_Ts = length RVr_Ns orelse
+      error ("create_tvsubst1_of_result: got " ^ string_of_int (length RVr_Ns) ^
+        " RVr names for " ^ string_of_int (length id_Ts) ^ " renaming substitutions");
+    val ids = map2 (fn T => fn N => (N, Const (@{const_name id}, T))) id_Ts RVr_Ns;
+
+    (* construct the Injection ctors and their respective bindings *)
+    val Injs = map2 (fn T => dest_Const #> (fn (N, _) =>
+      (Long_Name.base_name N, Const (N, T)))
+    ) Inj_Ts Injs;
+
+    (* all together *)
+    val (Ns, trms) = split_list (ids @ Injs);
+
+    (* accumulate simplification theorems by index, name, and term: *)
+    fun alg k N trm (acc, lthy) =
+      let
+        val (_, lthy) = Local_Theory.begin_nested lthy;
+        val b = Binding.map_name (fn str => str ^ "_" ^ N) tvsubst_b;
+
+        (* terms surrounding the current term *)
+        val (pre_trm, post_trm) = drop_at k trms;
+
+        val (v_T, t_T) = fastype_of trm |> dest_funT;
+
+        val (permute, lthy) = permute_of_type op_T lthy
+          |> (fn trm => Variable.importT_terms [trm] lthy)
+          |>> the_single;
+
+        val (permute_Ts, _) = fastype_of permute
+          |> binder_types
+          |> split_last;
+
+        val (((gs, t), v), names_lthy) = lthy
+          |> mk_Frees "g" permute_Ts |>> I
+          ||>> mk_Free "t" t_T
+          ||>> mk_Free "v" v_T;
+
+        val is_RVr = k < length ids;
+
+        val g_opt = map_index I gs
+          |> List.find (fn (_,g) => domain_type (fastype_of g) = v_T);
+
+        (* construct unary Sb definition: subst id... X{k}(v := t) Inj... *)
+        val upd = Quickcheck_Common.mk_fun_upd v_T t_T (v, t) trm;
+
+        val deltas  = pre_trm @ upd :: post_trm;
+        val cdeltas = map (SOME o Thm.cterm_of lthy) deltas;
+
+        val def = list_comb (Sb, deltas)
+          |> Term.absfree (dest_Free t)
+          |> Term.absfree (dest_Free v);
+
+        val ((_, (_, def_thm)), lthy) = Local_Theory.define
+          ((b, NoSyn), ((Thm.def_binding b, []), def)) lthy;
+
+        (* expand definition thm to make the Local_Defs.fold go through (v,t,x) *)
+        val (def3, def2) =
+          (def_thm RS @{thm meta_fun_cong} RS @{thm meta_fun_cong})
+          |> `(fn thm => thm RS @{thm meta_fun_cong});
+
+        (* map trivial premise to theorem that discharge it *)
+        fun trivial_fact prem = case prem |> HOLogic.dest_Trueprop of
+          (* |?A| <o |UNIV| *)
+          Const (@{const_name "Set.member"}, _) $
+            (Const (@{const_name "Pair"}, _) $
+              (Const (@{const_name "card_of"}, _) $ A) $
+              (Const (@{const_name "card_of"}, _) $ Const (@{const_name "top"}, _))) $
+            Const (@{const_name "ordLess"}, _) =>
+          (case A of
+            (* {} *)
+            Const (@{const_name "bot"}, _) => @{thm emp_bound}
+            (* supp (id(v := t)) *)
+          | Const (@{const_name "supp"}, _) $
+              (Const (@{const_name "fun_upd"}, _) $ Const (@{const_name "id"}, _) $ _ $ _) =>
+            @{thm supp_fun_upd_var}
+            (* SSupp Inj (Inj(v := t)) *)
+          | Const (@{const_name "SSupp"}, _) $ _ $ (Const (@{const_name "fun_upd"}, _) $ _ $ _ $ _) =>
+            @{thm SSupp_fun_upd_Inj_bound}
+            (* IImsupp Inj ?Set (Inj(v := t) *)
+          | Const (@{const_name "IImsupp"}, _) $ _ $ Set $
+              (Const (@{const_name "fun_upd"}, _) $ _ $ _ $ _) =>
+            the (AList.lookup op= set_bd_UNIV_tab (dest_Const_name Set)) RS
+            @{thm IImsupp_fun_upd_Inj_bound}
+            (* fallback (skip) *)
+          | _ => @{thm asm_rl}
+          )
+        (* ?x \<notin> {} *)
+        | Const (@{const_name "Not"}, _) $ (Const (@{const_name "Set.member"}, _) $
+            _ $ Const (@{const_name "bot"}, _)) =>
+          @{thm empty_iff[symmetric, unfolded simp_thms(13)]}
+        (* fallback (skip) *)
+        | _ => @{thm asm_rl};
+
+        fun discharge_trivial thm =
+          let
+            (* discharge premises (reverse order in case we don't fully resolve it) *)
+            val iprems = Thm.prop_of thm
+              |> Logic.strip_imp_prems
+              |> map_index (fn (i, prem) => (i+1, trivial_fact prem));
+          in fold_rev (fn (i,P) => fn thm => P RSN (i, thm)) iprems thm end;
+
+        (* get rid of all SSupp, IImssupp, SSupp, and imsupp mentions: *)
+        val tidy =
+          (* unfold "x \<notin> {IImssupp,SSupp,imsupp} .." \<leadsto> "t = Var v \<or> ..." *)
+          Local_Defs.unfold lthy @{thms not_in_SSupp_fun_upd_Inj_iff not_in_IImsupp_fun_upd_Inj_iff not_in_imsupp_fun_upd_id_iff}
+          (* rewrite \<lbrakk> t = Var v \<or> ?A1; t = Var v \<or> ?A2 ... \<rbrakk> \<leadsto> \<lbrakk> t = Var \<or> (?A1 \<and> ...); ... \<rbrakk> *)
+          #> Local_Defs.unfold lthy @{thms atomize_conjL}
+          (* tidy up a bit *)
+          #> Local_Defs.unfold lthy @{thms int_SSupp_fun_upd_iff int_imsupp_id_fun_upd_iff int_IImsupp_fun_upd_iff Int_empty_right simp_thms(6) simp_thms(21,22) True_implies_equals}
+          #> (
+            let
+              fun RS_tac thm = TRY (fn thm' => Seq.single (thm RS thm') handle THM _ => Seq.empty)
+
+              val tac = EVERY
+                [REPEAT (CHANGED (Local_Defs.fold_tac lthy @{thms conj_assoc disj_conj_distribL})),
+                 Local_Defs.unfold_tac lthy @{thms conj_assoc},
+                 RS_tac @{thm disjI2},
+                 RS_tac @{thm conjI}]
+            in REPEAT (CHANGED tac) #> Seq.hd end
+          );
+
+        (* adapt the simp theorems to the unary case: *)
+        val simps1 = map (
+          (* specialize the simps with unary Sb *)
+          Drule.infer_instantiate' lthy cdeltas
+          #> Local_Defs.fold lthy [def3]
+          (* unfold trivial/unary supports *)
+          #> Local_Defs.unfold lthy @{thms SSupp_Inj IImsupp_Inj supp_id imsupp_id}
+          (* discharge premises like "|{}| <o |UNIV|" etc. and tidy up *)
+          #> discharge_trivial
+          #> tidy
+          #> singleton (Variable.export names_lthy lthy)
+        ) simps;
+
+        (* permute gs \<circ> Inj(v := x) \<circ> inv g = Inj(g v := permute gs x) *)
+        val equiv_opt = case g_opt of
+          NONE => (warning ("No permutation argument for type " ^
+            Syntax.string_of_typ lthy v_T ^ "; skipping equivariance theorem for " ^
+            Binding.name_of b); NONE)
+        | SOME (j, g) =>
+          let
+            val cgs = map (SOME o Thm.cterm_of lthy) gs;
+
+            val permute_g = if is_RVr then g else list_comb (permute, gs);
+
+            (* instantiate tvsubst_permute and obtain equivariance theorem *)
+            val equiv_thm0 = #tvsubst_permute result
+              |> Drule.infer_instantiate' lthy (cgs @ cdeltas)
+              |> Local_Defs.fold lthy [def2]
+              |> Local_Defs.unfold lthy @{thms SSupp_Inj IImsupp_Inj supp_id imsupp_id}
+              |> discharge_trivial;
+
+            val bij_fact = Thm.assume (Thm.cprem_of equiv_thm0 (2*j + 1)); (* bij g *)
+
+            val discharge_prems = fold (fn fact => fn thm =>
+              Thm.assume fact RS thm handle THM _ => thm) (Thm.cprems_of equiv_thm0);
+            fun bij_RS thm = Thm.cprems_of equiv_thm0
+              |> map (fn fact => (Thm.assume fact RS thm) handle THM _ => @{thm refl});
+
+            (* permute_g \<circ> trm \<circ> inv g = trm *)
+            val g_prems = maps (fn g => map HOLogic.mk_Trueprop
+              [mk_bij g, MRBNF_Util.mk_supp_bound g]) gs;
+            val inner = Goal.prove names_lthy [] g_prems
+              (HOLogic.mk_Trueprop (HOLogic.mk_eq
+                (HOLogic.mk_comp (HOLogic.mk_comp (permute_g, trm), MRBNF_Util.mk_inv g), trm)))
+              (fn {context = ctxt, prems} => EVERY1 [
+                rtac ctxt @{thm ext},
+                K (Local_Defs.unfold0_tac ctxt (@{thms o_apply id_apply}
+                  @ map (fold (fn p => fn thm => p RS thm handle THM _ => thm) prems) permute_simps
+                  @ map_filter (fn p => try (fn () => p RS @{thm inv_simp2}) ()) prems)),
+                rtac ctxt refl
+              ])
+              |> discharge_prems;
+
+            (* permute_g \<circ> trm(v := t) \<circ> inv g = trm(g v := permute_g t) *)
+            val eq = (bij_fact RS @{thm fun_upd_comp_inv})
+              |> Drule.infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) [permute_g, trm, v, t])
+              |> Local_Defs.unfold lthy [inner RS @{thm eq_reflection}];
+
+            val permute_simps = map discharge_prems permute_simps;
+          in
+            (Local_Defs.unfold lthy
+              ((eq RS @{thm eq_reflection}) :: @{thm o_id} :: bij_RS @{thm inv_o_simp2})
+              equiv_thm0 RS @{thm o_eq_dest})
+            |> Local_Defs.unfold lthy (@{thm o_def} :: permute_simps @ bij_RS @{thm inv_simp2})
+            |> Local_Defs.fold lthy [def2]
+            |> singleton (Variable.export names_lthy lthy)
+            |> SOME
+          end;
+
+        val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+        val phi = Proof_Context.export_morphism old_lthy lthy;
+
+        val notes =
+          [("subst_" ^ N, Morphism.fact phi simps1, @{attributes [simp]}),
+           ("subst_" ^ N ^ "_equiv", Morphism.fact phi (the_list equiv_opt), @{attributes [equiv]})];
+
+      in (notes @ acc, lthy) end;
+
+  in @{fold 3} alg (0 upto n-1) Ns trms ([], lthy) end;
+end;
+
 end

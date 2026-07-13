@@ -444,7 +444,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
         ]));
         val perm_comps = prove_missing perm_comps (fn ctxt => fn mr_bnfs => K (EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id} @ maps map_comp_of_mr_bnf mr_bnfs)),
-          rtac ctxt refl
+          resolve_tac ctxt @{thms refl comp_apply[symmetric]}
         ]));
 
         fun set_map_of_mr_bnf (Inl mrbnf) = MRBNF_Def.set_map_of_mrbnf mrbnf
@@ -453,7 +453,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val supp_seminatss = transpose (map (fn thms => prove_missing thms (fn ctxt => fn mr_bnfs => K (EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
-            @{thms image_empty image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]}
+            @{thms image_empty image_insert image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]}
             @ maps set_map_of_mr_bnf mr_bnfs
           )),
           rtac ctxt @{thm subset_refl}
@@ -472,7 +472,11 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val perm_supports = prove_missing perm_supports (fn ctxt => fn mr_bnfs => fn i =>
           let val supps = nth suppss i;
-          in rtac ctxt @{thm id_apply} 1 ORELSE EVERY1 (map (fn j => REPEAT_DETERM o SELECT_GOAL (EVERY1 [
+          in rtac ctxt @{thm id_apply} 1
+            (* atom component: id_on {x} \<sigma> \<Longrightarrow> \<sigma> x = x *)
+            ORELSE SOLVED' (Subgoal.FOCUS_PREMS (fn {context=ctxt', prems, ...} =>
+              HEADGOAL (resolve_tac ctxt' prems THEN' resolve_tac ctxt' @{thms singletonI insertI1})) ctxt) 1
+            ORELSE EVERY1 (map (fn j => REPEAT_DETERM o SELECT_GOAL (EVERY1 [
             REPEAT_DETERM o EVERY' [
               resolve_tac ctxt (map map_cong_id_of_mr_bnf mr_bnfs),
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
@@ -526,12 +530,17 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = (case MRBNF_Def.mrbnf_of lthy (fst (dest_Type (#T sugar))) of
             SOME mrbnf => [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf] | NONE => [])
           | UNIV_cinfinite_of_mr_bnf _ = []
-        val infinite_UNIVs = map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs));
+        (* fallback appended after the MRBNF-derived facts (so those win): a `var`-sort type has
+           infinite UNIV by the class axiom alone, covering a bound-variable type the walk above
+           doesn't reach, e.g. one nested in a plain `set`/`prod` container *)
+        val infinite_UNIVs =
+          map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs))
+          @ [@{thm cinfinite_imp_infinite} OF [@{thm var_class.UNIV_cinfinite}]];
 
         val supp_smallss = transpose (map (fn supp_smalls => prove_missing supp_smalls
           (fn ctxt => fn mr_bnfs => K (EVERY1 [
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms emp_bound ordLeq_refl card_of_Card_order} @ [Un_bound, UN_bound, var_large]
+              @{thms emp_bound ordLeq_refl card_of_Card_order finite_ordLess_infinite2[OF finite_singleton]} @ [Un_bound, UN_bound, var_large]
               @ maps set_bd_UNIVs_of_mr_bnfs mr_bnfs @ infinite_UNIVs
             )
           ]))

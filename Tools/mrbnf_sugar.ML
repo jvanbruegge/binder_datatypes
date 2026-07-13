@@ -308,6 +308,16 @@ fun create_binder_datatype co (spec : spec) lthy =
       ) (MRBNF_Def.mrbnf_of lthy n)
       | get_sets _ _ _ = NONE;
 
+    (* the avoiding premises of strong_induct and for the freshness premises of fresh_inject
+       (atoms of sort `var` in the argument `t` avoid the set `K`) *)
+    fun mk_avoiding_prems var K t = case t of
+      (t as Free (_, T as (TFree _))) => if T = var then
+        [HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, K)))] else []
+      | _ => (case get_sets (fastype_of t) [var] t of
+        SOME ts => map (fn t => HOLogic.mk_Trueprop (mk_int_empty (t, K))) ts
+        | NONE => []
+      );
+
     val pre_mrbnf = hd (#pre_mrbnfs res);
     val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
 
@@ -354,14 +364,6 @@ fun create_binder_datatype co (spec : spec) lthy =
           | mk_IHs _ _ _ = [];
 
         val K_rhos = map (fn K => K $ rho) Ks;
-
-        fun mk_avoiding_prems var K_rho t = case t of
-          (t as Free (_, T as (TFree _))) => if T = var then
-            [HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, K_rho)))] else []
-          | _ => (case get_sets (fastype_of t) [var] t of
-            SOME ts => map (fn t => HOLogic.mk_Trueprop (mk_int_empty (t, K_rho))) ts
-            | NONE => []
-          );
 
         val bounds = drop (length pbounds) (
           map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
@@ -588,10 +590,11 @@ fun create_binder_datatype co (spec : spec) lthy =
           ||>> mk_TFrees' (replicate (length bfree_tys) class);
 
         val tys' = map (Term.typ_subst_atomic replace) tys;
-        val (((xs, ys), fs'), _) = names_lthy
+        val ((((xs, ys), fs'), As'), _) = names_lthy
           |> mk_Frees "x" tys'
           ||>> mk_Frees "y" tys'
-          ||>> mk_Frees "f" (map (fn a => a --> a) bound_tys');
+          ||>> mk_Frees "f" (map (fn a => a --> a) bound_tys')
+          ||>> mk_Frees "A" (map HOLogic.mk_setT bound_tys');
 
         val replace = map (fn (a, b) => if member (op=) bfrees a then
           (a, resort_tfree_or_tvar class (
@@ -606,6 +609,7 @@ fun create_binder_datatype co (spec : spec) lthy =
         val tys = map (Term.typ_subst_atomic fresh_subst) tys;
 
         val fs = map (Term.subst_atomic_types replace) fs';
+        val As = map (Term.subst_atomic_types replace) As';
         val sets = if null bound_tys then [] else map (fn f =>
           the (List.find (fn t => HOLogic.dest_setT (fastype_of t) = body_type (fastype_of f))
             (maps (filter (fn t => case t of
@@ -637,29 +641,30 @@ fun create_binder_datatype co (spec : spec) lthy =
           | map_cong0_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.map_cong0_of_bnf bnf
           | map_cong0_of_mr_bnf (Inr (Inr quot)) = Drule.rotate_prems (4 * length (#FVarss quot)) (#permute_cong (#inner quot));
 
-        val rhs = fold_rev (mk_ex o dest_Free) fs (fold_rev (curry HOLogic.mk_conj)
-          (maps (fn f => [mk_bij f, mk_supp_bound f]) fs @ id_ons)
+        fun mk_inject_rhs extra_prems = fold_rev (mk_ex o dest_Free) fs (fold_rev (curry HOLogic.mk_conj)
+          (maps (fn f => [mk_bij f, mk_supp_bound f]) fs @ id_ons @ extra_prems)
           (foldr1 HOLogic.mk_conj (@{map 3} (fn x => fn y => fn t => HOLogic.mk_eq (
             the_default I (Option.map (fn t => fn t' => t $ t') t) x, y
           )) xs ys permutes))
         );
+        val rhs = mk_inject_rhs [];
 
         val goal = mk_Trueprop_eq (
           HOLogic.mk_eq (Term.list_comb (ctor, xs), Term.list_comb (ctor, ys)), rhs
         );
+        val inject_rewrites =
+          @{thms map_sum.simps map_prod_simp sum.inject prod.inject id_apply}
+          @ set_simp_thms
+          @ map (BNF_Def.map_id_of_bnf o snd) bnfs
+          @ maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs
+          @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
+          @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+          @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I},
+            MRBNF_Def.map_def_of_mrbnf pre_mrbnf
+          ];
         val inject = Goal.prove_sorry lthy (names (xs @ ys)) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [ctor_def, #inject quotient]),
-          K (Local_Defs.unfold0_tac ctxt (
-            @{thms map_sum.simps map_prod_simp sum.inject prod.inject id_apply}
-            @ set_simp_thms
-            @ map (BNF_Def.map_id_of_bnf o snd) bnfs
-            @ maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs
-            @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
-            @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
-            @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I},
-              MRBNF_Def.map_def_of_mrbnf pre_mrbnf
-            ]
-          )),
+          K (Local_Defs.unfold0_tac ctxt inject_rewrites),
           if null bound_tys then EVERY' [
             rtac ctxt iffI,
             SELECT_GOAL (EVERY1 [
@@ -816,8 +821,88 @@ fun create_binder_datatype co (spec : spec) lthy =
             ]
           ])) end
         else NONE;
-      in SOME (the_default inject inject') end
+
+        val ((xs0, ys0), _) = names_lthy
+          |> mk_Frees "x" tys
+          ||>> mk_Frees "y" tys;
+        val fresh_premss = map2 (fn b => fn A =>
+          map2 (fn T => fn x =>
+            (member (op=) (map TFree (Term.add_tfreesT T [])) b, mk_avoiding_prems b A x)
+          ) tys xs0) bound_tys' As';
+
+        val covered = not (null bound_tys') andalso
+          forall (forall (fn (mentions, prems) => not mentions orelse not (null prems))) fresh_premss;
+
+        val fresh_inject_opt =
+          if covered then
+            let
+              val imsupp_prems = map2 (fn f => fn A => mk_int_empty (mk_imsupp f, A)) fs As;
+              val card_prems = map (fn A => HOLogic.mk_Trueprop (mk_ordLess (mk_card_of A)
+                (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of A)))))) As;
+              val fresh_prems = map (Term.subst_atomic_types replace) (
+                maps (maps snd) fresh_premss
+                @ flat (map2 (fn b => fn A => maps (mk_avoiding_prems b A) ys0) bound_tys' As'));
+              val goal = Logic.list_implies (card_prems @ fresh_prems, mk_Trueprop_eq (
+                HOLogic.mk_eq (Term.list_comb (ctor, xs), Term.list_comb (ctor, ys)),
+                mk_inject_rhs imsupp_prems
+              ));
+            in SOME (Goal.prove_sorry lthy (names (As @ xs @ ys)) [] goal (fn {context=ctxt, ...} => EVERY [
+              Local_Defs.unfold0_tac ctxt [ctor_def],
+              HEADGOAL (EqSubst.eqsubst_tac ctxt [0] [#fresh_inject quotient]),
+              Local_Defs.unfold0_tac ctxt inject_rewrites,
+              REPEAT_DETERM (FIRSTGOAL (FIRST' [
+                assume_tac ctxt,
+                rtac ctxt @{thm emp_bound},
+                rtac ctxt @{thm iffD2[OF disjoint_single]} THEN' assume_tac ctxt,
+                rtac ctxt conjI,
+                rtac ctxt @{thm iffD2[OF Un_empty]},
+                EqSubst.eqsubst_tac ctxt [0] @{thms Int_Un_distrib2},
+                rtac ctxt @{thm Int_empty_right}])),
+              HEADGOAL (EVERY' [
+                rtac ctxt iffI,
+                SELECT_GOAL (EVERY1 [
+                  REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+                  K (Local_Defs.unfold0_tac ctxt vvsubst_permutes),
+                  REPEAT_DETERM o rtac ctxt exI,
+                  REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
+                  REPEAT_DETERM o (assume_tac ctxt ORELSE' EVERY' [
+                    hyp_subst_tac ctxt,
+                    rtac ctxt refl ORELSE' (REPEAT_DETERM1 o EVERY' [
+                      resolve_tac ctxt (map map_cong0_of_mr_bnf mr_bnfs),
+                      REPEAT_DETERM o FIRST' [
+                        resolve_tac ctxt @{thms refl supp_id_bound bij_id},
+                        assume_tac ctxt,
+                        EVERY' [
+                          rtac ctxt @{thm trans[OF id_apply]},
+                          rtac ctxt sym,
+                          etac ctxt @{thm id_onD},
+                          REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
+                        ],
+                        SELECT_GOAL (EVERY1 [
+                          K (Local_Defs.unfold0_tac ctxt (@{thms image_Un image_single[symmetric] Union_Un_distrib} @ set_simp_thms)),
+                          assume_tac ctxt,
+                          IF_UNSOLVED o K no_tac
+                        ])
+                      ]
+                    ])
+                  ])
+                ]),
+
+                REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+                REPEAT_DETERM o rtac ctxt exI,
+                REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
+                REPEAT_DETERM o FIRST' [
+                  resolve_tac ctxt @{thms refl supp_id_bound bij_id id_on_empty id_on_id Int_empty_right conjI},
+                  assume_tac ctxt,
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map (fn thm => thm RS sym) vvsubst_permutes)) THEN' assume_tac ctxt
+                ]
+              ])
+            ])) end
+          else NONE;
+      in SOME (the_default inject inject', fresh_inject_opt) end
     ) ctors_tys (transpose setsss);
+
+    val (injects, fresh_injects) = apsnd (map_filter I) (split_list injects);
 
     (* Term for variable substitution *)
     val x = length replace - #rec_vars spec;
@@ -1333,7 +1418,8 @@ fun create_binder_datatype co (spec : spec) lthy =
         ("map", map_simps, simp),
         ("permute", permute_simps, equiv),
         ("distinct", distinct, simp),
-        ("inject", injects, simp)
+        ("inject", injects, simp),
+        ("fresh_inject", fresh_injects, [])
       ] @ the_default [] (Option.map (fn (res, tvsubst_simps) => [
         ("subst", tvsubst_simps, simp),
         ("IImsupp_permute_commute", #IImsupp_permute_commutes res, []),

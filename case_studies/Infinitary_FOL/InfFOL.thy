@@ -166,6 +166,7 @@ binder_datatype 'a ifol'
   | Conj "'a ifol' set\<^sub>k\<^sub>1"
   | All "(xs::'a) set\<^sub>k\<^sub>2" t::"'a ifol'" binds xs in t
 
+thm ifol'.fresh_inject ifol'.inject(4)
 
 definition Bot :: "'a::var_ifol' ifol'" ("\<bottom>") where
   "Bot \<equiv> Neg (Conj (Abs_set\<^sub>k\<^sub>1 bempty))"

@@ -344,7 +344,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
       ("rep_abs_sym", [#rep_abs_sym (#inner quot)]),
       ("abs_ctor", [#abs_ctor (#inner quot)]),
       ("TT_inject0", [#inject quot]),
-      ("fresh_inject", [#fresh_inject quot])
+      ("TT_fresh_inject", [#fresh_inject quot])
     ];
 
     fun note_always (quot : quotient_result fp_result_T) = [

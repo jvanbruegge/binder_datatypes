@@ -114,6 +114,7 @@ lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Ri
 
 lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
   by (auto simp: IImsupp_def)
+
 lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
 
 lemma SSupp_fun_upd_bound_UNIV[simp]: "|SSupp Inj (f(x := t))| <o |UNIV::'a::var set| \<longleftrightarrow> |SSupp Inj f| <o |UNIV::'a set|"
@@ -121,7 +122,11 @@ lemma SSupp_fun_upd_bound_UNIV[simp]: "|SSupp Inj (f(x := t))| <o |UNIV::'a::var
 
 lemma SSupp_fun_upd_Inj_bound[simp]: "|SSupp Inj (Inj(x := t))| <o |UNIV::'a::var set|"
   by simp
+
 lemma IImsupp_fun_upd_Inj_bound[simp, intro!]: "(\<And>x. |Vrs x| <o |UNIV::'a::var set| ) \<Longrightarrow> |IImsupp Inj Vrs (Inj(x := t))| <o |UNIV::'a::var set|"
   unfolding IImsupp_def by (meson SSupp_fun_upd_Inj_bound UN_bound)
+
+lemma supp_fun_upd_var: "|supp (id(v::'a::var := t))| <o |UNIV::'a set|"
+  by (simp add: supp_def)
 
 end

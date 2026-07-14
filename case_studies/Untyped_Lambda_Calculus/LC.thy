@@ -9,7 +9,6 @@ begin
 
 (* DATATYPE DECLARATION *)
 
-declare [[ML_print_depth=10000]]
 declare [[mrbnf_internals]]
 binder_datatype (FFVars: 'a) "term" =
   Var 'a
@@ -20,18 +19,7 @@ for
   subst: tvsubst
 print_theorems
 
-print_locale term.HL_REC_term
-thm HL_REC_term.HL_REC_term_def
-thm HL_REC_term.Uctor_def
-thm HL_REC_term.HL_REC_term_Var
-thm HL_REC_term.HL_REC_term_App
-thm HL_REC_term.HL_REC_term_Lam
-thm HL_REC_term.HL_REC_term_swap
-thm HL_REC_term.HL_REC_term_UFVars
-
-print_locale! REC_term
-
-(* No longer needed as it is generalized and implemented into mrbnf_sugar.ml *)
+(* No longer needed as it is generalized and implemented in mrbnf_sugar.ml *)
 
 locale xHL_REC_term =
   fixes Pmap :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"

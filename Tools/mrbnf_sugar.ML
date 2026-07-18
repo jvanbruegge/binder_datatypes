@@ -1350,9 +1350,10 @@ fun create_binder_datatype co (spec : spec) lthy =
           | [] => error ("the_qT_elem_of: nested type " ^ @{make_string} T
               ^ " contains no recursive element type");
 
+        fun set_fn_elem_T set_fn = HOLogic.dest_setT (body_type (fastype_of set_fn));
+
         fun the_live_pair_sets sets pairT =
-          case filter (fn s =>
-            HOLogic.dest_setT (body_type (fastype_of s)) = pairT) sets of
+          case filter (fn s => set_fn_elem_T s = pairT) sets of
             [] => error ("the_live_pair_sets: no set function with element type "
               ^ @{make_string} pairT)
           | ss => ss;
@@ -1472,10 +1473,13 @@ fun create_binder_datatype co (spec : spec) lthy =
             | NONE => mk_singleton arg
           end;
 
+        fun inner_spec_Ts spec_arg_T =
+          case spec_arg_T of Type (_, Ts) => Ts | _ => [];
+
         fun nesting_sets_by_pred pred arg spec_arg_T =
           let
             val inst_sets = inst_nesting_sets (fastype_of arg)
-            val spec_Ts = case spec_arg_T of Type (_, Ts) => Ts | _ => []
+            val spec_Ts = inner_spec_Ts spec_arg_T
           in map_filter (fn (set_fn, spec_T) =>
               if pred spec_T then SOME (set_fn $ arg) else NONE
             ) (inst_sets ~~ spec_Ts)
@@ -1625,10 +1629,11 @@ fun create_binder_datatype co (spec : spec) lthy =
         val f_prems = MRBNF_Recursor.mk_f_prems bds fs;
         val imsupp_prems = mk_imsupp_prems fs avoiding_sets;
 
-        val ctor_infos : ctor_info list = map (fn ((((ctor_name, (ctor_term, _)), Uctor), arg_tys), (_, spec_tys)) =>
-          {name = ctor_name, ctor = ctor_term, Uctor = Uctor,
-           arg_tys = arg_tys, contains_bounds = map contains_bound spec_tys}
-        ) ((((ctor_names ~~ ctors) ~~ Uctors) ~~ ctor_arg_tyss) ~~ #ctors spec);
+        val ctor_infos : ctor_info list =
+          @{map 5} (fn ctor_name => fn (ctor_term, _) => fn Uctor => fn arg_tys => fn (_, spec_tys) =>
+            {name = ctor_name, ctor = ctor_term, Uctor = Uctor,
+             arg_tys = arg_tys, contains_bounds = map contains_bound spec_tys})
+          ctor_names ctors Uctors ctor_arg_tyss (#ctors spec);
 
         val termlike_goals = MRBNF_Recursor.mk_termlike_goals vars bds NONE pT
           Pmap PFVarss validP lthy;
@@ -1698,8 +1703,8 @@ fun create_binder_datatype co (spec : spec) lthy =
         val Umap_ctor_goals = map mk_Umap_ctor_goal (ctor_infos ~~ ctor_setups);
 
         fun mk_UFVars_ctor_goals
-              ((({contains_bounds, ...} : ctor_info,
-                 {args, pus, nested_args, ctor_app, Uctor_app, prems = pred_fun_prems, infos} : ctor_setup)),
+              (({contains_bounds, ...} : ctor_info,
+                {args, pus, nested_args, ctor_app, Uctor_app, prems = pred_fun_prems, infos} : ctor_setup),
                spec_tys) =
           let
             val rec_arg_pus = map_filter (fn A_Rec { arg, pu } => SOME (arg, pu) | _ => NONE) infos;
@@ -1712,7 +1717,7 @@ fun create_binder_datatype co (spec : spec) lthy =
             ) (map ctor_arg_term infos) contains_bounds spec_tys);
           in
             @{map 4} (fn (bound_index, (UFVars_i, bound_i)) =>
-                  fn FVars_i => fn PFVars_i => fn avoiding_set_i =>
+                      fn FVars_i => fn PFVars_i => fn avoiding_set_i =>
               let
                 val int_empty_prems = map_filter (fn (arg, i, spec_T) =>
                   if i = bound_index then
@@ -2154,12 +2159,21 @@ fun create_binder_datatype co (spec : spec) lthy =
         fun is_brec (TFree x) = member (op=) brec_TFrees (TFree x)
           | is_brec _ = false;
 
-        fun contains_brec (TFree x) = member (op=) brec_TFrees (TFree x)
-          | contains_brec (Type (_, Ts)) = exists contains_brec Ts
-          | contains_brec _ = false;
+        fun contains_TFree_in tfrees =
+          let fun contains (TFree x) = member (op=) tfrees (TFree x)
+                | contains (Type (_, Ts)) = exists contains Ts
+                | contains _ = false
+          in contains end;
+
+        val contains_brec = contains_TFree_in brec_TFrees;
 
         val ctor_is_brecs = map (fn (_, spec_tys) => map is_brec spec_tys) (#ctors spec);
         val spec_tyss = map snd (#ctors spec);
+
+        val n_bfrees = length (#bfree_vars res);
+        val bfree_spec_TFrees = map (TFree o fst)
+          (take n_bfrees (drop (length (#vars spec) - n_bfrees - #rec_vars spec) (#vars spec)));
+        val contains_bfree = contains_TFree_in bfree_spec_TFrees;
 
         fun nonbound_sets aT arg spec_arg_T =
           filter (fn s => HOLogic.dest_setT (fastype_of s) = aT)
@@ -2171,17 +2185,15 @@ fun create_binder_datatype co (spec : spec) lthy =
         fun rec_fvars_in_nested aT arg spec_arg_T =
           let
             val inst_sets = inst_nesting_sets (fastype_of arg)
-            val spec_inner_Ts = case spec_arg_T of Type (_, Ts) => Ts | _ => []
+            val spec_inner_Ts = inner_spec_Ts spec_arg_T
             val qT_sets = map_filter (fn (set_fn, spec_T) =>
-              let val elem_T = HOLogic.dest_setT (body_type (fastype_of set_fn))
-              in if member (op=) qTs elem_T andalso not (contains_brec spec_T)
-                 then SOME set_fn else NONE
-              end
+              if member (op=) qTs (set_fn_elem_T set_fn) andalso not (contains_brec spec_T)
+              then SOME set_fn else NONE
             ) (inst_sets ~~ spec_inner_Ts)
             val bound_index = lookup_bound_index aT
             val fvars = nth FVarss_quot bound_index
             val results = map (fn qs =>
-              let val elem_T = HOLogic.dest_setT (body_type (fastype_of qs))
+              let val elem_T = set_fn_elem_T qs
               in mk_UNION (qs $ arg) (Term.abs ("t", elem_T) (fvars $ Bound 0)) end
             ) qT_sets
           in case results of [] => NONE | _ => SOME (foldl1 mk_Un results) end;
@@ -2248,12 +2260,14 @@ fun create_binder_datatype co (spec : spec) lthy =
 
             val arg_index_data = map_index I ((args ~~ contains_bounds) ~~ is_brecs);
 
+            fun is_passive_nonbound spec_T =
+              not (contains_bound spec_T) andalso not (contains_bfree spec_T);
+
             fun mk_other_arg_int_empty_prem j (bound, bound_index, bound_set)
                                             (k, ((a_arg, a_contains_bound), a_is_brec)) =
               if k = j then NONE
               else
-                let val aT = nth arg_aTs k
-                    val a_is_var = nth arg_is_var k
+                let val a_is_var = nth arg_is_var k
                     val a_kind = nth arg_kinds k
                     val not_redundant_symmetric_pair = not a_contains_bound orelse k > j
                 in if (a_is_var orelse a_contains_bound)
@@ -2267,11 +2281,11 @@ fun create_binder_datatype co (spec : spec) lthy =
                    else if a_kind = K_Passive andalso not a_is_var andalso not a_contains_bound
                    then
                      let val matching_sets = filter (fn s =>
-                           HOLogic.dest_setT (body_type (fastype_of s)) = bound
-                         ) (inst_nesting_sets aT)
+                           HOLogic.dest_setT (fastype_of s) = bound
+                         ) (nesting_sets_by_pred is_passive_nonbound a_arg (nth spec_tys k))
                      in case matching_sets of
                          fvars_set :: _ => SOME (HOLogic.mk_Trueprop (mk_int_empty (
-                           bound_set, fvars_set $ a_arg)))
+                           bound_set, fvars_set)))
                        | [] => NONE
                      end
                    else NONE
@@ -2290,11 +2304,12 @@ fun create_binder_datatype co (spec : spec) lthy =
               in case b_aT of Type _ =>
                    map_filter (fn (bound, _, bound_set) =>
                      let
-                         val rfvars = if nth arg_kinds j = K_Nested then
+                       val rfvars =
+                         if nth arg_kinds j = K_Nested then
                            (case rec_fvars_in_nested bound b_arg b_spec_T of
                              SOME r => [r] | NONE => [])
-                           else []
-                         val all_rhs = nonbound_sets bound b_arg b_spec_T @ rfvars
+                         else []
+                       val all_rhs = nonbound_sets bound b_arg b_spec_T @ rfvars
                      in case all_rhs of
                          [] => NONE
                        | _ => SOME (HOLogic.mk_Trueprop (mk_int_empty (bound_set, foldl1 mk_Un all_rhs)))

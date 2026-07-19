@@ -58,6 +58,12 @@ fun add_nesting_mrbnf_names Us =
       | add T ss = (member (op =) Us T, ss);
   in snd oo add end;
 
+fun all_type_names_in_types ctr_Tsss =
+  let
+    fun add (Type (s, Ts)) ss = fold add Ts (insert (op=) s ss)
+      | add _ ss = ss;
+  in fold (fold (fold add)) ctr_Tsss [] end;
+
 fun nesting_mrbnfs ctxt ctr_Tsss Us =
   map_filter (mrbnf_of ctxt) (fold (fold (fold (add_nesting_mrbnf_names Us))) ctr_Tsss []);
 
@@ -79,7 +85,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     val ((mrsbnf, (Ds, absinfo)), lthy) = MRSBNF_Comp.seal_mrsbnf I (bmv_unfolds
       @ BMV_Monad_Def.unfolds_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf), snd accum)
       (Binding.name pre_name) (#vars spec) tys mrsbnf NONE lthy;
-    
+
     val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
     val FVars_names = case #set_bs spec of
@@ -1137,7 +1143,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
             EqSubst.eqsubst_tac ctxt [0] (map (the o #map_permute) nesting_binder_sugars),
-            REPEAT_DETERM o resolve_tac ctxt prems                        
+            REPEAT_DETERM o resolve_tac ctxt prems
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
           rtac ctxt refl
@@ -1276,6 +1282,1098 @@ fun create_binder_datatype co (spec : spec) lthy =
     val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_permute_commutes res)) tvsubst_opt;
     val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_Diffs res)) tvsubst_opt;
 
+    fun HL_REC_build thy =
+      let
+        val (pT, names_lthy) = names_lthy
+          |> mk_TFrees 1 |>> the_single;
+        val fTs = map (fn a => a --> a) vars;
+
+        val ((((Pmap, PFVarss), validP), avoiding_sets), names_lthy) = names_lthy
+          |> apfst hd o mk_Frees "Pmap" [fTs ---> pT --> pT]
+          ||>> mk_Frees "PFVars" (map (fn a => pT --> HOLogic.mk_setT a) vars)
+          ||>> apfst hd o mk_Frees "validP" [pT --> @{typ bool}]
+          ||>> mk_Frees "avoiding_set" (map HOLogic.mk_setT vars)
+
+        val (uT, names_lthy) = names_lthy
+          |> mk_TFrees 1 |>> the_single;
+
+        val (((Umap, UFVarss), validU), names_lthy) = names_lthy
+          |> apfst hd o mk_Frees "Umap" [fTs ---> qT --> uT --> uT]
+          ||>> mk_Frees "UFVars" (map (fn a => qT --> uT --> HOLogic.mk_setT a) vars)
+          ||>> apfst hd o mk_Frees "validU" [uT --> @{typ bool}]
+
+        val qTs = map #T (#quotient_fps res);
+        val ctor_arg_tyss = map (fn (ctor_term, _) =>
+          fst (Term.strip_type (fastype_of ctor_term))
+        ) ctors;
+
+        fun is_rec_T T = member (op=) qTs T;
+
+        fun is_nested_rec_T T =
+          not (is_rec_T T) andalso not (member (op=) vars T)
+          andalso exists (fn qT' => Term.exists_subtype (curry (op=) qT') T) qTs;
+
+        datatype arg_kind = K_Rec | K_Nested | K_Passive;
+
+        fun classify_arg_T T =
+          if is_rec_T T then K_Rec
+          else if is_nested_rec_T T then K_Nested
+          else K_Passive;
+
+        fun subst_rec_in_type T =
+          if member (op=) qTs T then HOLogic.mk_prodT (T, pT --> uT)
+          else (case T of Type (s, Ts) => Type (s, map subst_rec_in_type Ts) | _ => T);
+
+        val nesting_mrbnf_tab = fold (fn m =>
+          Symtab.update (fst (dest_Type (MRBNF_Def.T_of_mrbnf m)), m)
+        ) fp_nesting_mrbnfs Symtab.empty;
+
+        fun find_nesting_mrbnf T =
+          case T of Type (s, _) => Symtab.lookup nesting_mrbnf_tab s
+          | _ => NONE;
+
+        fun inst_nesting_sets T =
+          case find_nesting_mrbnf T of
+            NONE => []
+          | SOME mrbnf =>
+              let
+                val mrbnf_Ts = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf))
+                val inner_Ts = snd (dest_Type T)
+              in
+                map (Term.subst_atomic_types (mrbnf_Ts ~~ inner_Ts))
+                    (MRBNF_Def.sets_of_mrbnf mrbnf)
+              end;
+
+        fun the_qT_elem_of T =
+          case filter (member (op=) qTs) (snd (dest_Type T)) of
+            t :: _ => t
+          | [] => error ("the_qT_elem_of: nested type " ^ @{make_string} T
+              ^ " contains no recursive element type");
+
+        fun set_fn_elem_T set_fn = HOLogic.dest_setT (body_type (fastype_of set_fn));
+
+        fun the_live_pair_sets sets pairT =
+          case filter (fn s => set_fn_elem_T s = pairT) sets of
+            [] => error ("the_live_pair_sets: no set function with element type "
+              ^ @{make_string} pairT)
+          | ss => ss;
+
+        fun inst_nesting_map mrbnf targetT mk_fun extra_type_hints =
+          let
+            val raw_map = MRBNF_Def.map_of_mrbnf mrbnf
+            val (map_arg_Ts, _) = strip_type (fastype_of raw_map)
+            val n_funs = length map_arg_Ts - 1
+            val thy = Proof_Context.theory_of lthy
+            val tyenv0 = Sign.typ_match thy (nth map_arg_Ts n_funs, targetT) Vartab.empty
+              handle Type.TYPE_MATCH => error ("inst_nesting_map: MRBNF type " ^
+                @{make_string} (nth map_arg_Ts n_funs) ^
+                " does not match target type " ^ @{make_string} targetT)
+            val tyenv1 = fold (fn (pat, target) => fn env =>
+              Sign.typ_match thy (pat, target) env handle Type.TYPE_MATCH => env
+            ) extra_type_hints tyenv0
+            val fun_args = map (fn fT =>
+              mk_fun (Envir.subst_type tyenv1 (domain_type fT))
+            ) (take n_funs map_arg_Ts)
+            val tyenv = fold (fn (fT, fa) => fn env =>
+              Sign.typ_match thy (fT, fastype_of fa) env handle Type.TYPE_MATCH => env
+            ) (take n_funs map_arg_Ts ~~ fun_args) tyenv1
+            val inst_map = Envir.subst_term (tyenv, Vartab.empty) raw_map
+          in Term.list_comb (inst_map, fun_args) end;
+
+        fun apply_nesting_map mk_fun extra_type_hints arg =
+          let val T = fastype_of arg
+          in inst_nesting_map (the (find_nesting_mrbnf T)) T mk_fun extra_type_hints $ arg end;
+
+        fun mk_nested_map_with mk_fun T f arg =
+          let
+            val mrbnf = the (find_nesting_mrbnf T)
+            val map_arg_Ts = fst (strip_type (fastype_of (MRBNF_Def.map_of_mrbnf mrbnf)))
+            val n_funs = length map_arg_Ts - 1
+          in apply_nesting_map mk_fun [(nth map_arg_Ts (n_funs - 1), fastype_of f)] arg end;
+
+        fun mk_nested_map_rename fs_renames T f arg =
+          let val f_domT = domain_type (fastype_of f) in
+          mk_nested_map_with
+            (fn domT =>
+              if domT = f_domT then f
+              else case AList.lookup (op=) (vars ~~ fs_renames) domT of
+                SOME fv => fv
+              | NONE => HOLogic.id_const domT) T f arg end;
+
+        fun mk_nested_map T f arg =
+          let val f_domT = domain_type (fastype_of f) in
+          mk_nested_map_with
+            (fn domT => if domT = f_domT then f else HOLogic.id_const domT) T f arg end;
+
+        fun mk_Uctor_arg_tys Ts = flat (map (fn T =>
+          case classify_arg_T T of
+            K_Rec => [T, pT --> uT]
+          | K_Nested => [subst_rec_in_type T]
+          | K_Passive => [T]) Ts);
+
+        val Uctor_tyss = map (fn Ts => mk_Uctor_arg_tys Ts ---> pT --> uT) ctor_arg_tyss;
+
+        val (Uctors, names_lthy) = fold_map (fn (name, ty) => fn lthy =>
+          lthy |> apfst hd o mk_Frees name [ty]
+        ) (map (fn name => "U" ^ name) ctor_names ~~ Uctor_tyss) names_lthy;
+
+        val (p, _) = lthy |> apfst hd o mk_Frees "p" [pT];
+        val (fs, _) = lthy |> mk_Frees "f" fTs;
+        val (t, _) = lthy |> apfst hd o mk_Frees "t" [qT];
+        val (u, _) = lthy |> apfst hd o mk_Frees "u" [uT];
+
+        fun mk_imsupp_prems fs avoiding_sets = map2 (fn f => fn A =>
+          HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, A))
+        ) fs avoiding_sets;
+
+        fun mk_pred_fun_prems validP validU pus = map (fn pu =>
+          HOLogic.mk_Trueprop (MRBNF_Recursor.mk_pred_fun validP validU $ pu)
+        ) pus;
+
+        fun mk_pus arg_tys = lthy |> mk_Frees "pu"
+          (map_filter (fn T => if is_rec_T T then SOME (pT --> uT) else NONE) arg_tys);
+
+        val rrename = Term.subst_atomic_types
+          (snd (dest_Type qT) ~~ (vars @ passives)) (#permute quotient);
+
+        fun contains_bound (TFree x) = (case AList.lookup (op=) (#vars spec) x of
+              SOME MRBNF_Def.Bound_Var => true | _ => false)
+          | contains_bound (Type (_, Ts)) = exists contains_bound Ts
+          | contains_bound _ = false;
+
+        fun lookup_bound_index T =
+          case find_index (curry (op=) T) vars of
+            ~1 => error ("lookup_bound_index: type " ^ @{make_string} T ^ " not found in vars")
+          | i => i;
+
+        fun try_lookup_bound_index T = find_index (curry (op=) T) vars;
+
+        fun bounds_in_T T =
+          filter (fn bound => Term.exists_subtype (curry (op=) bound) T) vars;
+
+        fun bound_types_of spec_T instT =
+          let
+            fun go (TFree x, inst) acc =
+                (case AList.lookup (op=) (#vars spec) x of
+                  SOME MRBNF_Def.Bound_Var =>
+                    if member (op=) vars inst andalso not (member (op=) acc inst)
+                    then inst :: acc else acc
+                | _ => acc)
+              | go (Type (_, spec_Ts), Type (_, inst_Ts)) acc =
+                  if length spec_Ts = length inst_Ts
+                  then fold go (spec_Ts ~~ inst_Ts) acc
+                  else acc
+              | go _ acc = acc;
+          in rev (go (spec_T, instT) []) end;
+
+        fun mk_bound_set_for aT arg =
+          let val T = fastype_of arg
+          in case build_set_for lthy aT arg T of
+              SOME (_, set_expr) => set_expr
+            | NONE => mk_singleton arg
+          end;
+
+        fun inner_spec_Ts spec_arg_T =
+          case spec_arg_T of Type (_, Ts) => Ts | _ => [];
+
+        fun nesting_sets_by_pred pred arg spec_arg_T =
+          let
+            val inst_sets = inst_nesting_sets (fastype_of arg)
+            val spec_Ts = inner_spec_Ts spec_arg_T
+          in map_filter (fn (set_fn, spec_T) =>
+              if pred spec_T then SOME (set_fn $ arg) else NONE
+            ) (inst_sets ~~ spec_Ts)
+          end;
+
+        fun mk_precise_bound_set aT arg spec_arg_T =
+          if member (op=) vars (fastype_of arg) then mk_singleton arg
+          else case fastype_of arg of
+            Type _ =>
+              let
+                val direct_sets =
+                  filter (fn s => HOLogic.dest_setT (fastype_of s) = aT)
+                    (nesting_sets_by_pred contains_bound arg spec_arg_T)
+              in
+                case direct_sets of
+                  [] => mk_bound_set_for aT arg
+                | _ => foldl1 mk_Un direct_sets
+              end
+          | _ => mk_bound_set_for aT arg;
+
+        fun mk_bound_set_dispatch bound arg spec_T =
+          case fastype_of arg of
+            Type _ => mk_precise_bound_set bound arg spec_T
+          | _ => mk_bound_set_for bound arg;
+
+        fun mk_rename_fn domT =
+          let val bound_index = try_lookup_bound_index domT in
+            if bound_index >= 0 then nth fs bound_index
+            else if exists (fn bound => Term.exists_subtype (curry (op=) bound) domT) vars then
+              (case find_nesting_mrbnf domT of
+                SOME mrbnf => inst_nesting_map mrbnf domT mk_rename_fn []
+              | NONE => HOLogic.id_const domT)
+            else HOLogic.id_const domT
+          end;
+
+        fun rename_passive_arg arg =
+          let val T = fastype_of arg
+              val bound_index = try_lookup_bound_index T
+          in if bound_index >= 0 then nth fs bound_index $ arg
+             else if exists (fn bound => Term.exists_subtype (curry (op=) bound) T) vars then
+               (case find_nesting_mrbnf T of
+                 SOME _ => mk_rename_fn T $ arg
+               | NONE => arg)
+             else arg
+          end;
+
+        fun mk_guarded_rec_lambda Pmap_inv t pu =
+          Term.absfree (dest_Free p) (
+            BNF_FP_Util.mk_If (validP $ p)
+              (Term.list_comb (Umap, fs) $ t $ (pu $ (Pmap_inv $ p)))
+              (BNF_GFP_Util.mk_undefined uT)
+          );
+
+        fun mk_guarded_p body =
+          Term.absfree (dest_Free p)
+            (BNF_FP_Util.mk_If (validP $ p) body (BNF_GFP_Util.mk_undefined uT));
+
+        datatype arg_info =
+            A_Rec of { arg: term, pu: term }
+          | A_Nested of { arg: term, nested: term, arg_T: typ, elem_T: typ, pairT: typ, live_sets: term list }
+          | A_Passive of { arg: term, arg_T: typ };
+
+        type ctor_info = {
+          name: string,
+          ctor: term,
+          Uctor: term,
+          arg_tys: typ list,
+          contains_bounds: bool list
+        };
+
+        type ctor_setup = {
+          args: term list,
+          pus: term list,
+          nested_args: term list,
+          ctor_app: term,
+          Uctor_app: term,
+          prems: term list,
+          infos: arg_info list
+        };
+
+        fun classify_args args arg_tys pus nested_args =
+          let
+            fun go [] _ _ acc = rev acc
+              | go ((arg, T) :: rest) pus_left nested_left acc =
+                  (case classify_arg_T T of
+                    K_Rec =>
+                      go rest (tl pus_left) nested_left
+                        (A_Rec { arg = arg, pu = hd pus_left } :: acc)
+                  | K_Nested =>
+                      let
+                        val nested_arg = hd nested_left;
+                        val elem_T = the_qT_elem_of T;
+                        val pairT = HOLogic.mk_prodT (elem_T, pT --> uT);
+                        val live_sets =
+                          the_live_pair_sets (inst_nesting_sets (subst_rec_in_type T)) pairT;
+                      in
+                        go rest pus_left (tl nested_left)
+                          (A_Nested { arg = arg, nested = nested_arg, arg_T = T,
+                                      elem_T = elem_T, pairT = pairT,
+                                      live_sets = live_sets } :: acc)
+                      end
+                  | K_Passive =>
+                      go rest pus_left nested_left
+                        (A_Passive { arg = arg, arg_T = T } :: acc));
+          in go (args ~~ arg_tys) pus nested_args [] end;
+
+        fun ctor_arg_term (A_Rec { arg, ... }) = arg
+          | ctor_arg_term (A_Passive { arg, ... }) = arg
+          | ctor_arg_term (A_Nested { nested, arg_T, pairT, elem_T, ... }) =
+              mk_nested_map (subst_rec_in_type arg_T)
+                (Const (@{const_name fst}, pairT --> elem_T)) nested;
+
+        fun mk_ctor_setup ({ctor = ctor_term, Uctor, arg_tys, ...} : ctor_info) =
+          let
+            val (args, _) = lthy |> mk_Frees "x" arg_tys;
+            val (pus, _) = mk_pus arg_tys;
+            val (nested_args, _) = lthy |> mk_Frees "nest"
+              (map_filter (fn T =>
+                if is_nested_rec_T T then SOME (subst_rec_in_type T) else NONE
+              ) arg_tys);
+            val infos = classify_args args arg_tys pus nested_args;
+            val Uctor_args = maps (fn
+                A_Rec { arg, pu } => [arg, pu]
+              | A_Nested { nested, ... } => [nested]
+              | A_Passive { arg, ... } => [arg]) infos;
+            val ctor_app = Term.list_comb (ctor_term, map ctor_arg_term infos);
+            val Uctor_app = Term.list_comb (Uctor, Uctor_args @ [p]);
+            val pred_fun_prems = mk_pred_fun_prems validP validU pus;
+            val nested_pred_fun_prems = maps (fn
+                A_Nested { nested, pairT, live_sets, ... } =>
+                  map (fn live_set =>
+                    let
+                      val tpu = Free ("tpu_", pairT);
+                      val pu_part = HOLogic.mk_snd tpu;
+                      val elem_in_set = HOLogic.mk_mem (tpu, live_set $ nested);
+                    in HOLogic.mk_Trueprop (HOLogic.mk_all ("tpu_", pairT,
+                      HOLogic.mk_imp (elem_in_set,
+                        MRBNF_Recursor.mk_pred_fun validP validU $ pu_part))) end) live_sets
+              | _ => []) infos;
+          in
+            { args = args, pus = pus, nested_args = nested_args,
+              ctor_app = ctor_app, Uctor_app = Uctor_app,
+              prems = pred_fun_prems @ nested_pred_fun_prems, infos = infos } : ctor_setup
+          end;
+
+        val bds = map (mk_card_of o HOLogic.mk_UNIV) vars;
+        val f_prems = MRBNF_Recursor.mk_f_prems bds fs;
+        val imsupp_prems = mk_imsupp_prems fs avoiding_sets;
+
+        val ctor_infos : ctor_info list =
+          @{map 5} (fn ctor_name => fn (ctor_term, _) => fn Uctor => fn arg_tys => fn (_, spec_tys) =>
+            {name = ctor_name, ctor = ctor_term, Uctor = Uctor,
+             arg_tys = arg_tys, contains_bounds = map contains_bound spec_tys})
+          ctor_names ctors Uctors ctor_arg_tyss (#ctors spec);
+
+        val termlike_goals = MRBNF_Recursor.mk_termlike_goals vars bds NONE pT
+          Pmap PFVarss validP lthy;
+
+        val small_PFVars_goals = map2 (fn FVars => fn bd =>
+          Logic.all p (Logic.mk_implies (
+            HOLogic.mk_Trueprop (validP $ p),
+            HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (FVars $ p)) bd)
+          ))
+        ) PFVarss bds;
+
+        val valid_Pmap_goal = fold_rev Logic.all (fs @ [p]) (Logic.mk_implies (
+          HOLogic.mk_Trueprop (validP $ p),
+          fold_rev (curry Logic.mk_implies) f_prems
+            (HOLogic.mk_Trueprop (validP $ (Term.list_comb (Pmap, fs) $ p)))
+        ));
+
+        val small_avoiding_set_goals = map2 (fn A => fn bd =>
+          HOLogic.mk_Trueprop (mk_ordLess (mk_card_of A) bd)
+        ) avoiding_sets bds;
+
+        val u_termlike_goals = MRBNF_Recursor.mk_termlike_goals vars bds (SOME quotient) uT
+          Umap UFVarss validU lthy;
+
+        val validU_Umap_goal = fold_rev Logic.all (fs @ [t, u]) (Logic.mk_implies (
+          HOLogic.mk_Trueprop (validU $ u),
+          fold_rev (curry Logic.mk_implies) f_prems
+            (HOLogic.mk_Trueprop (validU $ (Term.list_comb (Umap, fs) $ t $ u)))
+        ));
+
+        val ctor_setups = map mk_ctor_setup ctor_infos;
+
+        val FVarss_quot = #FVarss quotient;
+
+        fun mk_Umap_ctor_goal
+              ({Uctor, ...} : ctor_info,
+               {args, pus, nested_args, ctor_app, Uctor_app, prems = pred_fun_prems, infos} : ctor_setup) =
+          let
+            val lhs = Term.list_comb (Umap, fs) $ ctor_app $ Uctor_app;
+            val Pmap_inv = Term.list_comb (Pmap, map mk_inv fs);
+
+            val Uctor_rhs_args = maps (fn
+                A_Rec { arg, pu } =>
+                  [Term.list_comb (rrename, fs) $ arg,
+                   mk_guarded_rec_lambda Pmap_inv arg pu]
+              | A_Nested { nested, arg_T, elem_T, ... } =>
+                  let
+                    val t_var = Free ("t", elem_T);
+                    val pu_var = Free ("pu", pT --> uT);
+                    val renamed_t = Term.list_comb (rrename, fs) $ t_var;
+                    val guarded_pu = mk_guarded_rec_lambda Pmap_inv t_var pu_var;
+                    val pair_fn = HOLogic.mk_prod (renamed_t, guarded_pu);
+                    val lambda_fn = HOLogic.mk_case_prod
+                      (Term.lambda t_var (Term.lambda pu_var pair_fn));
+                  in [mk_nested_map_rename fs (subst_rec_in_type arg_T) lambda_fn nested] end
+              | A_Passive { arg, ... } => [rename_passive_arg arg]) infos;
+
+            val rhs = Term.list_comb (Uctor, Uctor_rhs_args @ [Term.list_comb (Pmap, fs) $ p]);
+          in
+            fold_rev Logic.all (fs @ args @ pus @ nested_args @ [p]) (Logic.mk_implies (
+              HOLogic.mk_Trueprop (validP $ p),
+              fold_rev (curry Logic.mk_implies) (f_prems @ imsupp_prems @ pred_fun_prems)
+                (mk_Trueprop_eq (lhs, rhs))
+            ))
+          end;
+
+        val Umap_ctor_goals = map mk_Umap_ctor_goal (ctor_infos ~~ ctor_setups);
+
+        fun mk_UFVars_ctor_goals
+              (({contains_bounds, ...} : ctor_info,
+                {args, pus, nested_args, ctor_app, Uctor_app, prems = pred_fun_prems, infos} : ctor_setup),
+               spec_tys) =
+          let
+            val rec_arg_pus = map_filter (fn A_Rec { arg, pu } => SOME (arg, pu) | _ => NONE) infos;
+
+            val bound_args = flat (@{map 3} (fn arg => fn contains_bound => fn spec_T =>
+              if contains_bound then
+                map (fn bound => (arg, lookup_bound_index bound, spec_T))
+                    (bound_types_of spec_T (fastype_of arg))
+              else []
+            ) (map ctor_arg_term infos) contains_bounds spec_tys);
+          in
+            @{map 4} (fn (bound_index, (UFVars_i, bound_i)) =>
+                      fn FVars_i => fn PFVars_i => fn avoiding_set_i =>
+              let
+                val int_empty_prems = map_filter (fn (arg, i, spec_T) =>
+                  if i = bound_index then
+                    SOME (HOLogic.mk_Trueprop (mk_int_empty (
+                      mk_bound_set_dispatch bound_i arg spec_T,
+                      mk_Un (PFVars_i $ p, avoiding_set_i)
+                    )))
+                  else NONE
+                ) bound_args;
+
+                val subset_prems = map (fn (t_arg, pu_arg) =>
+                  Logic.all p (Logic.mk_implies (
+                    HOLogic.mk_Trueprop (validP $ p),
+                    HOLogic.mk_Trueprop (mk_leq
+                      (UFVars_i $ t_arg $ (pu_arg $ p))
+                      (mk_Un (mk_Un (FVars_i $ t_arg, PFVars_i $ p), avoiding_set_i))
+                    )
+                  ))
+                ) rec_arg_pus;
+
+                val nested_subset_prems = maps (fn
+                    A_Nested { nested, pairT, live_sets, ... } =>
+                      map (fn live_set =>
+                        let
+                          val tpu = Free ("tpu_", pairT);
+                          val t_part = HOLogic.mk_fst tpu;
+                          val pu_part = HOLogic.mk_snd tpu;
+                          val elem_in_set = HOLogic.mk_mem (tpu, live_set $ nested);
+                        in fold_rev Logic.all [tpu, p] (
+                          Logic.mk_implies (HOLogic.mk_Trueprop elem_in_set,
+                          Logic.mk_implies (HOLogic.mk_Trueprop (validP $ p),
+                          HOLogic.mk_Trueprop (mk_leq
+                            (UFVars_i $ t_part $ (pu_part $ p))
+                            (mk_Un (mk_Un (FVars_i $ t_part, PFVars_i $ p), avoiding_set_i))
+                          )))
+                        ) end) live_sets
+                  | _ => []) infos;
+
+                val concl = HOLogic.mk_Trueprop (mk_leq
+                  (UFVars_i $ ctor_app $ Uctor_app)
+                  (mk_Un (mk_Un (FVars_i $ ctor_app, PFVars_i $ p), avoiding_set_i))
+                );
+              in
+                fold_rev Logic.all (args @ pus @ nested_args @ [p]) (Logic.mk_implies (
+                  HOLogic.mk_Trueprop (validP $ p),
+                  fold_rev (curry Logic.mk_implies)
+                    (pred_fun_prems @ int_empty_prems @ subset_prems @ nested_subset_prems) concl
+                ))
+              end
+            ) (map_index I (UFVarss ~~ vars)) FVarss_quot PFVarss avoiding_sets
+          end;
+
+        val UFVars_ctor_goalss =
+          map mk_UFVars_ctor_goals ((ctor_infos ~~ ctor_setups) ~~ map snd (#ctors spec));
+
+        val validU_ctor_goals = map (fn (_ : ctor_info,
+              {args, pus, nested_args, Uctor_app, prems = pred_fun_prems, ...} : ctor_setup) =>
+          fold_rev Logic.all (args @ pus @ nested_args @ [p]) (Logic.mk_implies (
+            HOLogic.mk_Trueprop (validP $ p),
+            fold_rev (curry Logic.mk_implies) pred_fun_prems
+              (HOLogic.mk_Trueprop (validU $ Uctor_app))
+          ))
+        ) (ctor_infos ~~ ctor_setups);
+
+        val p_goals = [
+          ("Pmap_comp0", [#map_comp0 termlike_goals]),
+          ("Pmap_cong_id", [#map_cong_id termlike_goals]),
+          ("PFVars_Pmap", #FVars_map termlike_goals),
+          ("small_PFVars", small_PFVars_goals),
+          ("valid_Pmap", [valid_Pmap_goal]),
+          ("small_avoiding_sets", small_avoiding_set_goals)
+        ];
+
+        val u_generic_goals = [
+          ("Umap_comp0", [#map_comp0 u_termlike_goals]),
+          ("Umap_cong_id", [#map_cong_id u_termlike_goals]),
+          ("valid_Umap", [validU_Umap_goal])
+        ];
+
+        val u_ctor_goals = map2 (fn ({name, ...} : ctor_info) => fn goal =>
+          ("Umap_U" ^ name, [goal])
+        ) ctor_infos Umap_ctor_goals;
+
+        val UFVars_goals = map2 (fn ({name, ...} : ctor_info) => fn goals =>
+          ("UFVars_U" ^ name, goals)
+        ) ctor_infos UFVars_ctor_goalss;
+
+        val validU_goals = map2 (fn ({name, ...} : ctor_info) => fn goal =>
+          ("validU_U" ^ name, [goal])
+        ) ctor_infos validU_ctor_goals;
+
+        val param_goals =
+          p_goals @
+          u_generic_goals @
+          u_ctor_goals @
+          UFVars_goals @
+          validU_goals;
+
+        val T_names = map (short_type_name o fst o dest_Type o #T) (#quotient_fps res);
+
+        fun mk_locale_name s =
+          qualify (Binding.prefix_name (s ^ "_") (Binding.conglomerate (map Binding.name T_names)));
+
+        val (HL_REC_name, lthy) = Expression.add_locale (mk_locale_name "HL_REC") Binding.empty [] ([], []) [
+          Element.Fixes (map (fn t =>
+            let val (b, T) = dest_Free t;
+            in (Binding.name b, SOME T, NoSyn) end
+          ) ([Pmap] @ PFVarss @ [validP] @ avoiding_sets @ [Umap] @ UFVarss @ Uctors @ [validU])),
+          Element.Assumes (map (fn (b, ts) =>
+            ((Binding.concealed (Binding.name b), []), map (rpair []) ts)
+          ) param_goals)
+        ] thy;
+
+        val Uctor_preT =
+          let val (pn, pTs) = dest_Type (domain_type (fastype_of quotient_ctor))
+          in Type (pn, map subst_rec_in_type pTs) end;
+
+        val Uctor_repT =
+          let
+            val info_abs_Ts = snd (dest_Type (#abs_type (fst info)))
+            val Uctor_preT_Ts = snd (dest_Type Uctor_preT)
+          in Term.typ_subst_atomic (info_abs_Ts ~~ Uctor_preT_Ts) (#rep_type (fst info)) end;
+
+        val Uctor_rep = Const (#Rep_name (fst info), Uctor_preT --> Uctor_repT);
+
+        val Uctor_branches = map2 (fn Uctor_i => fn orig_tys =>
+          let
+            val (tuple_elems, Uctor_argss) = split_list (map_index (fn (j, orig_T) =>
+              if member (op=) qTs orig_T then
+                let
+                  val t_free = Free ("t" ^ string_of_int j, orig_T)
+                  val pu_free = Free ("pu" ^ string_of_int j, pT --> uT)
+                in (HOLogic.pair_const orig_T (pT --> uT) $ t_free $ pu_free, [t_free, pu_free]) end
+              else if is_nested_rec_T orig_T then
+                let val subst_T = subst_rec_in_type orig_T
+                    val x_free = Free ("x" ^ string_of_int j, subst_T)
+                in (x_free, [x_free]) end
+              else
+                let val x_free = Free ("x" ^ string_of_int j, orig_T)
+                in (x_free, [x_free]) end
+            ) orig_tys)
+            val Uctor_args = flat Uctor_argss
+            val body = Term.list_comb (Uctor_i, Uctor_args)
+            val tuple = mk_tuple_balanced tuple_elems
+          in HOLogic.tupled_lambda tuple body end
+        ) Uctors ctor_arg_tyss;
+
+        val Uctor_case_fn = Balanced_Tree.make mk_case_sum Uctor_branches;
+        val Uctor_x = Free ("x", Uctor_preT);
+        val Uctor_rhs = lambda Uctor_x (Uctor_case_fn $ (Uctor_rep $ Uctor_x));
+
+        val ((Uctor, (_, Uctor_def_thm)), lthy) = Local_Theory.define
+          ((Binding.name "Uctor", NoSyn),
+           ((Thm.def_binding (Binding.name "Uctor"), []), Uctor_rhs)) lthy;
+
+        val Uctor_unfold_thms =
+          [Uctor_def_thm]
+          @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
+             MRBNF_Def.pred_set_of_mrbnf pre_mrbnf]
+          @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+          @ @{thms comp_def Ball_def};
+
+        val absumprodE_thm = BNF_FP_Util.mk_absumprodE (#type_definition (snd info))
+          (map (length o snd) (#ctors spec));
+
+        val common_unfold_thms =
+          @{thms sum.case map_sum.simps fst_conv snd_conv map_prod_simp prod.case
+              comp_def sum_set_simps Int_Un_distrib Int_Un_distrib2 Union_insert Union_empty
+              Int_empty_left Un_empty_left empty_iff simp_thms Un_empty_right
+              prod.set_map UN_singleton split_beta prod_set_simps Un_iff
+              imp_disjL all_conj_distrib};
+
+        val base_simp_thms =
+          common_unfold_thms
+          @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
+          @ map (Thm.symmetric o snd) ctors;
+
+        val all_ctor_mrbnfs = map_filter (mrbnf_of lthy)
+          (all_type_names_in_types [map snd (#ctors spec)]);
+        val rewrite_mrbnfs = Library.distinct
+          ((op =) o apply2 (fst o dest_Type o MRBNF_Def.T_of_mrbnf))
+          (all_ctor_mrbnfs @ fp_nesting_mrbnfs);
+
+        fun try_OF thms th = SOME (th OF thms) handle THM _ => NONE;
+
+        fun specialize_id th =
+          if Thm.nprems_of th = 0 then []
+          else (case try_OF @{thms bij_id} th of
+             SOME th' => th' :: specialize_id th'
+           | NONE =>
+             (case try_OF @{thms supp_id_bound} th of
+                SOME th' => th' :: specialize_id th'
+              | NONE => []));
+
+        val set_map_rewrites = maps (fn m =>
+          maps (fn thm =>
+            map (fn t => t RS @{thm eq_reflection}) (thm :: specialize_id thm)
+          ) (MRBNF_Def.set_map_of_mrbnf m)
+        ) rewrite_mrbnfs;
+
+        val map_id0_rewrites = map (fn m =>
+          MRBNF_Def.map_id0_of_mrbnf m RS @{thm eq_reflection}
+        ) rewrite_mrbnfs;
+
+        val map_ident_rewrites = map (fn m =>
+          MRBNF_Def.map_ident_of_mrbnf m RS @{thm eq_reflection}
+        ) rewrite_mrbnfs;
+
+        val setmap_conv = Raw_Simplifier.rewrite lthy true set_map_rewrites;
+        val mapid0_conv = Raw_Simplifier.rewrite lthy true map_id0_rewrites;
+        val mapident_conv = Raw_Simplifier.rewrite lthy true map_ident_rewrites;
+
+        val Uctor_pre_name = fst (dest_Type Uctor_preT);
+
+        fun find_pre_mrbnf_param params =
+          get_first (fn (_, ct) =>
+            case Thm.typ_of_cterm ct of
+              Type (tn, _) => if tn = Uctor_pre_name then SOME ct else NONE
+            | _ => NONE
+          ) params;
+
+        val pred_simp_thms = @{thms pred_fun_def split_paired_All prod.sel prod.collapse
+                 singleton_iff insert_iff empty_iff
+                 prod_set_simps
+                 image_insert image_empty UN_insert UN_empty UN_singleton
+                 Union_insert Union_empty
+                 Un_empty_right Un_empty_left
+                 simp_thms HOL.all_simps ex_simps};
+
+        fun normalize_case_tac ctxt = SELECT_GOAL (
+          Local_Defs.unfold0_tac ctxt base_simp_thms THEN
+          CONVERSION setmap_conv 1 THEN
+          Local_Defs.unfold0_tac ctxt pred_simp_thms THEN
+          CONVERSION mapid0_conv 1 THEN
+          Local_Defs.unfold0_tac ctxt @{thms id_def} THEN
+          CONVERSION mapident_conv 1);
+
+        fun Uctor_cases_tac ctxt finish_tac i =
+          Subgoal.FOCUS_PARAMS (fn {context = ctxt', params, ...} =>
+            Local_Defs.unfold0_tac ctxt' Uctor_unfold_thms THEN
+            (case find_pre_mrbnf_param params of
+               NONE => all_tac
+             | SOME ct => rtac ctxt' (infer_instantiate' ctxt' [SOME ct] absumprodE_thm) 1)
+          ) ctxt i
+          THEN PARALLEL_ALLGOALS (
+            TRY o hyp_subst_tac ctxt THEN'
+            normalize_case_tac ctxt THEN'
+            REPEAT_DETERM o etac ctxt @{thm conjE} THEN'
+            finish_tac
+          );
+
+        val n_ctors = length ctor_infos;
+        val (_, after_p_assms) = chop (length p_goals) param_goals;
+        val (u_generic_assms, after_generic_assms) =
+          chop (length u_generic_goals) after_p_assms;
+        val (Umap_ctor_assms, after_Umap_assms) = chop n_ctors after_generic_assms;
+        val (UFVars_ctor_assms, validU_ctor_assms) = chop n_ctors after_Umap_assms;
+
+        fun assm_thms_of (name, _) = Proof_Context.get_thms lthy name;
+        val ctor_defs = map snd ctors;
+
+        val unfold_pred_fun = Local_Defs.unfold0 lthy
+          @{thms pred_fun_def split_paired_All prod.sel id_def};
+
+        val unfold_pred_fun_ctor = Local_Defs.unfold0 lthy
+          (@{thms pred_fun_def split_paired_All prod.sel id_def} @ ctor_defs);
+
+        val u_params = {
+          Umap_comp0    = hd (assm_thms_of (nth u_generic_assms 0)),
+          Umap_cong_id  = hd (assm_thms_of (nth u_generic_assms 1)),
+          valid_Umap    = hd (assm_thms_of (nth u_generic_assms 2)),
+          Umap_Uctors   = map (unfold_pred_fun o hd o assm_thms_of) Umap_ctor_assms,
+          UFVars_Uctors = map (map unfold_pred_fun o assm_thms_of) UFVars_ctor_assms,
+          validU_Uctors = map (unfold_pred_fun o hd o assm_thms_of) validU_ctor_assms
+        };
+
+        val params = MRBNF_Recursor.mk_params lthy param_goals;
+
+        fun pair_collapse_finish ctxt =
+          Subgoal.FOCUS_PREMS (fn {context = ctxt', prems, ...} =>
+            let
+              val collapsed = map_filter (fn p =>
+                SOME (@{thm mp} OF [@{thm spec} OF [@{thm spec} OF [p]], @{thm prod.collapse}])
+                handle THM _ => NONE) prems
+            in
+              FIRST' (map (fn c => resolve_tac ctxt' [c]) (prems @ collapsed)) 1
+            end) ctxt;
+
+        val meta_rewrites = map (Local_Defs.meta_rewrite_rule lthy);
+        val int_un_distrib_conv = Raw_Simplifier.rewrite lthy true (meta_rewrites
+          @{thms Int_Un_distrib Int_Un_distrib2 Int_empty_left Int_empty_right
+              Un_empty_left Un_empty_right});
+        val fold_id_conv = Raw_Simplifier.rewrite lthy true
+          (meta_rewrites @{thms id_def[symmetric]});
+        val image_id_distrib_conv = Raw_Simplifier.rewrite lthy true (meta_rewrites
+          @{thms image_id image_ident id_apply
+              Int_Un_distrib Int_Un_distrib2 Int_empty_left Int_empty_right
+              Un_empty_left Un_empty_right});
+        fun concl_conv_tac cv = CONVERSION
+          (Conv.params_conv ~1 (K (Conv.concl_conv ~1 cv)) lthy) 1;
+        val map_fun_names = map_filter (fn m =>
+          try (fst o dest_Const) (MRBNF_Def.map_of_mrbnf m)) rewrite_mrbnfs;
+
+        fun resolve_prems_collapse_tac ctxt =
+          (REPEAT_DETERM o resolve_tac ctxt [@{thm allI}, @{thm impI}]) THEN'
+          Subgoal.FOCUS_PREMS (fn {context = ctxt', prems, ...} =>
+            let
+              fun disj_tac i st = FIRST' [
+                rtac ctxt' @{thm refl},
+                resolve_tac ctxt' prems,
+                rtac ctxt' @{thm disjI1} THEN' disj_tac,
+                rtac ctxt' @{thm disjI2} THEN' disj_tac
+              ] i st
+            in EVERY1 [
+              REPEAT_DETERM1 o resolve_tac ctxt' prems,
+              K (Local_Defs.unfold0_tac ctxt' @{thms prod.collapse}),
+              disj_tac
+            ] end
+          ) ctxt;
+
+        fun empty_intersection_tac ctxt =
+          let
+            val decompose_prems_close = [
+              REPEAT_DETERM (eresolve_tac ctxt
+                [@{thm Un_empty[THEN iffD1]} RS @{thm conjE}] 1),
+              REPEAT_DETERM1 (FIRST' [
+                assume_tac ctxt,
+                rtac ctxt @{thm iffD2[OF Un_empty]},
+                rtac ctxt @{thm conjI}
+              ] 1)
+            ];
+          in
+            SUBGOAL (fn (goal, i) =>
+              (case try HOLogic.dest_Trueprop (Logic.strip_assums_concl goal) of
+                SOME (Const (@{const_name HOL.eq}, _) $ lhs $
+                      Const (@{const_name bot}, _)) =>
+                  FIRST' ([
+                    SOLVED' (SELECT_GOAL (EVERY (
+                      concl_conv_tac int_un_distrib_conv
+                      :: decompose_prems_close)))
+                  ] @
+                  (if Term.exists_Const (fn (c, _) =>
+                        member (op=) map_fun_names c) lhs
+                   then [
+                    SOLVED' (SELECT_GOAL (EVERY (
+                      [concl_conv_tac fold_id_conv,
+                       concl_conv_tac setmap_conv,
+                       concl_conv_tac mapid0_conv,
+                       concl_conv_tac mapident_conv,
+                       concl_conv_tac image_id_distrib_conv]
+                      @ decompose_prems_close)))
+                   ] else [])) i
+              | _ => no_tac))
+          end;
+
+        fun ufvars_finish_tac ctxt = FIRST' [
+              assume_tac ctxt,
+              SOLVED' (pair_collapse_finish ctxt),
+              SOLVED' (resolve_prems_collapse_tac ctxt),
+              empty_intersection_tac ctxt
+            ];
+
+        fun u_ctor_goals_tac ctxt =
+          let
+            val assume_or_collapse = assume_tac ctxt ORELSE' pair_collapse_finish ctxt;
+            val is_0arg_flags = map (fn ({arg_tys, ...} : ctor_info) => null arg_tys) ctor_infos;
+            fun expand_0arg thms_per_ctor =
+              maps (fn (th, is_0arg) =>
+                th :: (if is_0arg then [unfold_pred_fun_ctor th] else [])
+              ) (thms_per_ctor ~~ is_0arg_flags);
+
+            val umap_rules = expand_0arg (#Umap_Uctors u_params);
+            val validu_rules = expand_0arg (#validU_Uctors u_params);
+            val ufvars_rules = maps (fn (ctor_thms, is_0arg) =>
+              ctor_thms @
+              (if is_0arg then map unfold_pred_fun_ctor ctor_thms else [])
+            ) (#UFVars_Uctors u_params ~~ is_0arg_flags);
+          in
+            PARALLEL_ALLGOALS (SUBGOAL (fn (goal, i) =>
+              case try HOLogic.dest_Trueprop (Logic.strip_assums_concl goal) of
+                SOME (Const (@{const_name HOL.eq}, _) $ _ $ _) =>
+                  Uctor_cases_tac ctxt
+                    (resolve_tac ctxt umap_rules THEN_ALL_NEW assume_or_collapse) i
+              | SOME (Const (@{const_name less_eq}, _) $ _ $ _) =>
+                  Uctor_cases_tac ctxt
+                    (resolve_tac ctxt ufvars_rules THEN_ALL_NEW ufvars_finish_tac ctxt) i
+              | SOME _ =>
+                  FIRST' [
+                    rtac ctxt (#valid_Umap u_params) THEN_ALL_NEW assume_tac ctxt,
+                    fn i => Uctor_cases_tac ctxt
+                      (resolve_tac ctxt validu_rules THEN_ALL_NEW assume_or_collapse) i
+                  ] i
+              | NONE => no_tac))
+          end;
+
+        val interp_qualifier = "HL_to_LL";
+        val REC_name = vvsubst_res_opt |> the |> #recursor_result |> #REC;
+        val state = Interpretation.isar_interpretation ([ (REC_name,
+          ((interp_qualifier, true), (Expression.Named [("Uctor", Uctor)], []))
+        )], []) lthy;
+
+        val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => METHOD (fn thms => EVERY1 [
+          K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
+          REPEAT_DETERM o resolve_tac ctxt (
+            @{thms ordLeq_refl card_of_Card_order cmin_Card_order cmin_Cinfinite
+                   cmin_regularCard cmin2 ordLeq_transitive[OF cmin1]
+                   cmin_greater conjI}
+            @ [MRBNF_Def.UNIV_cinfinite_of_mrbnf pre_mrbnf,
+               #var_regular (MRBNF_Def.class_thms_of_mrbnf pre_mrbnf)]
+            @ maps #card_of_FVars_bound_UNIVs (#raw_fps res)
+            @ MRBNF_Def.set_bd_UNIV_of_mrbnf pre_mrbnf
+          ),
+          rtac ctxt (#Pmap_comp0 params) THEN_ALL_NEW assume_tac ctxt,
+          rtac ctxt (#Pmap_cong_id params)
+            THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
+          REPEAT_DETERM o (resolve_tac ctxt (#PFVars_Pmap params) THEN_ALL_NEW assume_tac ctxt),
+          REPEAT_DETERM o eresolve_tac ctxt (#small_PFVarss params),
+          etac ctxt (#valid_Pmap params) THEN_ALL_NEW assume_tac ctxt,
+          REPEAT_DETERM o resolve_tac ctxt (#small_avoiding_sets params),
+
+          rtac ctxt (#Umap_comp0 u_params) THEN_ALL_NEW assume_tac ctxt,
+          rtac ctxt (#Umap_cong_id u_params)
+            THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
+
+          K (u_ctor_goals_tac ctxt)
+          ])), Position.no_range), NONE) state;
+
+        val (HL_RECs, lthy) = @{fold_map 2} (fn T_name =>
+          mk_def_t true Binding.empty I ("HL_REC_" ^ T_name) 0
+        ) T_names (MRBNF_Recursor.get_RECs false interp_qualifier lthy) lthy;
+
+        val HL_REC_t = fst (hd HL_RECs);
+        val HL_REC_def = snd (hd HL_RECs);
+
+        val n_brecs = (case #binding_rel spec of [] => 0 | (_, brecs) :: _ => length brecs);
+        val rec_spec_vars = drop (length (#vars spec) - #rec_vars spec) (#vars spec);
+        val brec_TFrees = map (TFree o fst) (take n_brecs rec_spec_vars);
+
+        fun is_brec (TFree x) = member (op=) brec_TFrees (TFree x)
+          | is_brec _ = false;
+
+        fun contains_TFree_in tfrees =
+          let fun contains (TFree x) = member (op=) tfrees (TFree x)
+                | contains (Type (_, Ts)) = exists contains Ts
+                | contains _ = false
+          in contains end;
+
+        val contains_brec = contains_TFree_in brec_TFrees;
+
+        val ctor_is_brecs = map (fn (_, spec_tys) => map is_brec spec_tys) (#ctors spec);
+        val spec_tyss = map snd (#ctors spec);
+
+        val n_bfrees = length (#bfree_vars res);
+        val bfree_spec_TFrees = map (TFree o fst)
+          (take n_bfrees (drop (length (#vars spec) - n_bfrees - #rec_vars spec) (#vars spec)));
+        val contains_bfree = contains_TFree_in bfree_spec_TFrees;
+
+        fun nonbound_sets aT arg spec_arg_T =
+          filter (fn s => HOLogic.dest_setT (fastype_of s) = aT)
+            (nesting_sets_by_pred
+              (fn spec_T => not (contains_bound spec_T) andalso
+                (case spec_T of TFree _ => true | _ => false))
+              arg spec_arg_T);
+
+        fun rec_fvars_in_nested aT arg spec_arg_T =
+          let
+            val inst_sets = inst_nesting_sets (fastype_of arg)
+            val spec_inner_Ts = inner_spec_Ts spec_arg_T
+            val qT_sets = map_filter (fn (set_fn, spec_T) =>
+              if member (op=) qTs (set_fn_elem_T set_fn) andalso not (contains_brec spec_T)
+              then SOME set_fn else NONE
+            ) (inst_sets ~~ spec_inner_Ts)
+            val bound_index = lookup_bound_index aT
+            val fvars = nth FVarss_quot bound_index
+            val results = map (fn qs =>
+              let val elem_T = set_fn_elem_T qs
+              in mk_UNION (qs $ arg) (Term.abs ("t", elem_T) (fvars $ Bound 0)) end
+            ) qT_sets
+          in case results of [] => NONE | _ => SOME (foldl1 mk_Un results) end;
+
+        val REC_ctor_thms = Proof_Context.get_thms lthy (interp_qualifier ^ ".REC_ctor");
+
+        val HL_REC_ctor_unfold_thms =
+          [snd (#noclash quotient)]
+          @ [Uctor_def_thm]
+          @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf]
+          @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+          @ common_unfold_thms
+          @ @{thms id_apply singleton_iff fsts.simps snds.simps image_empty image_insert
+              Int_empty_right UN_empty2 Union_Un_distrib}
+          @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
+          @ map (Thm.symmetric o snd) ctors;
+
+        val HL_REC_ctor_thms = Par_List.map
+          (fn (({name = _, ctor = ctor_term, Uctor, arg_tys, contains_bounds} : ctor_info),
+               ((_, ctor_def), (is_brecs, spec_tys))) =>
+          let
+            val (args, _) = lthy |> mk_Frees "x" arg_tys;
+            val ctor_app = Term.list_comb (ctor_term, args);
+
+            val arg_aTs = map fastype_of args;
+            val arg_kinds = map classify_arg_T arg_aTs;
+            val arg_vars_in = map bounds_in_T arg_aTs;
+            val arg_is_var = map (fn aT => member (op=) vars aT) arg_aTs;
+            val arg_bounds = @{map 3} (fn aT => fn contains_bound => fn spec_T =>
+              if contains_bound then bound_types_of spec_T aT else []
+            ) arg_aTs contains_bounds spec_tys;
+
+            val arg_bound_data = @{map 3} (fn arg => fn spec_T => fn bounds =>
+              map (fn bound =>
+                (bound, lookup_bound_index bound, mk_bound_set_dispatch bound arg spec_T)
+              ) bounds
+            ) args spec_tys arg_bounds;
+
+            val rhs_uctor_args = maps (fn (arg, T) =>
+              if is_rec_T T then
+                [arg, mk_guarded_p (HL_REC_t $ arg $ p)]
+              else if is_nested_rec_T T then
+                let
+                  val elem_T = the_qT_elem_of T;
+                  val t_var = Free ("t_nested", elem_T);
+                  val guarded = mk_guarded_p (HL_REC_t $ t_var $ p);
+                  val pair = HOLogic.pair_const elem_T (pT --> uT) $ t_var $ guarded;
+                  val lambda_fn = Term.lambda t_var pair;
+                in [mk_nested_map T lambda_fn arg] end
+              else [arg]
+            ) (args ~~ arg_tys);
+
+            val lhs = HL_REC_t $ ctor_app $ p;
+            val rhs = Term.list_comb (Uctor, rhs_uctor_args @ [p]);
+
+            val bound_freshness_prems = flat (map (fn triples =>
+              map (fn (_, bound_index, bound_set) =>
+                HOLogic.mk_Trueprop (mk_int_empty (
+                  bound_set,
+                  mk_Un (nth PFVarss bound_index $ p, nth avoiding_sets bound_index)
+                ))
+              ) triples
+            ) arg_bound_data);
+
+            val arg_index_data = map_index I ((args ~~ contains_bounds) ~~ is_brecs);
+
+            fun is_passive_nonbound spec_T =
+              not (contains_bound spec_T) andalso not (contains_bfree spec_T);
+
+            fun mk_other_arg_int_empty_prem j (bound, bound_index, bound_set)
+                                            (k, ((a_arg, a_contains_bound), a_is_brec)) =
+              if k = j then NONE
+              else
+                let val a_is_var = nth arg_is_var k
+                    val a_kind = nth arg_kinds k
+                    val not_redundant_symmetric_pair = not a_contains_bound orelse k > j
+                in if (a_is_var orelse a_contains_bound)
+                      andalso member (op=) (nth arg_vars_in k) bound
+                      andalso not_redundant_symmetric_pair
+                   then SOME (HOLogic.mk_Trueprop (mk_int_empty (
+                     bound_set, mk_bound_set_for bound a_arg)))
+                   else if a_kind = K_Rec andalso not a_contains_bound andalso not a_is_brec
+                   then SOME (HOLogic.mk_Trueprop (mk_int_empty (
+                     bound_set, nth FVarss_quot bound_index $ a_arg)))
+                   else if a_kind = K_Passive andalso not a_is_var andalso not a_contains_bound
+                   then
+                     let val matching_sets = filter (fn s =>
+                           HOLogic.dest_setT (fastype_of s) = bound
+                         ) (nesting_sets_by_pred is_passive_nonbound a_arg (nth spec_tys k))
+                     in case matching_sets of
+                         fvars_set :: _ => SOME (HOLogic.mk_Trueprop (mk_int_empty (
+                           bound_set, fvars_set)))
+                       | [] => NONE
+                     end
+                   else NONE
+                end;
+
+            val noclash_prems = flat (map_index (fn (j, triples) =>
+              flat (map (fn triple =>
+                map_filter (mk_other_arg_int_empty_prem j triple) arg_index_data
+              ) triples)
+            ) arg_bound_data);
+
+            val self_noclash_prems = flat (map_index (fn (j, triples) =>
+              let val b_arg = nth args j
+                  val b_aT = nth arg_aTs j
+                  val b_spec_T = nth spec_tys j
+              in case b_aT of Type _ =>
+                   map_filter (fn (bound, _, bound_set) =>
+                     let
+                       val rfvars =
+                         if nth arg_kinds j = K_Nested then
+                           (case rec_fvars_in_nested bound b_arg b_spec_T of
+                             SOME r => [r] | NONE => [])
+                         else []
+                       val all_rhs = nonbound_sets bound b_arg b_spec_T @ rfvars
+                     in case all_rhs of
+                         [] => NONE
+                       | _ => SOME (HOLogic.mk_Trueprop (mk_int_empty (bound_set, foldl1 mk_Un all_rhs)))
+                     end
+                   ) triples
+               | _ => []
+               end
+            ) arg_bound_data);
+
+            val prems = [HOLogic.mk_Trueprop (validP $ p)]
+              @ bound_freshness_prems @ noclash_prems @ self_noclash_prems;
+            val concl = mk_Trueprop_eq (lhs, rhs);
+            val goal = fold_rev (curry Logic.mk_implies) prems concl;
+          in
+            Goal.prove_sorry lthy (map (fst o dest_Free) (args @ [p])) [] goal
+              (fn {context = ctxt, ...} => EVERY1 [
+                K (Local_Defs.unfold0_tac ctxt [ctor_def, HL_REC_def]),
+                EqSubst.eqsubst_tac ctxt [0] REC_ctor_thms,
+                K (Local_Defs.unfold0_tac ctxt HL_REC_ctor_unfold_thms),
+                K (rewrite_goals_tac ctxt set_map_rewrites),
+                K (rewrite_goals_tac ctxt map_id0_rewrites),
+                K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
+                K (rewrite_goals_tac ctxt map_ident_rewrites),
+                REPEAT_DETERM o FIRST' [
+                  assume_tac ctxt,
+                  rtac ctxt @{thm TrueI},
+                  rtac ctxt @{thm refl},
+                  SOLVED' (fn i => EVERY [
+                    REPEAT_DETERM (eresolve_tac ctxt
+                      [@{thm Un_empty[THEN iffD1]} RS @{thm conjE}] i),
+                    asm_simp_tac (put_simpset HOL_basic_ss ctxt
+                      addsimps @{thms Un_empty_left Un_empty_right}) i
+                  ])
+                ]
+              ])
+          end
+        ) (ctor_infos ~~ (ctors ~~ (ctor_is_brecs ~~ spec_tyss)));
+
+        val T_name = hd T_names;
+
+        val HL_REC_ctor_notes = map2 (fn ({name, ...} : ctor_info) => fn thm =>
+          (((Binding.name ("HL_REC_" ^ T_name ^ "_" ^ name)), []), [([ thm ], [])])
+        ) ctor_infos HL_REC_ctor_thms;
+        val (_, lthy) = Local_Theory.notes HL_REC_ctor_notes lthy;
+
+        val HL_REC_defs = map snd HL_RECs;
+        val HL_REC_swap_thms = map (Local_Defs.fold lthy HL_REC_defs)
+          (Proof_Context.get_thms lthy (interp_qualifier ^ ".REC_swap"));
+        val HL_REC_UFVars_thms = map (Local_Defs.fold lthy HL_REC_defs)
+          (Proof_Context.get_thms lthy (interp_qualifier ^ ".REC_UFVars"));
+
+        val swap_UFVars_notes = [
+          (((Binding.name ("HL_REC_" ^ T_name ^ "_swap")), []), [(HL_REC_swap_thms, [])]),
+          (((Binding.name ("HL_REC_" ^ T_name ^ "_UFVars")), []), [(HL_REC_UFVars_thms, [])])
+        ];
+        val (_, lthy) = Local_Theory.notes swap_UFVars_notes lthy;
+
+        val thy = Local_Theory.exit_global lthy;
+
+      in (HL_REC_name, thy) end;
+
+    val lthy = if co then lthy
+      else snd (Local_Theory.background_theory_result HL_REC_build lthy);
+
     val (sugar, lthy) = if co then
       let
         val (locale_name, lthy) = MRBNF_Corecursor.create_binding_corecursor I res lthy;
@@ -1344,7 +2442,7 @@ fun create_binder_datatype co (spec : spec) lthy =
         |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
-    val (_, lthy) = Local_Theory.notes notes lthy;;
+    val (_, lthy) = Local_Theory.notes notes lthy;
   in (sugar, lthy) end;
 
 end

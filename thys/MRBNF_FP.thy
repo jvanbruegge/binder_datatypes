@@ -515,14 +515,19 @@ fun refreshability_tac verbose supss instss pred_thm G_thm eqvt_thm extend_thms 
         RS @{thm iffD1})]
       end handle TERM _ => [] | THM _ => [];
 
-    fun is_bij (\<^Const_>\<open>Trueprop\<close> $ t) =
-        (case head_of t of Const (\<^const_name>\<open>bij_betw\<close>, _) => true | _ => false)
-      | is_bij _ = false;
-    (* the bijection and small-support assumptions, in order, one pair per bound variable kind *)
-    fun bij_supp_prems [] = []
-      | bij_supp_prems (p :: ps) = if is_bij (Thm.prop_of p)
-          then p :: take 1 ps @ bij_supp_prems (drop 1 ps)
-          else bij_supp_prems ps;
+    (* the bijection and small-support assumptions, one pair per bound variable kind, matched
+       by the bijection they talk about (their order among the premises is not stable) *)
+    fun dest_bij (\<^Const_>\<open>Trueprop\<close> $ t) =
+        (case Term.strip_comb t of
+          (Const (\<^const_name>\<open>bij_betw\<close>, _), [f, _, _]) => SOME f
+          | _ => NONE)
+      | dest_bij _ = NONE;
+    fun mentions_supp_of f thm = Term.exists_subterm
+      (fn Const (\<^const_name>\<open>Prelim.supp\<close>, _) $ g => g aconv f | _ => false) (Thm.prop_of thm);
+    fun bij_supp_prems prems = maps (fn p => (case dest_bij (Thm.prop_of p) of
+        NONE => []
+        | SOME f => (case find_first (mentions_supp_of f) prems of
+          SOME p' => [p, p'] | NONE => []))) prems;
 
     (* apply an instantiation term expecting one bijection per bound variable kind *)
     fun apply_inst fs t a =
@@ -569,13 +574,15 @@ val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
 val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
               val eqvt_thm = eqvt_thm OF take (2 * num_vars) (bij_supp_prems fprems);
               val pred_assms = map_filter (try (fn thm => thm RS pred_thm)) assms;
-              val extra_assms = (assms @ pred_assms) RL (eqvt_thm :: extend_thms);
+              val extra_assms = (assms RL (eqvt_thm :: extend_thms)) @ (pred_assms RL extend_thms);
               val id_onI = fprems RL @{thms id_on_antimono};
 val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
               val auto_ctxt = (ctxt
                   |> Simplifier.add_simps (simp_thms @ defs @ fprems))
                 addSIs (ex_fs @ id_onI @ intro_thms)
                 addSEs (elim_thms @ [@{thm id_onD}]);
+              (* the equality solver of P_fix_tac needs backtrackable existential witnesses:
+                 sometimes the fresh bijection, sometimes the identity *)
               val fix_ctxt = (ctxt
                   |> Simplifier.add_simps (simp_thms @ defs @ fprems))
                 addSIs (id_onI @ intro_thms)
@@ -591,7 +598,7 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
                 K (if verbose then print_tac ctxt "pre_inst" else all_tac) THEN'
                 EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs) THEN'
-                Method.insert_tac ctxt (assms @ pred_assms @ extra_assms @ fprems) THEN'
+                Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
                 SELECT_GOAL (mk_auto_tac auto_ctxt 0 10)

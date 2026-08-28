@@ -152,7 +152,7 @@ lemma equiv[equiv]:
   apply simp
   done
 
-binder_inductive Ty
+binder_inductive (no_auto_refresh) Ty
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
     unfolding fresh_def by auto

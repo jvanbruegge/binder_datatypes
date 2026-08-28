@@ -28,7 +28,7 @@ lemmas [equiv] =
   iterm.tvsubst_permute[THEN fun_cong, unfolded comp_def]
   imkSubst_smap_irrename[symmetric, THEN fun_cong, unfolded comp_def]
 
-binder_inductive istep
+binder_inductive (no_auto_refresh) istep
   subgoal premises prems for R B x1 x2
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     apply (insert prems(3))

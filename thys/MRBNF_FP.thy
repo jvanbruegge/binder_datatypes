@@ -472,66 +472,138 @@ lemma extend_fresh:
   unfolding Int_Un_distrib fun_eq_iff o_apply id_apply
   by blast
 
+named_theorems refresh_extends
+named_theorems refresh_smalls
+named_theorems refresh_simps
+named_theorems refresh_intros
+named_theorems refresh_elims
+
 ML \<open>
 local
   open BNF_Util
   open BNF_FP_Util
 in
 
-fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
+(* Discharges the refreshability goal of binder_inductive.
+   supss: for every bound variable kind, the support functions of the predicate's parameters;
+   instss: for every case of the inductive definition, NONE if the case involves no binders,
+     otherwise for every existentially quantified variable of the case NONE (keep unchanged) or
+     the permutation (a function of one bijection per bound variable kind) to apply;
+   pred_thm: the goal's premise relating the abstract predicate to the inductive one. *)
+fun refreshability_tac verbose supss instss pred_thm G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
-    val n = length supps;
+    val num_vars = length supss;
+    val n = length (hd supss);
+    val extend_thms = extend_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_extends\<close>;
+    val small_thms = small_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_smalls\<close>;
+    val simp_thms = simp_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_simps\<close>;
+    val intro_thms = intro_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_intros\<close>;
+    val elim_thms = elim_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_elims\<close>;
+
+    (* generic congruence elimination for the abstract predicate: from an assumption
+       P xs conclude P ys, leaving the equalities xs = ys as goals; used in a directed
+       post-processing step that backtracks unless all equalities can be discharged *)
+    val P_elims =
+      let
+        fun strip (Const (\<^const_name>\<open>Pure.all\<close>, _) $ Abs (_, _, t)) = strip t
+          | strip (Const (\<^const_name>\<open>Pure.imp\<close>, _) $ _ $ t) = strip t
+          | strip t = t;
+        val P = head_of (HOLogic.dest_Trueprop (strip (Thm.prop_of eqvt_thm)));
+        val _ = is_Free P orelse raise TERM ("refreshability_tac: no predicate", [P]);
+      in [Drule.rotate_prems ~1 (fold (fn _ => fn thm => @{thm cong} OF [thm])
+        (1 upto n) (infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt P)] @{thm refl})
+        RS @{thm iffD1})]
+      end handle TERM _ => [] | THM _ => [];
+
+    fun is_bij (\<^Const_>\<open>Trueprop\<close> $ t) =
+        (case head_of t of Const (\<^const_name>\<open>bij_betw\<close>, _) => true | _ => false)
+      | is_bij _ = false;
+    (* the bijection and small-support assumptions, in order, one pair per bound variable kind *)
+    fun bij_supp_prems [] = []
+      | bij_supp_prems (p :: ps) = if is_bij (Thm.prop_of p)
+          then p :: take 1 ps @ bij_supp_prems (drop 1 ps)
+          else bij_supp_prems ps;
+
+    (* apply an instantiation term expecting one bijection per bound variable kind *)
+    fun apply_inst fs t a =
+      let fun go t = (case fastype_of t of
+        Type (@{type_name fun}, [Type (@{type_name fun}, [T1, T2]), _]) =>
+          if T1 = T2 then (case find_first (fn f => fastype_of f = T1 --> T1) fs of
+            SOME f => go (t $ f)
+            | NONE => go (t $ HOLogic.id_const T1))
+          else t
+        | _ => t)
+      in go t $ a end;
+
     fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN'
-        K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
+        K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN
+        (SOLVE (auto_tac ctxt) ORELSE
+          SOLVE (auto_tac ((ctxt |> Simplifier.add_simps simp_thms) addSIs intro_thms addSEs elim_thms)))
       | case_tac (SOME insts) params prems ctxt =
         let
 val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
-          fun mk_supp ts = @{map 2} (fn s => fn t => s $ t) supps ts |>
+          fun mk_supp supps ts = @{map 2} (fn s => fn t => s $ t) supps ts |>
             Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>)
-          val (defs, assms) = chop (n + 1) prems;
+          val (defs, assms) = chop (num_vars + n) prems;
           val Bts = defs
             |> map (fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of);
-          val B = hd Bts;
-          val ts = tl Bts;
+          val (Bs, ts) = chop num_vars Bts;
           val other_tss = assms
-            |> filter (can (fn thm => thm RSN (3, eqvt_thm)))
-            |> map (snd o strip_comb o HOLogic.dest_Trueprop o Thm.prop_of);
-          val A = map mk_supp (ts :: other_tss)
-            |> Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>);
-          val fresh = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)]
-            @{thm extend_fresh};
+            |> filter (can (fn thm => thm RSN (2 * num_vars + 1, eqvt_thm)))
+            |> map (snd o strip_comb o HOLogic.dest_Trueprop o Thm.prop_of)
+            |> filter (fn args => length args = n);
+          val As = map (fn supps => map (mk_supp supps) (ts :: other_tss)
+            |> Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>)) supss;
+          val freshs = map2 (fn B => fn A => infer_instantiate' ctxt
+            [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)] @{thm extend_fresh}) Bs As;
 
-          fun case_inner_tac fs fprems ctxt =
+          fun case_inner_tac fss fprems ctxt =
             let
-              val f = hd fs |> snd |> Thm.term_of;
-              val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
-              val ex_B' = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI;
+              val fs = map (Thm.term_of o snd) fss;
+              val ex_fs = map (fn f => infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI) fs;
+              val ex_B's = map2 (fn f => fn B => infer_instantiate' ctxt
+                [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI) fs Bs;
               val args = params |> map (snd #> Thm.term_of);
               val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt
-                (case i of SOME i => nth renames i $ f $ a | NONE => a)) insts args;
+                (case i of SOME t => apply_inst fs t a | NONE => a)) insts args;
 val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
-              val eqvt_thm = eqvt_thm OF take 2 fprems;
-              val extra_assms = assms RL (eqvt_thm :: extend_thms);
+              val eqvt_thm = eqvt_thm OF take (2 * num_vars) (bij_supp_prems fprems);
+              val pred_assms = map_filter (try (fn thm => thm RS pred_thm)) assms;
+              val extra_assms = (assms @ pred_assms) RL (eqvt_thm :: extend_thms);
               val id_onI = fprems RL @{thms id_on_antimono};
 val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
+              val auto_ctxt = (ctxt
+                  |> Simplifier.add_simps (simp_thms @ defs @ fprems))
+                addSIs (ex_fs @ id_onI @ intro_thms)
+                addSEs (elim_thms @ [@{thm id_onD}]);
+              val fix_ctxt = (ctxt
+                  |> Simplifier.add_simps (simp_thms @ defs @ fprems))
+                addSIs (id_onI @ intro_thms)
+                addIs (ex_fs @ @{thms exI[of _ id] bij_id supp_id_bound id_on_id})
+                addSEs (elim_thms @ [@{thm id_onD}]);
+              (* re-establish a premise of the case from some assumption about the predicate,
+                 backtracking over the choice of assumption unless all argument equalities
+                 can be discharged *)
+              val P_fix_tac = SOLVED' (eresolve_tac ctxt P_elims THEN_ALL_NEW
+                (fn i => SOLVED' (SELECT_GOAL (mk_auto_tac fix_ctxt 0 6)) i));
             in
-              HEADGOAL (rtac ctxt ex_B' THEN' rtac ctxt conjI THEN'
+              HEADGOAL (EVERY' (map (fn ex_B' => rtac ctxt ex_B') ex_B's) THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
                 K (if verbose then print_tac ctxt "pre_inst" else all_tac) THEN'
                 EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs) THEN'
-                Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
+                Method.insert_tac ctxt (assms @ pred_assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
-                SELECT_GOAL (mk_auto_tac ((ctxt
-                  |> Simplifier.add_simps (simp_thms @ defs @ fprems))
-                  addSIs (ex_f :: id_onI @ intro_thms)
-                  addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
+                SELECT_GOAL (mk_auto_tac auto_ctxt 0 10)
+                THEN_ALL_NEW (P_fix_tac ORELSE' SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
           val small_ctxt = (ctxt |> Simplifier.add_simps small_thms) addIs small_thms;
         in
-          HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-          SELECT_GOAL (auto_tac (small_ctxt |> Simplifier.add_simps [hd defs])) THEN'
-          REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
+          HEADGOAL (EVERY' (maps (fn fresh => [
+            rtac ctxt (fresh RS exE),
+            SELECT_GOAL (auto_tac (small_ctxt |> Simplifier.add_simps (take num_vars defs))),
+            REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt)
+          ]) freshs) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'
           (if verbose then K (print_tac ctxt "pre_case_inner_tac") else K all_tac) THEN'

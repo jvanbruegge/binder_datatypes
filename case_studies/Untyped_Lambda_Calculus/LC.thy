@@ -907,7 +907,7 @@ by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map)
 
 (* *)
 
-lemma Lam_eq_tvsubst:
+lemma Lam_eq_tvsubst[refresh_intros]:
 assumes il: "Lam (x::var) e1 = Lam x' e1'"
 shows "tvsubst (Var (x:=e2)) e1 = tvsubst (Var (x':=e2)) e1'"
 proof-

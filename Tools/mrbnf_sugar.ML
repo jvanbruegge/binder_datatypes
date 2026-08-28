@@ -1926,9 +1926,9 @@ fun create_binder_datatype co (spec : spec) lthy =
           MRBNF_Def.map_ident_of_mrbnf m RS @{thm eq_reflection}
         ) rewrite_mrbnfs;
 
-        val setmap_conv = Raw_Simplifier.rewrite lthy true set_map_rewrites;
-        val mapid0_conv = Raw_Simplifier.rewrite lthy true map_id0_rewrites;
-        val mapident_conv = Raw_Simplifier.rewrite lthy true map_ident_rewrites;
+        val setmap_conv = Raw_Simplifier.rewrite_wrt lthy true set_map_rewrites;
+        val mapid0_conv = Raw_Simplifier.rewrite_wrt lthy true map_id0_rewrites;
+        val mapident_conv = Raw_Simplifier.rewrite_wrt lthy true map_ident_rewrites;
 
         val Uctor_pre_name = fst (dest_Type Uctor_preT);
 
@@ -2007,12 +2007,12 @@ fun create_binder_datatype co (spec : spec) lthy =
             end) ctxt;
 
         val meta_rewrites = map (Local_Defs.meta_rewrite_rule lthy);
-        val int_un_distrib_conv = Raw_Simplifier.rewrite lthy true (meta_rewrites
+        val int_un_distrib_conv = Raw_Simplifier.rewrite_wrt lthy true (meta_rewrites
           @{thms Int_Un_distrib Int_Un_distrib2 Int_empty_left Int_empty_right
               Un_empty_left Un_empty_right});
-        val fold_id_conv = Raw_Simplifier.rewrite lthy true
+        val fold_id_conv = Raw_Simplifier.rewrite_wrt lthy true
           (meta_rewrites @{thms id_def[symmetric]});
-        val image_id_distrib_conv = Raw_Simplifier.rewrite lthy true (meta_rewrites
+        val image_id_distrib_conv = Raw_Simplifier.rewrite_wrt lthy true (meta_rewrites
           @{thms image_id image_ident id_apply
               Int_Un_distrib Int_Un_distrib2 Int_empty_left Int_empty_right
               Un_empty_left Un_empty_right});
@@ -2340,8 +2340,8 @@ fun create_binder_datatype co (spec : spec) lthy =
                   SOLVED' (fn i => EVERY [
                     REPEAT_DETERM (eresolve_tac ctxt
                       [@{thm Un_empty[THEN iffD1]} RS @{thm conjE}] i),
-                    asm_simp_tac (put_simpset HOL_basic_ss ctxt
-                      addsimps @{thms Un_empty_left Un_empty_right}) i
+                    asm_simp_tac (Simplifier.add_simps
+                      @{thms Un_empty_left Un_empty_right} (put_simpset HOL_basic_ss ctxt)) i
                   ])
                 ]
               ])

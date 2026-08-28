@@ -236,6 +236,34 @@ fun create_binder_datatype co (spec : spec) lthy =
     val nrecs = fold (curry (op+)) (#rec_vars res) 0;
     val quotient_ctor = #ctor (hd (#quotient_fps res));
 
+    (* The spec's variables (in particular the internally invented ones) may clash with the
+       canonical variables of the quotient type. The staged type substitutions below assume the
+       two variable spaces are disjoint, so rename the clashing spec variables apart first. *)
+    val (spec, fp_pre_T) =
+      let
+        val target_args = snd (dest_Type (domain_type (fastype_of quotient_ctor)));
+        val target_names = fold Term.add_tfree_namesT target_args [];
+        (* only spec variables whose name occurs among the canonical names of the quotient
+           but is paired with a differently named argument are problematic *)
+        val clashes = map_filter (fn (v as ((a, _), _), tgt) =>
+          if member (op=) target_names a andalso
+            (case tgt of TFree (b, _) => a <> b | _ => true)
+          then SOME v else NONE) (#vars spec ~~ target_args);
+      in if null clashes then (spec, fp_pre_T) else
+        let
+          val names = Name.make_context (target_names @ map (fst o fst) (#vars spec));
+          val (new_names, _) = fold_map (Name.variant o fst o fst) clashes names;
+          val ren = map2 (fn ((a, s), _) => fn b => (TFree (a, s), TFree (b, s))) clashes new_names;
+          val renT = Term.typ_subst_atomic ren;
+          fun ren_var ((a, s), k) = (case AList.lookup (op=) ren (TFree (a, s)) of
+            SOME (TFree b) => (b, k) | _ => ((a, s), k));
+        in ({fp_b = #fp_b spec, vars = map ren_var (#vars spec), rec_vars = #rec_vars spec,
+          binding_rel = #binding_rel spec, ctors = map (apsnd (map renT)) (#ctors spec),
+          map_b = #map_b spec, tvsubst_b = #tvsubst_b spec, rel_b = #rel_b spec,
+          permute_b = #permute_b spec, set_bs = #set_bs spec} : spec, renT fp_pre_T)
+        end
+      end;
+
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
     val abs =

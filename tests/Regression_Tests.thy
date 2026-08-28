@@ -92,4 +92,23 @@ lemma
   shows "e = e"
   by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) auto
 
+(* #111: variable kind occurring only bound *)
+binder_datatype 'a foo1 = Foo1 | Bar1 x::'a y::"'a foo1" binds x in y
+
+(* #111: unused type parameter *)
+binder_datatype ('a, 'b) foo3 = Foo3 'a | Bar3 x::'a y::"('a, 'b) foo3" binds x in y
+
+(* #111: passive parameter as plain argument *)
+binder_datatype ('a, 'b) foo4 = Foo4 'a 'b | Bar4 x::'a y::"('a, 'b) foo4" binds x in y
+
+(* #111: bound-only variable kind, nullary constructor, passive under a functor *)
+binder_datatype ('a, 'b) foo7 = Foo7 | Bar7 x::'a y::"('a, 'b) foo7" binds x in y | Foobar7 "'b list"
+
+(* #111: original report *)
+binder_datatype ('ty, 'c, 'v) preterm =
+  PConst 'c "'ty list" "('ty, 'c, 'v) preterm list"
+| PVar 'v
+| PApp "('ty, 'c, 'v) preterm" "('ty, 'c, 'v) preterm"
+| PAbs x::'v 'ty t::"('ty, 'c, 'v) preterm" binds x in t
+
 end

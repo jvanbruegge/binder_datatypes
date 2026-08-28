@@ -2064,17 +2064,33 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
         K (unfold_thms_tac ctxt (flat pset_simpss)),
         REPEAT_DETERM o eresolve_tac ctxt (
           @{thms UnE UN_E} @ MRBNF_Def.wit_thms_of_mrbnf mrbnf
+          (* a witness property concluding False also discharges goals with other conclusions *)
+          @ map_filter (try (fn thm => thm RS @{thm FalseE}))
+            (MRBNF_Def.wit_thms_of_mrbnf mrbnf)
         )
       ]
     }) vvsubst_permutes (#quotient_fps fp_res) vvsubst_comp0s vvsubst_congs set_mapss set_bdss mrbnfs vvsubst_id0s;
 
     val witss = @{map 3} (fn mrbnf => fn quot => fn deads =>
-      let val nwits = nwits_of_mrbnf mrbnf;
-      in map (fn (_, t) => #ctor quot $ t) (
-        mk_wits_of_mrbnf (replicate nwits deads)
-        (replicate nwits (plives @ replicate_rec (map #T (#quotient_fps fp_res))))
-        (replicate nwits bounds) (replicate nwits (frees @ bfrees)) mrbnf
-      ) end
+      let
+        val nwits = nwits_of_mrbnf mrbnf;
+        val wits = mk_wits_of_mrbnf (replicate nwits deads)
+          (replicate nwits (plives @ replicate_rec (map #T (#quotient_fps fp_res))))
+          (replicate nwits bounds) (replicate nwits (frees @ bfrees)) mrbnf;
+        (* A pre-MRBNF witness may depend on live arguments. Keep only witnesses whose
+           dependencies are passive (recursive ones would need recursively built witnesses)
+           and keep them abstracted over these arguments, so that the fixpoint's witness is
+           again a function of its passive dependencies. *)
+      in map_filter (fn (I, t) =>
+        if exists (fn i => i >= length plives) I then NONE
+        else
+          let
+            val depTs = take (length I) (Term.binder_types (fastype_of t));
+            val (xs, _) = lthy |> mk_Frees "a" depTs;
+          in SOME (fold_rev (Term.absfree o dest_Free) xs
+            (#ctor quot $ Term.list_comb (t, xs)))
+          end
+      ) wits end
     ) mrbnfs (#quotient_fps fp_res) deadss;
 
     val class_thms = SOME (maps class_of_mrbnf mrbnfs);

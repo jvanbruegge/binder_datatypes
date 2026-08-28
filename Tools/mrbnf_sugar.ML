@@ -236,6 +236,34 @@ fun create_binder_datatype co (spec : spec) lthy =
     val nrecs = fold (curry (op+)) (#rec_vars res) 0;
     val quotient_ctor = #ctor (hd (#quotient_fps res));
 
+    (* The spec's variables (in particular the internally invented ones) may clash with the
+       canonical variables of the quotient type. The staged type substitutions below assume the
+       two variable spaces are disjoint, so rename the clashing spec variables apart first. *)
+    val (spec, fp_pre_T) =
+      let
+        val target_args = snd (dest_Type (domain_type (fastype_of quotient_ctor)));
+        val target_names = fold Term.add_tfree_namesT target_args [];
+        (* only spec variables whose name occurs among the canonical names of the quotient
+           but is paired with a differently named argument are problematic *)
+        val clashes = map_filter (fn (v as ((a, _), _), tgt) =>
+          if member (op=) target_names a andalso
+            (case tgt of TFree (b, _) => a <> b | _ => true)
+          then SOME v else NONE) (#vars spec ~~ target_args);
+      in if null clashes then (spec, fp_pre_T) else
+        let
+          val names = Name.make_context (target_names @ map (fst o fst) (#vars spec));
+          val (new_names, _) = fold_map (Name.variant o fst o fst) clashes names;
+          val ren = map2 (fn ((a, s), _) => fn b => (TFree (a, s), TFree (b, s))) clashes new_names;
+          val renT = Term.typ_subst_atomic ren;
+          fun ren_var ((a, s), k) = (case AList.lookup (op=) ren (TFree (a, s)) of
+            SOME (TFree b) => (b, k) | _ => ((a, s), k));
+        in ({fp_b = #fp_b spec, vars = map ren_var (#vars spec), rec_vars = #rec_vars spec,
+          binding_rel = #binding_rel spec, ctors = map (apsnd (map renT)) (#ctors spec),
+          map_b = #map_b spec, tvsubst_b = #tvsubst_b spec, rel_b = #rel_b spec,
+          permute_b = #permute_b spec, set_bs = #set_bs spec} : spec, renT fp_pre_T)
+        end
+      end;
+
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
     val abs =
@@ -554,6 +582,40 @@ fun create_binder_datatype co (spec : spec) lthy =
     ) (#FVarss quotient @ map fst (the_default [] (Option.map (#psets o #vvsubst_res) vvsubst_res_opt)))));
 
     val ctors_tys = ctors ~~ map snd (#ctors spec);
+
+    (* For every constructor argument: NONE if the argument is not affected by any binder of the
+       constructor, otherwise the permutation (as a function of one bijection per bound variable
+       kind) that renames exactly the bound occurrences in the argument. Used for the automatic
+       refreshability proof of binder_inductive. *)
+    val permute_boundss =
+      let
+        val bound_tys = distinct (op=) (map (Term.typ_subst_atomic replace) bounds);
+        val (fs, _) = names_lthy
+          |> mk_Frees "f" (map (fn a => a --> a) bound_tys);
+        val kind_tfreess = map_index (fn (i, (_, brecs)) =>
+          nth bounds i :: map (nth rec_vars) brecs @ bfrees
+        ) (#binding_rel spec);
+        val kind_bound_tys = map (fn i => Term.typ_subst_atomic replace (nth bounds i))
+          (0 upto length (#binding_rel spec) - 1);
+        fun mk_permute_bound ty =
+          let
+            val tfrees = map TFree (Term.add_tfreesT ty []);
+            val kinds = map (fn ts => not (null (inter (op=) ts tfrees))) kind_tfreess;
+          in if not (exists I kinds) then NONE else
+            let
+              val ty' = Term.typ_subst_atomic replace ty;
+              val fs' = map2 (fn bty => fn f =>
+                if exists I (map_index (fn (i, b) => b andalso nth kind_bound_tys i = bty) kinds)
+                then f else HOLogic.id_const (fst (dest_funT (fastype_of f)))
+              ) bound_tys fs;
+              val (_, perm) = build_permute_for lthy fs' bound_tys ty';
+            in case perm of
+              Const (@{const_name id}, _) => NONE
+              | _ => SOME (fold_rev (Term.absfree o dest_Free) fs perm)
+            end
+          end;
+      in map (map mk_permute_bound o snd) ctors_tys end;
+
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
       let
         val ((xs, ys), _) = names_lthy
@@ -822,8 +884,11 @@ fun create_binder_datatype co (spec : spec) lthy =
             ]
           ])) end
         else NONE;
-      in SOME (the_default inject inject') end
+      in SOME (inject, the_default inject inject') end
     ) ctors_tys (transpose setsss);
+    (* the existential form of injectivity is what the refreshability automation of
+       binder_inductive needs; the swap form (where available) is the one noted for users *)
+    val (ex_injects, injects) = split_list injects;
 
     (* Term for variable substitution *)
     val x = length replace - #rec_vars spec;
@@ -2390,6 +2455,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           IImsupp_Diffs = IImsupp_Diffs,
           tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = [],
+          permute_bounds = [],
           bset_bounds = [],
           pset_ctors = [],
           mrbnf = mrbnf,
@@ -2411,11 +2477,12 @@ fun create_binder_datatype co (spec : spec) lthy =
           IImsupp_Diffs = IImsupp_Diffs,
           tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = bset_optss,
+          permute_bounds = permute_boundss,
           bset_bounds = [],
           pset_ctors = #pset_ctors (#vvsubst_res (the vvsubst_res_opt)),
           mrbnf = mrbnf,
           distinct = distinct,
-          inject = injects,
+          inject = ex_injects,
           ctors = ctors
         } : Binder_Sugar.binder_sugar;
       in (sugar, lthy) end

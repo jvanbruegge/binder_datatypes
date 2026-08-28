@@ -322,7 +322,7 @@ proof (induction \<Delta>)
     by (cases a) auto
 qed simp
 
-binder_inductive typing
+binder_inductive (no_auto_refresh) typing
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -1108,7 +1108,7 @@ lemma tvsubst_restrict[equiv]:
             trm.IImsupp_natural restrict_def trm.set_map
           intro!: trm.SSupp_map_bound)
 
-binder_inductive step
+binder_inductive (no_auto_refresh) step
   subgoal premises prems for R B1 B2 t u
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)

@@ -1224,6 +1224,10 @@ fun pbmv_monad_of_mrbnf qualify mrbnf lthy =
      }]
    } [] lthy) end;
 
+val no_reflexive = filter_out (fn thm => the_default false (Option.map (fn (lhs, rhs) =>
+  lhs = rhs
+) (try (HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of) thm)));
+
 fun register_mrbnf_as_pbmv_monad name lthy =
   let
     val mrbnf = the (MRBNF_Def.mrbnf_of lthy name);
@@ -1738,10 +1742,6 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     }: bmv_monad_consts;
 
     val T = leader ops_of_bmv_monad outer;
-
-    val no_reflexive = filter_out (fn thm => the_default false (Option.map (fn (lhs, rhs) =>
-      lhs = rhs
-    ) (try (HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of) thm)));
 
     val model = {
       ops = [T],
@@ -2298,7 +2298,7 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       tacs = [{
         Sb_Inj = fn ctxt => EVERY1 [          
           K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @
-            [snd Sb, #Sb_Inj axioms, @{thm type_copy_Rep_o_Abs_o} OF [copy]]
+            no_reflexive [snd Sb, #Sb_Inj axioms, @{thm type_copy_Rep_o_Abs_o} OF [copy]]
             @ Inj_defs
           )),
           rtac ctxt @{thm type_copy_Abs_o_Rep},

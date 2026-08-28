@@ -354,7 +354,7 @@ lemma supp_subset_bound[simp]:
 
 lemmas [simp] = supp_o_bij[unfolded comp_def]
 
-binder_inductive deduct
+binder_inductive (no_auto_refresh) deduct
   subgoal premises prems for R B \<Delta> x2
     using prems(2-) unfolding induct_rulify_fallback split_beta
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib

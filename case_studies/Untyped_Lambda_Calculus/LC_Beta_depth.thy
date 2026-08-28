@@ -10,15 +10,6 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
 binder_inductive stepD
-  subgoal premises prems for R B d t1 t2
-    by (tactic \<open>refreshability_tac false
-      [@{term "(\<lambda>_. {}) :: nat \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [NONE, SOME 0, SOME 0, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.permute_cong_id[symmetric]}
-      @{thms } @{context}\<close>)
   done
 
 thm stepD.strong_induct

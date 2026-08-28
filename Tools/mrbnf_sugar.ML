@@ -2372,7 +2372,9 @@ fun create_binder_datatype co (spec : spec) lthy =
       in (HL_REC_name, thy) end;
 
     val lthy = if co then lthy
-      else snd (Local_Theory.background_theory_result HL_REC_build lthy);
+      (* the high-level recursor does not support all binder shapes yet *)
+      else \<^try>\<open>snd (Local_Theory.background_theory_result HL_REC_build lthy)
+        catch exn => (warning ("Skipping high-level recursor: " ^ Runtime.exn_message exn); lthy)\<close>;
 
     val (sugar, lthy) = if co then
       let

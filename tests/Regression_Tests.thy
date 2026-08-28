@@ -118,4 +118,10 @@ binder_datatype 'a hlterm =
 | HFix f::'a x::'a M::"'a hlterm" binds f x in M
 term HL_REC_hlterm
 
+(* #90: parameter occurring only in a dead position, detected automatically *)
+binder_datatype ('a, 'b::var) dtest = DV 'b | DB "'a set" | DC x::'b t::"('a, 'b) dtest" binds x in t
+
+(* #90: the same with an explicit dead annotation *)
+binder_datatype (dead 'a, 'b::var) dtest2 = DV2 'b | DB2 "'a set" | DC2 x::'b t::"('a, 'b) dtest2" binds x in t
+
 end

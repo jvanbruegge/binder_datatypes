@@ -311,6 +311,15 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     val (defs, lthy) = define_tvsubst_consts qualify fp_res etas lthy;
 
     val quot = hd (#quotient_fps fp_res);
+
+    (* fix the datatype MRBNF's variables (in particular its dead ones) to the
+       quotient instance before building any terms from its constants *)
+    val rec_mrbnf =
+      (let val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
+        (MRBNF_Def.T_of_mrbnf rec_mrbnf, #T quot) Vartab.empty
+      in MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism (
+        map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv))) rec_mrbnf end)
+      handle Type.TYPE_MATCH => rec_mrbnf;
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
 
     val frees = map (HOLogic.dest_setT o body_type o fastype_of) (#FVarss (hd (#quotient_fps fp_res)));
@@ -324,7 +333,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val nvars = length frees;
 
-    val args = (snd o dest_Type o body_type o fastype_of o #eta) (hd (map_filter I etas));
+    val args = filter_out (member (op=) (MRBNF_Def.deads_of_mrbnf mrbnf))
+      ((snd o dest_Type o body_type o fastype_of o #eta) (hd (map_filter I etas)));
     val (live_args, bound_args, free_args) = fold_rev (
       fn (MRBNF_Def.Live_Var, x) => (fn (a, b, c) => (x::a, b, c))
        | (MRBNF_Def.Bound_Var, x) => (fn (a, b, c) => (a, x::b, c))
@@ -739,7 +749,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
       let
         val ctor = #ctor quot;
         val (name, (args, rec_args)) = dest_Type (fst (dest_funT (fastype_of ctor)))
-          |> apsnd (chop (nvars * 2 + passive + length (#bfree_vars fp_res)));
+          |> apsnd (chop (nvars * 2 + passive + length (#bfree_vars fp_res)
+            + length (MRBNF_Def.deads_of_mrbnf mrbnf)));
         val rec_args' = map (fn T => HOLogic.mk_prodT (T, T)) rec_args;
         val args = args @ rec_args';
 

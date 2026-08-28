@@ -119,30 +119,30 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
     val bfrees = flat bfreess;
 
     fun replicate_rec xs = flat (map2 replicate rec_vars xs);
-    val mk_recs = replicate_rec o map (fn n => Type (n, frees @ passives));
+    val mk_recs = replicate_rec o map (fn n => Type (n, frees @ passives @ flat deadss));
 
     val (raw_Ts, lthy) =
       let
         val T_long_names = map (fn { T_name, ...} =>
           Local_Theory.full_name lthy (Binding.name (prefix "raw_" T_name))
         ) models;
-        val args = map (fn T => (T, Type.sort_of_atyp T)) (frees @ passives);
-        val T_specs = map (fn { T_name=n, pre_mrbnf, ... } => ((((
+        val args = map (fn T => (T, Type.sort_of_atyp T)) (frees @ passives @ flat deadss);
+        val T_specs = map2 (fn { T_name=n, pre_mrbnf, ... } => fn deads => ((((
           (map (pair NONE) args, Binding.name ("raw_" ^ n)), NoSyn),
           [(((Binding.empty, Binding.name ("raw_" ^ n ^ "_ctor")),
-           [(Binding.empty, Type (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf)),
-             frees @ passives @ bounds @ bfrees @ mk_recs T_long_names
-           ))]), NoSyn)
+           [(Binding.empty, MRBNF_Def.mk_T_of_mrbnf deads
+             (plives @ mk_recs T_long_names) (pbounds @ bounds) (frees @ pfrees @ bfrees) pre_mrbnf
+           )]), NoSyn)
           ]),
           (Binding.empty, Binding.empty, Binding.empty)), []
-        )) models;
+        )) models deadss;
         val lthy = BNF_FP_Def_Sugar.co_datatypes fp_kind (if co
           then BNF_GFP.construct_gfp else BNF_LFP.construct_lfp
         ) ((K false, false), T_specs) lthy;
         val T_sugars = map (the o BNF_FP_Def_Sugar.fp_sugar_of lthy) T_long_names;
       in (map (fn sugar =>
         let
-          val subst = (snd (dest_Type (#T sugar)) ~~ (frees @ passives));
+          val subst = (snd (dest_Type (#T sugar)) ~~ (frees @ passives @ flat deadss));
           val tsubst = Term.typ_subst_atomic subst;
           val subst = Term.subst_atomic_types subst;
           val ctr_sugar = #ctr_sugar (#fp_ctr_sugar sugar);
@@ -264,11 +264,12 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
         ) permute_raws raw_Ts simps deadss mrbnfs raw_xs raw_zs));
       in (permute_raws ~~ simps, raw_sels, lthy) end
 
-    val setss = map (fn mrbnf =>
+    val setss = map2 (fn mrbnf => fn deads =>
       let val subst = Term.subst_atomic_types (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~
-        (frees @ passives @ bounds @ bfrees @ replicate_rec (map #T raw_Ts)));
+        snd (dest_Type (MRBNF_Def.mk_T_of_mrbnf deads
+          (plives @ replicate_rec (map #T raw_Ts)) (pbounds @ bounds) (frees @ pfrees @ bfrees) mrbnf)));
       in map subst (MRBNF_Def.sets_of_mrbnf mrbnf) end
-    ) mrbnfs;
+    ) mrbnfs deadss;
     val rec_setss = map (drop (npre_args - nrecs)) setss;
     val free_setss = map (take nvars) setss;
     val (bound_setsss, rest) = split_list (map (fold_map (chop o length) binding_relation o drop (nvars + npassive)) setss);
@@ -3723,7 +3724,11 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       fp_thms = case least_fp_thms of
        SOME x => SOME (Inl x)
        | NONE => Option.map Inr greatest_fp_thms,
-      pre_mrbnfs = mrbnfs
+      (* fix the dead variables to the instance used for the raw and quotient types, so
+         that consumers reading deads_of_mrbnf do not leak schematic variables into terms *)
+      pre_mrbnfs = map2 (fn mrbnf => fn deads =>
+        MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism
+          (MRBNF_Def.deads_of_mrbnf mrbnf ~~ deads)) mrbnf) mrbnfs deadss
     } : MRBNF_FP_Def_Sugar.fp_result;
 
     val lthy = MRBNF_FP_Def_Sugar.register_fp_results [fp_result] lthy;

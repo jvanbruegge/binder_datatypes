@@ -241,11 +241,15 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) fp_bs
               (X_T --> X'_T, A_T --> A'_T)
               Vartab.empty;
             val mapx = Envir.subst_term (tyenv, Vartab.empty) mapx;
-            val gs = map (fn Type (@{type_name prod}, [T, PU]) => mk_map_prod (
-                #abs (#inner (the (List.find (curry (op=) T o #T) (#quotient_fps fp_res))))
-              ) (HOLogic.id_const PU)
+            (* one function per map argument (dead positions have none), driven by the
+               map's own argument domains rather than the type's parameter list *)
+            val gs = map (fn fT => case domain_type fT of
+                Type (@{type_name prod}, [T, PU]) => mk_map_prod (
+                  #abs (#inner (snd (the (List.find (curry (op=) T o #T o fst)
+                    (#raw_fps fp_res ~~ #quotient_fps fp_res)))))
+                ) (HOLogic.id_const PU)
               | T => HOLogic.id_const T
-            ) (snd (dest_Type A'_T));
+            ) (fst (split_last (Term.binder_types (fastype_of mapx))));
           in Term.list_comb (mapx, gs) end;
 
         val ((((Umap', UFVars's), PUmap), Uctor'), lthy) = lthy

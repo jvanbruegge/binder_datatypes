@@ -264,6 +264,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
 
     val nvars = length (#binding_relation fp_result);
     val (vars, passives) = chop nvars new_vars;
+    (* dead parameters of the pre-MRBNFs come after the passives in the fixpoint's
+       argument order and belong to none of the passive classes *)
+    val (passives, _) = chop
+      (length passives - length (maps MRBNF_Def.deads_of_mrbnf mrbnfs)) passives;
     val ((pfrees, plives), pbounds) = passives
       |> chop (MRBNF_Def.free_of_mrbnf (hd mrbnfs) - length (#bfree_vars fp_result) - nvars)
       ||>> chop (MRBNF_Def.live_of_mrbnf (hd mrbnfs) - foldr1 (op+) (#rec_vars fp_result));
@@ -356,12 +360,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
 
     val state = Interpretation.isar_interpretation ([ (QREC_fixed_name,
       (("vvsubst", true), (Expression.Positional (map SOME (
-        map mk_imsupp var_fs @ map2 (fn quot => fn mrbnf => HOLogic.mk_comp (
+        map mk_imsupp var_fs @ @{map 3} (fn quot => fn mrbnf => fn deads => HOLogic.mk_comp (
           Term.subst_atomic_types (plives ~~ plives') (#ctor quot),
-          MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+          MRBNF_Def.mk_map_comb_of_mrbnf deads
             (plive_fs @ replicate_rec (map (fn quot => snd_const (HOLogic.mk_prodT (#T quot, Term.typ_subst_atomic (plives ~~ plives') (#T quot)))) (#quotient_fps fp_res)))
             (pbound_fs @ map HOLogic.id_const vars) (free_fs @ bfree_fs) mrbnf
-        )) (#quotient_fps fp_res) mrbnfs
+        )) (#quotient_fps fp_res) mrbnfs deadss
       )), []))
     )], []) lthy;
 
@@ -423,8 +427,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
       ])) ctxt
     ])), Position.no_range), NONE) state;
 
-    val (vvsubsts, lthy) = @{fold_map 3} (fn b => fn T =>
+    val (vvsubsts, lthy) = @{fold_map 3} (fn b => fn T => fn rec_t =>
+      (* dead parameters occur in no fixed term of the interpretation context and come
+         back generalized: instantiate them to the quotient's instance *)
       mk_def_t true Binding.empty qualify (the_default ("map_" ^ short_type_name (fst (dest_Type T))) (Option.map Binding.name_of b)) 0
+        ((Envir.subst_term (Sign.typ_match (Proof_Context.theory_of lthy)
+          (body_type (fastype_of rec_t), T) Vartab.empty, Vartab.empty) rec_t)
+         handle Type.TYPE_MATCH => rec_t)
     ) (map #vvsubst vvsubst_bss) (map #T (#quotient_fps fp_res)) (MRBNF_Recursor.get_RECs true "vvsubst" lthy) lthy;
 
     val vvsubst_cctors = @{map 6} (fn vvsubst => fn quot => fn bsets => fn mrbnf => fn x => fn deads =>

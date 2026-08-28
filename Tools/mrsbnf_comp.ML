@@ -51,6 +51,10 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
     val mrbnf' = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv);
 
+    (* a variable that occurs in a dead position is dead overall: do not lift it in
+       as a phantom live, which would collide with its occurrence inside the dead types *)
+    val dead_tfrees = fold Term.add_tfreesT Ds [];
+    val Xs = filter_out (member (op=) dead_tfrees o fst) Xs;
     val ((_, _, new_tys), _, (mrbnfs', ((_, lift_unfolds), lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
       [] Xs (K (map fst Xs)) NONE [mrbnf'] ((MRBNF_Comp.empty_comp_cache, mrbnf_unfolds), lthy);
     val mrbnf' = hd mrbnfs';
@@ -71,8 +75,10 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
 
     val T = MRBNF_Def.mk_T_of_mrbnf (map TFree (rev (fold_rev Term.add_tfreesT Ds []))) lives bounds frees mrbnf;
 
+    (* zip positionally: collecting tfrees deduplicates when a dead type's variable
+       coincides with a live/free/bound one and then the lists have different lengths *)
     val info = map_prod I (morph_info (MRBNF_Util.subst_typ_morphism (
-      (op~~) (apply2 (fn T => map TFree (Term.add_tfreesT T [])) (#abs_type (fst (snd info)), T))
+      (op~~) (apply2 (snd o dest_Type) (#abs_type (fst (snd info)), T))
     ))) info;
 
     val bmv =

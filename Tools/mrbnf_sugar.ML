@@ -21,7 +21,7 @@ val morph_mr_bnf: morphism -> mr_bnf -> mr_bnf;
 val build_permute_for: Proof.context -> term list -> typ list -> typ -> (string * mr_bnf) list * term;
 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
-  -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRSBNF_Def.mrsbnf * MRBNF_Comp.absT_info) * local_theory
+  -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRSBNF_Def.mrsbnf * (typ list * MRBNF_Comp.absT_info)) * local_theory
 
 val create_binder_datatype : bool -> spec -> local_theory -> Binder_Sugar.binder_sugar * local_theory
 end
@@ -102,7 +102,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
       permute = Option.map Binding.name_of (#permute_b spec),
       FVars = FVars_names
     }] (map single (#binding_rel spec)) lthy;
-  in ((res, fp_pre_T, mrsbnf, absinfo), lthy) end
+  in ((res, fp_pre_T, mrsbnf, (fst tys, absinfo)), lthy) end
 
 fun mr_bnf_of lthy prefer_quot s =
   let
@@ -209,9 +209,25 @@ fun create_binder_datatype co (spec : spec) lthy =
 
     val _ = clean_message lthy quiet_mode "  Creating quotient type ...";
 
-    val ((res, fp_pre_T, mrsbnf, absinfo), lthy) = create_binder_type fp_kind spec lthy;
+    val ((res, fp_pre_T, mrsbnf, (Ds, absinfo)), lthy) = create_binder_type fp_kind spec lthy;
     val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+
+    (* a parameter occurring (only) in dead positions is dead overall, whether the user
+       annotated it or the composition detected it: remove it from the passive variable
+       and set-name lists; it stays a (dead) parameter of the datatype itself *)
+    val dead_spec_tfrees = fold Term.add_tfreesT Ds [];
+    val spec =
+      if not (exists (member (op=) dead_spec_tfrees o fst) (#vars spec)) then spec else
+      let
+        val n = length (#set_bs spec);
+        val (var_setbs, rest) = chop n (#vars spec) |>> (fn xs => xs ~~ #set_bs spec);
+        val keep = filter_out (member (op=) dead_spec_tfrees o fst o fst) var_setbs;
+      in {fp_b = #fp_b spec, vars = map fst keep @ rest, rec_vars = #rec_vars spec,
+        binding_rel = #binding_rel spec, ctors = #ctors spec, map_b = #map_b spec,
+        tvsubst_b = #tvsubst_b spec, rel_b = #rel_b spec, permute_b = #permute_b spec,
+        set_bs = map snd keep} : spec
+      end;
 
     val (vvsubst_res_opt, lthy) = if co then (NONE, lthy) else (* TODO: Automate renaming for codatatypes *)
       let
@@ -239,9 +255,15 @@ fun create_binder_datatype co (spec : spec) lthy =
     (* The spec's variables (in particular the internally invented ones) may clash with the
        canonical variables of the quotient type. The staged type substitutions below assume the
        two variable spaces are disjoint, so rename the clashing spec variables apart first. *)
+    (* the pre-type's arguments, with the dead positions separated out: the spec's
+       variable list only covers the non-dead positions *)
+    val pre_deadTs = MRBNF_Def.deads_of_mrbnf (hd (#pre_mrbnfs res));
+    val (dead_targs, live_targs) = partition (member (op=) pre_deadTs)
+      (snd (dest_Type (domain_type (fastype_of quotient_ctor))));
+
     val (spec, fp_pre_T) =
       let
-        val target_args = snd (dest_Type (domain_type (fastype_of quotient_ctor)));
+        val target_args = live_targs;
         val target_names = fold Term.add_tfree_namesT target_args [];
         (* only spec variables whose name occurs among the canonical names of the quotient
            but is paired with a differently named argument are problematic *)
@@ -264,7 +286,8 @@ fun create_binder_datatype co (spec : spec) lthy =
         end
       end;
 
-    val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
+    val replace = (map (TFree o fst) (#vars spec) ~~ live_targs)
+      @ (map TFree (fold Term.add_tfreesT Ds []) ~~ dead_targs);
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
     val abs =
       let val (s, _) = dest_Const (#abs absinfo)
@@ -299,6 +322,9 @@ fun create_binder_datatype co (spec : spec) lthy =
     );
     val ctors = map morph ctors;
     val (vars, passives) = chop (length (#binding_rel spec)) vars;
+    (* the dead parameters come last and belong to no passive class *)
+    val (passives, _) = chop
+      (length passives - length (MRBNF_Def.deads_of_mrbnf mrbnf)) passives;
 
     val ((pfrees, plives), pbounds) = passives
       |> chop (MRBNF_Def.free_of_mrbnf mrbnf - length vars)
@@ -315,7 +341,8 @@ fun create_binder_datatype co (spec : spec) lthy =
       map_filter (fn (x, Live_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
     )); *) (map (TFree o fst) (#vars spec))
 
-    val names_lthy = fold Variable.declare_typ (map (TFree o fst) (#vars spec)) lthy;
+    val names_lthy = fold Variable.declare_typ
+      (map (TFree o fst) (#vars spec) @ maps (fn (a, b) => [a, b]) replace) lthy;
 
     val (b, names_lthy) = apfst hd (mk_TFrees (length vars) names_lthy);
     val (((Ks, rho), t), names_lthy) = names_lthy
@@ -894,11 +921,18 @@ fun create_binder_datatype co (spec : spec) lthy =
     val x = length replace - #rec_vars spec;
     val etas =
       let
+        (* the recursive pairs are the last ones of the live part of replace,
+           the dead pairs (if any) come after them *)
+        val nlive = length replace - length dead_targs;
+        val xl = nlive - #rec_vars spec;
+        val (replace_pre, rest) = chop xl replace;
+        val (replace_rec, replace_dead) = chop (#rec_vars spec) rest;
         val (fresh_tvars, _) = lthy
-          |> fold Variable.declare_typ (map snd (take x replace))
-          |> mk_TFrees (length replace - x);
+          |> fold Variable.declare_typ (map snd (replace_pre @ replace_dead))
+          |> mk_TFrees (#rec_vars spec);
         val (s, _) = dest_Const (#abs absinfo)
-        val replace' = take x replace @ map2 (fn (x, _) => fn T => (x, T)) (drop x replace) fresh_tvars;
+        val replace' = replace_pre
+          @ map2 (fn (x, _) => fn T => (x, T)) replace_rec fresh_tvars @ replace_dead;
         val pre_repT = Term.typ_subst_atomic replace' fp_pre_T;
         val (n, Ts) = dest_Type (domain_type (fastype_of quotient_ctor));
         val Ts' = take x Ts @ fresh_tvars;
@@ -1159,9 +1193,12 @@ fun create_binder_datatype co (spec : spec) lthy =
         val (fs, _) = lthy
           |> mk_Frees "f" (map2 (curry (op-->)) (vars @ passives) args');
 
-        val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf rec_mrbnf));
+        val (deadTs', Ts') = partition (member (op=) (MRBNF_Def.deads_of_mrbnf rec_mrbnf))
+          (snd (dest_Type (MRBNF_Def.T_of_mrbnf rec_mrbnf)));
+        val qdeads = filter (member (op=) pre_deadTs) (snd (dest_Type qT));
         val mapx = Term.subst_atomic_types (
-          (Ts' ~~ (vars @ passives)) @ (MRBNF_Def.lives'_of_mrbnf rec_mrbnf ~~ plives')
+          (Ts' ~~ (vars @ passives)) @ (deadTs' ~~ qdeads)
+          @ (MRBNF_Def.lives'_of_mrbnf rec_mrbnf ~~ plives')
         ) (MRBNF_Def.map_of_mrbnf rec_mrbnf);
         fun tac ctxt prems = EVERY1 [
           rtac ctxt (trans OF [#vvsubst_ctor vvsubst_res]),
@@ -1196,7 +1233,8 @@ fun create_binder_datatype co (spec : spec) lthy =
       let
         val (fs, _) = lthy
           |> mk_Frees "f" (map (fn a => a --> a) vars);
-        val Ts' = snd (dest_Type qT);
+        val Ts' = filter_out (member (op=) (maps MRBNF_Def.deads_of_mrbnf (#pre_mrbnfs res)))
+          (snd (dest_Type qT));
         val mapx = Term.subst_atomic_types (Ts' ~~ (vars @ passives)) (#permute quotient);
         fun tac ctxt prems = EVERY1 [
           rtac ctxt (trans OF [#permute_ctor quotient]),

@@ -111,4 +111,11 @@ binder_datatype ('ty, 'c, 'v) preterm =
 | PApp "('ty, 'c, 'v) preterm" "('ty, 'c, 'v) preterm"
 | PAbs x::'v 'ty t::"('ty, 'c, 'v) preterm" binds x in t
 
+(* high-level recursor for constructors with three or more recursive arguments *)
+binder_datatype 'a hlterm =
+  HVar 'a
+| HIf "'a hlterm" "'a hlterm" "'a hlterm"
+| HFix f::'a x::'a M::"'a hlterm" binds f x in M
+term HL_REC_hlterm
+
 end

@@ -2067,8 +2067,24 @@ fun create_binder_datatype co (spec : spec) lthy =
               val collapsed = map_filter (fn p =>
                 SOME (@{thm mp} OF [@{thm spec} OF [@{thm spec} OF [p]], @{thm prod.collapse}])
                 handle THM _ => NONE) prems
+              (* premises quantified over the components of a pair drawn from a literal set
+                 (arising for constructors with three or more recursive arguments) *)
+              val mem_rules = map_filter (fn p =>
+                SOME (@{thm mp} OF [@{thm spec} OF [@{thm spec} OF [p]]])
+                handle THM _ => NONE) prems
+              fun mem_search d i = if d > 20 then no_tac else FIRST' [
+                rtac ctxt' @{thm singletonI},
+                rtac ctxt' @{thm insertI1},
+                rtac ctxt' @{thm UnI1} THEN' mem_search (d + 1),
+                rtac ctxt' @{thm UnI2} THEN' mem_search (d + 1)] i
+              val pair_mem = @{lemma "p \<in> S \<Longrightarrow> (fst p, snd p) \<in> S" by simp}
+              val mem_tac = EVERY' [
+                resolve_tac ctxt' mem_rules,
+                TRY o rtac ctxt' pair_mem,
+                mem_search 0]
             in
-              FIRST' (map (fn c => resolve_tac ctxt' [c]) (prems @ collapsed)) 1
+              (FIRST' (map (fn c => resolve_tac ctxt' [c]) (prems @ collapsed))
+                ORELSE' SOLVED' mem_tac) 1
             end) ctxt;
 
         val meta_rewrites = map (Local_Defs.meta_rewrite_rule lthy);
@@ -2090,16 +2106,20 @@ fun create_binder_datatype co (spec : spec) lthy =
           (REPEAT_DETERM o resolve_tac ctxt [@{thm allI}, @{thm impI}]) THEN'
           Subgoal.FOCUS_PREMS (fn {context = ctxt', prems, ...} =>
             let
-              fun disj_tac i st = FIRST' [
+              fun disj_tac d i st = if d > 20 then no_tac st else FIRST' [
                 rtac ctxt' @{thm refl},
                 resolve_tac ctxt' prems,
-                rtac ctxt' @{thm disjI1} THEN' disj_tac,
-                rtac ctxt' @{thm disjI2} THEN' disj_tac
+                rtac ctxt' @{thm singletonI},
+                rtac ctxt' @{thm insertI1},
+                rtac ctxt' @{thm disjI1} THEN' disj_tac (d + 1),
+                rtac ctxt' @{thm disjI2} THEN' disj_tac (d + 1),
+                rtac ctxt' @{thm UnI1} THEN' disj_tac (d + 1),
+                rtac ctxt' @{thm UnI2} THEN' disj_tac (d + 1)
               ] i st
             in EVERY1 [
               REPEAT_DETERM1 o resolve_tac ctxt' prems,
               K (Local_Defs.unfold0_tac ctxt' @{thms prod.collapse}),
-              disj_tac
+              disj_tac 0
             ] end
           ) ctxt;
 

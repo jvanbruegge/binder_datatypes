@@ -152,9 +152,9 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
     ) bind_ts_opt 0;
     val bind_ts_opt = map (Option.map (fn xs => xs @ replicate (num_vars - length xs) [])) bind_ts_opt;
 
-    val bind_Ts = map hd (foldl1 (uncurry (map2 (curry (op@))))
-      (map_filter (Option.map (map (map fastype_of))) bind_ts_opt)
-    );
+    val bind_Ts = (case map_filter (Option.map (map (map fastype_of))) bind_ts_opt of
+        [] => error "binder_inductive: no rule of the inductive predicate binds any variable"
+      | tss => map hd (foldl1 (uncurry (map2 (curry (op@)))) tss));
 
     val bind_ts = map (fn NONE => map (mk_bot o HOLogic.dest_setT) bind_Ts
       | SOME tss => map2 (fn xs => fn T => case xs of

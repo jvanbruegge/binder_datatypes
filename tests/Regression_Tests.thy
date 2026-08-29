@@ -124,4 +124,20 @@ binder_datatype ('a, 'b::var) dtest = DV 'b | DB "'a set" | DC x::'b t::"('a, 'b
 (* #90: the same with an explicit dead annotation *)
 binder_datatype (dead 'a, 'b::var) dtest2 = DV2 'b | DB2 "'a set" | DC2 x::'b t::"('a, 'b) dtest2" binds x in t
 
+(* #117, #118: the strong rule of a constructor binding two atoms carries two
+   pointwise freshness premises with the same avoiding set, and binder_induction
+   handles them; #119: a union avoiding set supplied as one term *)
+binder_datatype 'a bi_t =
+  BVar 'a
+| BAp "'a bi_t" "'a bi_t"
+| BFix f::'a x::'a M::"'a bi_t" binds f x in M
+
+lemma "R (e :: 'a::var bi_t) \<Longrightarrow> e = e"
+  for x y :: "'a::var"
+  by (binder_induction e avoiding: x y rule: bi_t.strong_induct) auto
+
+lemma "R (e :: 'a::var bi_t) \<Longrightarrow> e = e"
+  for x y :: "'a::var"
+  by (binder_induction e avoiding: "{x} \<union> {y}" rule: bi_t.strong_induct) auto
+
 end

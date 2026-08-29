@@ -493,9 +493,10 @@ in
 fun refreshability_tac verbose supss instss pred_thm G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
     (* a missing fact must make the search fail, not diverge *)
-    fun bounded_tac tac st = (Timeout.apply (Time.fromSeconds 60) (fn () => Seq.pull (tac st)) ()
+    fun bounded_tac' secs tac st = (Timeout.apply (Time.fromSeconds secs) (fn () => Seq.pull (tac st)) ()
         |> (fn NONE => Seq.empty | SOME (x, xs) => Seq.cons x xs))
       handle Timeout.TIMEOUT _ => Seq.empty;
+    val bounded_tac = bounded_tac' 60;
     val num_vars = length supss;
     val n = length (hd supss);
     val extend_thms = extend_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_extends\<close>;
@@ -592,11 +593,18 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 addSIs (id_onI @ intro_thms)
                 addIs (ex_fs @ @{thms exI[of _ id] bij_id supp_id_bound id_on_id})
                 addSEs (elim_thms @ [@{thm id_onD}]);
+              val plain_ctxt = (ctxt |> Simplifier.add_simps (simp_thms @ defs @ fprems
+                  @ @{thms Int_Un_distrib Int_Un_distrib2 Un_empty image_Un image_insert
+                      image_empty image_id id_apply}))
+                addSEs (elim_thms @ [@{thm id_onD}]);
+              val rich_ctxt = (plain_ctxt |> Simplifier.add_simps @{thms id_on_def})
+                addSIs ex_fs;
               (* re-establish a premise of the case from some assumption about the predicate,
                  backtracking over the choice of assumption unless all argument equalities
-                 can be discharged *)
+                 can be discharged; the equality solver must fail fast on the equalities of a
+                 wrong assumption, so its timeout stays small *)
               val P_fix_tac = SOLVED' (eresolve_tac ctxt P_elims THEN_ALL_NEW
-                (fn i => SOLVED' (SELECT_GOAL (bounded_tac (mk_auto_tac fix_ctxt 0 6))) i));
+                (fn i => SOLVED' (SELECT_GOAL (bounded_tac' 60 (mk_auto_tac fix_ctxt 0 6))) i));
             in
               HEADGOAL (EVERY' (map (fn ex_B' => rtac ctxt ex_B') ex_B's) THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
@@ -605,8 +613,28 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
-                SELECT_GOAL (bounded_tac (mk_auto_tac auto_ctxt 0 10))
-                THEN_ALL_NEW (P_fix_tac ORELSE' SELECT_GOAL (print_tac ctxt "auto failed")))
+                (* split the conjunction and close each conjunct separately (strictly within
+                   its own subgoal: a global search leaks premise rewrites, e.g. an unfolded
+                   id_on, into the conjuncts it fails to solve): a registered refresh_intros
+                   rule applied deterministically first, then bounded autos of increasing
+                   strength; one search over the whole conjunction can spend its budget
+                   backtracking across conjuncts *)
+                SELECT_GOAL (EVERY [
+                  REPEAT_DETERM (CHANGED (ALLGOALS (TRY o rtac ctxt conjI))),
+                  ALLGOALS (fn i =>
+                    TRY (FIRST' [
+                      (* registered refresh_intros must see the goal before simplification
+                         normalizes away the syntactic form their conclusions match *)
+                      SOLVED' (DETERM o resolve_tac ctxt intro_thms
+                        THEN_ALL_NEW (fn j => bounded_tac' 15 (SOLVED' (SELECT_GOAL (auto_tac rich_ctxt)) j))),
+                      (fn j => bounded_tac' 10 (SOLVED' (SELECT_GOAL (auto_tac plain_ctxt)) j)),
+                      (fn j => bounded_tac' 15 (SOLVED' (SELECT_GOAL (auto_tac rich_ctxt)) j)),
+                      (fn j => bounded_tac' 30 (SOLVED' (SELECT_GOAL (mk_auto_tac auto_ctxt 0 10)) j))] i))
+                ])
+                (* leftover conjuncts, typically the re-established premises of the case:
+                   normalize with a terminating simp pass, then P_fix_tac *)
+                THEN_ALL_NEW (SELECT_GOAL (TRY (bounded_tac' 10 (ALLGOALS (full_simp_tac plain_ctxt))))
+                  THEN' (P_fix_tac ORELSE' SELECT_GOAL (print_tac ctxt "auto failed"))))
             end;
           val small_ctxt = (ctxt |> Simplifier.add_simps small_thms) addIs small_thms;
         in

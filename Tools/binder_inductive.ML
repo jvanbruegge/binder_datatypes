@@ -880,7 +880,10 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
               @ maps set_bd_UNIVs_of_mr_bnfs (flat mr_bnfs @ binder_mr_bnfs)
               @ flat supp_smallss;
             val simp_thms = maps #inject sugars @ maps #distinct sugars
-              @ maps (map snd) suppss;
+              @ maps (map snd) suppss
+              (* naturality of the sets of binder and nesting functors: without these the
+                 search cannot relate a renamed binder's bound set to its image *)
+              @ maps set_map_of_mr_bnf (flat mr_bnfs @ binder_mr_bnfs);
             val cong_ids = distinct Thm.eq_thm_prop (map_filter
               (fn Inr (Inr quot) => SOME (#permute_cong_id (#inner quot)) | _ => NONE)
               (flat mr_bnfs @ binder_mr_bnfs));

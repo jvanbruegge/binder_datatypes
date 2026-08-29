@@ -492,6 +492,10 @@ in
    pred_thm: the goal's premise relating the abstract predicate to the inductive one. *)
 fun refreshability_tac verbose supss instss pred_thm G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
+    (* a missing fact must make the search fail, not diverge *)
+    fun bounded_tac tac st = (Timeout.apply (Time.fromSeconds 60) (fn () => Seq.pull (tac st)) ()
+        |> (fn NONE => Seq.empty | SOME (x, xs) => Seq.cons x xs))
+      handle Timeout.TIMEOUT _ => Seq.empty;
     val num_vars = length supss;
     val n = length (hd supss);
     val extend_thms = extend_thms @ Named_Theorems.get ctxt \<^named_theorems>\<open>refresh_extends\<close>;
@@ -542,8 +546,8 @@ fun refreshability_tac verbose supss instss pred_thm G_thm eqvt_thm extend_thms 
 
     fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN'
         K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN
-        (SOLVE (auto_tac ctxt) ORELSE
-          SOLVE (auto_tac ((ctxt |> Simplifier.add_simps simp_thms) addSIs intro_thms addSEs elim_thms)))
+        (SOLVE (bounded_tac (auto_tac ctxt)) ORELSE
+          SOLVE (bounded_tac (auto_tac ((ctxt |> Simplifier.add_simps simp_thms) addSIs intro_thms addSEs elim_thms))))
       | case_tac (SOME insts) params prems ctxt =
         let
 val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
@@ -592,7 +596,7 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                  backtracking over the choice of assumption unless all argument equalities
                  can be discharged *)
               val P_fix_tac = SOLVED' (eresolve_tac ctxt P_elims THEN_ALL_NEW
-                (fn i => SOLVED' (SELECT_GOAL (mk_auto_tac fix_ctxt 0 6)) i));
+                (fn i => SOLVED' (SELECT_GOAL (bounded_tac (mk_auto_tac fix_ctxt 0 6))) i));
             in
               HEADGOAL (EVERY' (map (fn ex_B' => rtac ctxt ex_B') ex_B's) THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
@@ -601,7 +605,7 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
-                SELECT_GOAL (mk_auto_tac auto_ctxt 0 10)
+                SELECT_GOAL (bounded_tac (mk_auto_tac auto_ctxt 0 10))
                 THEN_ALL_NEW (P_fix_tac ORELSE' SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
           val small_ctxt = (ctxt |> Simplifier.add_simps small_thms) addIs small_thms;

@@ -1255,7 +1255,7 @@ fun create_binder_datatype co (spec : spec) lthy =
         (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
       end;
 
-    val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
+    val (tvsubst_opt, lthy) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
       let
         val recursor_result = #recursor_result (the vvsubst_res_opt);
         val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt);
@@ -1366,8 +1366,33 @@ fun create_binder_datatype co (spec : spec) lthy =
           in map (Local_Defs.unfold0 lthy bmv_unfolds) (
             mk_map_simps lthy false true Sbs plives (fs @ rhos) mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac
           ) end;
-        in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
-      else (lthy, NONE);
+
+        in (SOME (tvsubst_res, tvsubst_simps), lthy) end
+      else (NONE, lthy);
+
+    val (tvsubst1_opt, lthy) = (case tvsubst_opt of
+        NONE => (NONE, lthy)
+      | SOME tvsubst =>
+        let
+          (* A binding-related free var gets a renaming (RVr) delta in Sb iff it has no
+             eta ctor; mirror the eta condition of tvsubst_model (single-arg ctor whose
+             var occurs in no other ctor, nested occurrences included). We need the
+             original tv names from the spec for the RVr binding names. *)
+          fun has_eta NT = #ctors spec
+            |> map_index I
+            |> exists (fn (i, (_, tys)) => tys = [TFree NT] andalso
+                not (member (op=) (fold Term.add_tfreesT
+                  (maps snd (nth_drop i (#ctors spec))) []) NT));
+
+          fun is_RVr (NT, x) =
+            x = Free_Var andalso member (op=) frees (TFree NT) andalso not (has_eta NT);
+
+          val RVr_Ns = filter is_RVr (#vars spec)
+            |> map ((fn N => String.extract (N, 1, NONE)) o fst o fst);
+        in
+          TVSubst.create_tvsubst1_of_result (#tvsubst_b spec, RVr_Ns) (tvsubst, permute_simps) lthy
+          |> apfst SOME
+        end);
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
@@ -2564,7 +2589,7 @@ fun create_binder_datatype co (spec : spec) lthy =
         ("IImsupp_permute_commute", #IImsupp_permute_commutes res, []),
         ("IImsupp_Diff", #IImsupp_Diffs res, []),
         ("tvsubst_permute", [#tvsubst_permute res], [])
-      ]) tvsubst_opt))
+      ]) tvsubst_opt) @ the_default [] tvsubst1_opt)
         |> filter_out (null o #2)
         |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])

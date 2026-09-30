@@ -7,6 +7,9 @@ binder_datatype 'a trm =
   Var 'a
 | Abs x::'a t::"'a trm" binds x in t
 
+thm trm.subst
+thm trm.subst_Var
+
 (* #69 *)
 binder_datatype 'a LLC =
   Var 'a

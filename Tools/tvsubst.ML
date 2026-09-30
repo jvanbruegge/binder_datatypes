@@ -1349,6 +1349,10 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   eresolve_tac ctxt @{thms UnI1 UnI2},
+                  let
+                    fun solve i st = (assume_tac ctxt i APPEND
+                      (resolve_tac ctxt @{thms UnI1 UnI2} i THEN solve i)) st
+                  in SELECT_GOAL (SOLVE (HEADGOAL solve)) end,
                   rtac ctxt @{thm UnI1}
                 ]
               ])

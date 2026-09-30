@@ -956,8 +956,7 @@ lemma f_swap_alpha:
                apply (rule ballI)+
                apply (rule impI)
                apply (rotate_tac -1)
-               apply (subst disj_commute)
-               apply (rule verit_and_neg)
+               apply (rule disjCI)
                apply (frule l_is_inr[of _ _ _ pick "pick'"])
                 apply assumption
                apply (erule exE)
@@ -984,8 +983,7 @@ lemma f_swap_alpha:
               apply (unfold inv_o_simp1)
               apply (unfold o_id)
               apply (rotate_tac -1)
-              apply (subst disj_commute)
-              apply (rule verit_and_neg)
+              apply (rule disjCI)
               apply (frule l_is_inr[of _ _ _ pick "pick'"])
                apply assumption
               apply (erule exE)

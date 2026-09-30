@@ -40,7 +40,7 @@ fun extract_map_rel_pred ("map", m) = (fn (_, r, p, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("subst", r) = (fn (m, _, p, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("permute", p) = (fn (m, r, _, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("rel", rel) = (fn (m, r, p, _) => (m, r, p, rel))
-  | extract_map_rel_pred (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"vvsubst\" or \"tvsubst\")");
+  | extract_map_rel_pred (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"map\", \"subst\", \"permute\", or \"rel\")");
 
 val parse_subst_bindings =
   @{keyword for} |-- Scan.repeat parse_subst_binding

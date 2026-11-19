@@ -323,9 +323,16 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
         )) Injs gs g_prems SSupp_map_subset;
 
         val Map_map = Option.map (fn Map =>
-          let val goal = mk_Trueprop_eq (
+          let
+            (* a live variable the Map does not act on (dead for the bmv monad) is mapped
+               by the identity *)
+            val Map_lives = map domain_type (fst (split_last (binder_types (fastype_of Map))));
+            val live_fs' = map (fn f =>
+              if member (op=) Map_lives (domain_type (fastype_of f)) then f
+              else HOLogic.id_const (domain_type (fastype_of f))) live_fs;
+            val goal = mk_Trueprop_eq (
             Term.list_comb (Map, map (fn T => the (List.find (curry (op=) T o fastype_of) live_fs)) (fst (split_last (binder_types (fastype_of Map))))),
-            MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf) live_fs (map HOLogic.id_const (MRBNF_Def.bounds_of_mrbnf mrbnf)) (map HOLogic.id_const (MRBNF_Def.frees_of_mrbnf mrbnf)) mrbnf
+            MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf) live_fs' (map HOLogic.id_const (MRBNF_Def.bounds_of_mrbnf mrbnf)) (map HOLogic.id_const (MRBNF_Def.frees_of_mrbnf mrbnf)) mrbnf
           ) in Goal.prove_sorry lthy (names live_fs) [] goal (fn {context=ctxt, ...} => EVERY1 [
             rtac ctxt sym,
             rtac ctxt trans,
@@ -645,7 +652,11 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                     MRBNF_Def.interlace (replicate (2 * live) [])
                       (map single bound_fs @ map (single o id_of_f) bound_fs)
                       (map (single o id_of_f) free_fs @ map single free_fs) (var_types @ var_types)
-                  ) @ maps (fn f => [f, HOLogic.id_const (domain_type (fastype_of f))]) live_fs)
+                  ) @ maps (fn f =>
+                      (* a live variable outside the bmv monad commutes into the other factor *)
+                      if member (op=) (nth (BMV_Monad_Def.lives_of_bmv_monad bmv) i) (domain_type (fastype_of f))
+                      then [f, HOLogic.id_const (domain_type (fastype_of f))]
+                      else [HOLogic.id_const (range_type (fastype_of f)), f]) live_fs)
                 ) (MRBNF_Def.map_comp0_of_mrbnf mrbnf))),
                 REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
                 rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]}
@@ -952,6 +963,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
             ) Injs)
           ) end
         )));
+
 
         val RVrs_aTs = map (HOLogic.dest_setT o body_type o fastype_of) RVrs;
 

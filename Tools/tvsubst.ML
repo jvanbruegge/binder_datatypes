@@ -94,9 +94,20 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
         val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf';
         val tyenv = fold (Sign.typ_match (Proof_Context.theory_of lthy)) ([
           (BMV_Monad_Def.leader BMV_Monad_Def.ops_of_bmv_monad bmv, pre_T)
-        ] @ the_default [] (Option.map (fn Map => [
-          apply2 (body_type o fastype_of) (Map, MRBNF_Def.map_of_mrbnf mrbnf)
-        ]) (BMV_Monad_Def.leader BMV_Monad_Def.Maps_of_bmv_monad bmv))) Vartab.empty;
+        ] @ the_default [] (Option.map (fn Map =>
+          let
+            (* a live variable the bmv's Map does not act on keeps its unprimed instance *)
+            val tyenv1 = Sign.typ_match (Proof_Context.theory_of lthy)
+              (BMV_Monad_Def.leader BMV_Monad_Def.ops_of_bmv_monad bmv, pre_T) Vartab.empty;
+            val Map_doms = map (Envir.subst_type tyenv1 o domain_type)
+              (fst (split_last (binder_types (fastype_of Map))));
+            val collapse = map_filter (fn (l, l') =>
+              if member (op=) Map_doms l then NONE else SOME (l', l))
+              (MRBNF_Def.lives_of_mrbnf mrbnf ~~ MRBNF_Def.lives'_of_mrbnf mrbnf);
+          in [(body_type (fastype_of Map),
+            Term.typ_subst_atomic collapse (body_type (fastype_of (MRBNF_Def.map_of_mrbnf mrbnf))))]
+          end
+        ) (BMV_Monad_Def.leader BMV_Monad_Def.Maps_of_bmv_monad bmv))) Vartab.empty;
         val mrsbnf = MRSBNF_Def.morph_mrsbnf (MRBNF_Util.subst_typ_morphism (
           map (fn (x, (s, T)) => (TVar (x, s), T)) (Vartab.dest tyenv)
         )) mrsbnf';
@@ -165,7 +176,7 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
           BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv (BMV_Monad_Def.leader_of_bmv_monad bmv) gs rhos
         );
         val live_fs = map (fn l => the (List.find (curry (op=) l o domain_type o fastype_of) fs)) (
-          BMV_Monad_Def.leader BMV_Monad_Def.lives_of_bmv_monad bmv
+          MRBNF_Def.lives_of_mrbnf mrbnf
         );
         val pbound = MRBNF_Def.bound_of_mrbnf mrbnf - nvars;
         val bound_fs = map (fn l => the (List.find (curry (op=) l o domain_type o fastype_of) fs)) (
@@ -300,6 +311,15 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     val (defs, lthy) = define_tvsubst_consts qualify fp_res etas lthy;
 
     val quot = hd (#quotient_fps fp_res);
+
+    (* fix the datatype MRBNF's variables (in particular its dead ones) to the
+       quotient instance before building any terms from its constants *)
+    val rec_mrbnf =
+      (let val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
+        (MRBNF_Def.T_of_mrbnf rec_mrbnf, #T quot) Vartab.empty
+      in MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism (
+        map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv))) rec_mrbnf end)
+      handle Type.TYPE_MATCH => rec_mrbnf;
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
 
     val frees = map (HOLogic.dest_setT o body_type o fastype_of) (#FVarss (hd (#quotient_fps fp_res)));
@@ -313,7 +333,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val nvars = length frees;
 
-    val args = (snd o dest_Type o body_type o fastype_of o #eta) (hd (map_filter I etas));
+    val args = filter_out (member (op=) (MRBNF_Def.deads_of_mrbnf mrbnf))
+      ((snd o dest_Type o body_type o fastype_of o #eta) (hd (map_filter I etas)));
     val (live_args, bound_args, free_args) = fold_rev (
       fn (MRBNF_Def.Live_Var, x) => (fn (a, b, c) => (x::a, b, c))
        | (MRBNF_Def.Bound_Var, x) => (fn (a, b, c) => (a, x::b, c))
@@ -658,7 +679,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
           let
             val fs = map (Thm.term_of o snd) (tl params);
-            val map_t = MRBNF_Def.mk_map_comb_of_mrbnf (subtract (op=) (frees @ pbounds) (BMV_Monad_Def.leader BMV_Monad_Def.deads_of_bmv_monad bmv))
+            val map_t = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
               (map (Term.subst_atomic_types (plives ~~ lives')) (map HOLogic.id_const plives @ map (fn xs => if null xs then HOLogic.id_const (#T quot) else
                 Term.list_comb (#permute quot, map_index (fn (i, f) =>
                   if member (op=) xs i then mk_inv f else HOLogic.id_const (domain_type (fastype_of f))
@@ -728,7 +749,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
       let
         val ctor = #ctor quot;
         val (name, (args, rec_args)) = dest_Type (fst (dest_funT (fastype_of ctor)))
-          |> apsnd (chop (nvars * 2 + passive + length (#bfree_vars fp_res)));
+          |> apsnd (chop (nvars * 2 + passive + length (#bfree_vars fp_res)
+            + length (MRBNF_Def.deads_of_mrbnf mrbnf)));
         val rec_args' = map (fn T => HOLogic.mk_prodT (T, T)) rec_args;
         val args = args @ rec_args';
 
@@ -1327,6 +1349,10 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   eresolve_tac ctxt @{thms UnI1 UnI2},
+                  let
+                    fun solve i st = (assume_tac ctxt i APPEND
+                      (resolve_tac ctxt @{thms UnI1 UnI2} i THEN solve i)) st
+                  in SELECT_GOAL (SOLVE (HEADGOAL solve)) end,
                   rtac ctxt @{thm UnI1}
                 ]
               ])
@@ -2272,6 +2298,47 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
       ])) end
     )) defs;
 
+    (* map with phantom (non-bmv) live functions splits into Map-shape o phantom-only map *)
+    (* live positions of the pre-mrbnf that the bmv's Map does not cover (phantom lives):
+       read off the Map_map fact, whose map side carries id exactly at those positions *)
+    val phantom_mask =
+      (case #Map_map mrsbnf_facts of
+        NONE => replicate (MRBNF_Def.live_of_mrbnf mrbnf) true
+      | SOME thm =>
+        let
+          val rhs = snd (HOLogic.dest_eq (HOLogic.dest_Trueprop (Thm.concl_of thm)));
+          val n = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf;
+          val fn_args = take n (snd (Term.strip_comb rhs));
+          val (live_args, _, _) = MRBNF_Def.deinterlace fn_args (MRBNF_Def.var_types_of_mrbnf mrbnf);
+        in map (fn (Const (@{const_name Fun.id}, _)) => true | _ => false) live_args end)
+      handle TERM _ => replicate (MRBNF_Def.live_of_mrbnf mrbnf) false;
+    val phantom_split = if not (exists I phantom_mask) then NONE else SOME (
+      let
+        val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
+        val livesT = MRBNF_Def.lives_of_mrbnf mrbnf;
+        val livesT' = MRBNF_Def.lives'_of_mrbnf mrbnf;
+        val boundsT = MRBNF_Def.bounds_of_mrbnf mrbnf;
+        val freesT = MRBNF_Def.frees_of_mrbnf mrbnf;
+        val (lfs, _) = lthy |> mk_Frees "f" (map2 (curry (op-->)) livesT livesT');
+        val lfs_inner = map2 (fn ph => fn f =>
+          if ph then f else HOLogic.id_const (domain_type (fastype_of f))) phantom_mask lfs;
+        val lfs_outer = map2 (fn ph => fn f =>
+          if ph then HOLogic.id_const (range_type (fastype_of f)) else f) phantom_mask lfs;
+        val ids_bounds = map HOLogic.id_const boundsT;
+        val ids_frees = map HOLogic.id_const freesT;
+        val map_lhs = MRBNF_Def.mk_map_comb_of_mrbnf deads lfs ids_bounds ids_frees mrbnf;
+        val map_inner = MRBNF_Def.mk_map_comb_of_mrbnf deads lfs_inner ids_bounds ids_frees mrbnf;
+        val map_outer = MRBNF_Def.mk_map_comb_of_mrbnf deads lfs_outer ids_bounds ids_frees mrbnf;
+        val x = Free ("x", domain_type (fastype_of map_lhs));
+        val goal = mk_Trueprop_eq (map_lhs $ x, map_outer $ (map_inner $ x));
+      in Goal.prove_sorry lthy (names (lfs @ [x])) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        rtac ctxt sym,
+        rtac ctxt trans,
+        rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
+        REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+        K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+        rtac ctxt refl
+      ]) end);
     val (rec_mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def (K BNF_Def.Dont_Note) qualify NONE mrbnfs rec_bmv
       (map (fn i => if i <> 0 then
         let val axioms = nth (MRSBNF_Def.axioms_of_mrsbnf mrsbnf) i;
@@ -2367,12 +2434,21 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
               ))));
             in rtac ctxt (mk_arg_cong lthy 1 ctor) i end
           ),
+          TRY o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (the_list phantom_split),
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+          ],
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt [the (#Map_map mrsbnf_facts) RS sym]),
           rtac ctxt trans,
           rtac ctxt (@{thm trans[OF comp_apply[symmetric]]} OF [
             #map_is_Sb mrsbnf_axioms RS sym RS fun_cong
           ]),
           REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm supp_id_bound}),
+          TRY o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+            K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id})
+          ],
           rtac ctxt sym,
           rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
@@ -2427,6 +2503,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
             SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
             rtac ctxt refl
           ])) (rev defs))
+        
         ],
         set_Sb = replicate (length (pbounds @ plives)) (fn ctxt => EVERY1 [
           resolve_tac ctxt set_Sb,

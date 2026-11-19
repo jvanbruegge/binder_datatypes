@@ -126,7 +126,7 @@ fun define_vvsubst_consts qualify vvsubst_bss (fp_res : MRBNF_FP_Def_Sugar.fp_re
               foldl1 mk_Un (pset $ x :: map2 (fn rset => mk_UNION (rset $ x)) rec_sets (replicate_rec sets))
             )) sets psets (#raw_fps fp_res) rec_setss xs;
 
-            val lthy = snd (Function.add_function
+            val lthy = snd (Function.add_function {verbose=false}
               (map (fn f => (Binding.concealed (Binding.name (fst (dest_Free f))), NONE, NoSyn)) sets)
               (map (fn eq => (((Binding.concealed Binding.empty, []), eq), [], [])) eqs)
               Function_Common.default_config (fn ctxt => EVERY1 [
@@ -264,6 +264,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
 
     val nvars = length (#binding_relation fp_result);
     val (vars, passives) = chop nvars new_vars;
+    (* dead parameters of the pre-MRBNFs come after the passives in the fixpoint's
+       argument order and belong to none of the passive classes *)
+    val (passives, _) = chop
+      (length passives - length (maps MRBNF_Def.deads_of_mrbnf mrbnfs)) passives;
     val ((pfrees, plives), pbounds) = passives
       |> chop (MRBNF_Def.free_of_mrbnf (hd mrbnfs) - length (#bfree_vars fp_result) - nvars)
       ||>> chop (MRBNF_Def.live_of_mrbnf (hd mrbnfs) - foldr1 (op+) (#rec_vars fp_result));
@@ -356,12 +360,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
 
     val state = Interpretation.isar_interpretation ([ (QREC_fixed_name,
       (("vvsubst", true), (Expression.Positional (map SOME (
-        map mk_imsupp var_fs @ map2 (fn quot => fn mrbnf => HOLogic.mk_comp (
+        map mk_imsupp var_fs @ @{map 3} (fn quot => fn mrbnf => fn deads => HOLogic.mk_comp (
           Term.subst_atomic_types (plives ~~ plives') (#ctor quot),
-          MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+          MRBNF_Def.mk_map_comb_of_mrbnf deads
             (plive_fs @ replicate_rec (map (fn quot => snd_const (HOLogic.mk_prodT (#T quot, Term.typ_subst_atomic (plives ~~ plives') (#T quot)))) (#quotient_fps fp_res)))
             (pbound_fs @ map HOLogic.id_const vars) (free_fs @ bfree_fs) mrbnf
-        )) (#quotient_fps fp_res) mrbnfs
+        )) (#quotient_fps fp_res) mrbnfs deadss
       )), []))
     )], []) lthy;
 
@@ -423,8 +427,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
       ])) ctxt
     ])), Position.no_range), NONE) state;
 
-    val (vvsubsts, lthy) = @{fold_map 3} (fn b => fn T =>
+    val (vvsubsts, lthy) = @{fold_map 3} (fn b => fn T => fn rec_t =>
+      (* dead parameters occur in no fixed term of the interpretation context and come
+         back generalized: instantiate them to the quotient's instance *)
       mk_def_t true Binding.empty qualify (the_default ("map_" ^ short_type_name (fst (dest_Type T))) (Option.map Binding.name_of b)) 0
+        ((Envir.subst_term (Sign.typ_match (Proof_Context.theory_of lthy)
+          (body_type (fastype_of rec_t), T) Vartab.empty, Vartab.empty) rec_t)
+         handle Type.TYPE_MATCH => rec_t)
     ) (map #vvsubst vvsubst_bss) (map #T (#quotient_fps fp_res)) (MRBNF_Recursor.get_RECs true "vvsubst" lthy) lthy;
 
     val vvsubst_cctors = @{map 6} (fn vvsubst => fn quot => fn bsets => fn mrbnf => fn x => fn deads =>
@@ -2064,17 +2073,33 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bss qualify (fp_result : MRBNF_FP_Def_Sug
         K (unfold_thms_tac ctxt (flat pset_simpss)),
         REPEAT_DETERM o eresolve_tac ctxt (
           @{thms UnE UN_E} @ MRBNF_Def.wit_thms_of_mrbnf mrbnf
+          (* a witness property concluding False also discharges goals with other conclusions *)
+          @ map_filter (try (fn thm => thm RS @{thm FalseE}))
+            (MRBNF_Def.wit_thms_of_mrbnf mrbnf)
         )
       ]
     }) vvsubst_permutes (#quotient_fps fp_res) vvsubst_comp0s vvsubst_congs set_mapss set_bdss mrbnfs vvsubst_id0s;
 
     val witss = @{map 3} (fn mrbnf => fn quot => fn deads =>
-      let val nwits = nwits_of_mrbnf mrbnf;
-      in map (fn (_, t) => #ctor quot $ t) (
-        mk_wits_of_mrbnf (replicate nwits deads)
-        (replicate nwits (plives @ replicate_rec (map #T (#quotient_fps fp_res))))
-        (replicate nwits bounds) (replicate nwits (frees @ bfrees)) mrbnf
-      ) end
+      let
+        val nwits = nwits_of_mrbnf mrbnf;
+        val wits = mk_wits_of_mrbnf (replicate nwits deads)
+          (replicate nwits (plives @ replicate_rec (map #T (#quotient_fps fp_res))))
+          (replicate nwits bounds) (replicate nwits (frees @ bfrees)) mrbnf;
+        (* A pre-MRBNF witness may depend on live arguments. Keep only witnesses whose
+           dependencies are passive (recursive ones would need recursively built witnesses)
+           and keep them abstracted over these arguments, so that the fixpoint's witness is
+           again a function of its passive dependencies. *)
+      in map_filter (fn (I, t) =>
+        if exists (fn i => i >= length plives) I then NONE
+        else
+          let
+            val depTs = take (length I) (Term.binder_types (fastype_of t));
+            val (xs, _) = lthy |> mk_Frees "a" depTs;
+          in SOME (fold_rev (Term.absfree o dest_Free) xs
+            (#ctor quot $ Term.list_comb (t, xs)))
+          end
+      ) wits end
     ) mrbnfs (#quotient_fps fp_res) deadss;
 
     val class_thms = SOME (maps class_of_mrbnf mrbnfs);

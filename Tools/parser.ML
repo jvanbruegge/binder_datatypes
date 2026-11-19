@@ -40,7 +40,7 @@ fun extract_map_rel_pred ("map", m) = (fn (_, r, p, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("subst", r) = (fn (m, _, p, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("permute", p) = (fn (m, r, _, rel) => (m, r, p, rel))
   | extract_map_rel_pred ("rel", rel) = (fn (m, r, p, _) => (m, r, p, rel))
-  | extract_map_rel_pred (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"vvsubst\" or \"tvsubst\")");
+  | extract_map_rel_pred (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"map\", \"subst\", \"permute\", or \"rel\")");
 
 val parse_subst_bindings =
   @{keyword for} |-- Scan.repeat parse_subst_binding
@@ -216,7 +216,14 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
       tvsubst_b = with_def tvsubst_b @{binding subst},
       rel_b = with_def rel_b @{binding rel},
       permute_b = without_def permute_b,
-      set_bs = map without_def set_bs
+      (* aligned with the sorted variable order (free kinds first, then passives),
+         annotated-dead parameters carry no set function *)
+      set_bs =
+        let val tab = map (fn ((_, bnd), T) => (T, bnd)) Ts;
+        in map (fn (ns, _) => Option.mapPartial without_def (AList.lookup (op=) tab (TFree ns)))
+          (frees @ flat "pfree" MRBNF_Def.Free_Var @ flat "plive" MRBNF_Def.Live_Var
+            @ flat "pbound" MRBNF_Def.Bound_Var)
+        end
     } : MRBNF_Sugar.spec;
   in (spec, lthy) end
 

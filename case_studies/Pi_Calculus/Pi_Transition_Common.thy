@@ -76,16 +76,6 @@ lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
 lemma vars_alt: "vars \<alpha> = bns \<alpha> \<union> fns \<alpha>"
   by (cases \<alpha>) auto
 
-fun rrename_bound_action where
-  "rrename_bound_action f (finp x y) = finp x y"
-| "rrename_bound_action f (fout x y) = fout x y"
-| "rrename_bound_action f (bout x y) = bout x (f y)"
-| "rrename_bound_action f (binp x y) = binp x (f y)"
-| "rrename_bound_action f tau = tau"
-
-lemma bvars_rrename_bound_action[simp]: "bvars (rrename_bound_action f \<alpha>) = f ` bvars \<alpha>"
-  by (cases \<alpha>) auto
-
 lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> P = Cmt (rrename_bound_action f \<alpha>) (rrename f P)"
   apply (cases \<alpha>)
@@ -95,5 +85,18 @@ lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarr
 lemma Cmt_rrename_bound_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_bound_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"
   by (subst Cmt_rrename_bound_action[of f]) auto
+
+lemma rrename_bound_action_id[refresh_simps]: "bns \<alpha> = {} \<Longrightarrow> rrename_bound_action f \<alpha> = \<alpha>"
+  by (cases \<alpha>) auto
+
+declare bij_implies_inject[refresh_simps] Res_inject[refresh_simps] Inp_inject[refresh_simps]
+  Bout_inject[refresh_simps] Binp_inject[refresh_simps] FVars_commit_Cmt[refresh_simps]
+  ns_alt[refresh_simps] vars_alt[refresh_simps] Int_Un_distrib[refresh_simps]
+
+declare Inp_eq_usub[refresh_intros] action.map_ident_strong[refresh_intros]
+  Cmt_rrename_bound_action[refresh_intros] Cmt_rrename_bound_action_Par[refresh_intros]
+
+lemmas [refresh_intros] = arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
+  cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout]
 
 end

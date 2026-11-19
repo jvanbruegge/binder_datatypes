@@ -465,33 +465,42 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   ]
                 ],
                 Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
+                  (* the induction machinery may left-associate the conclusion's conjunctions,
+                     while the case hypothesis (IH) keeps them right-associated; normalise so
+                     they match and resolution does not fail for goals with >= 2 conjuncts *)
+                  K (Local_Defs.unfold0_tac ctxt @{thms conj_assoc}),
                   DETERM o resolve_tac ctxt (IH :: repeat_mp IH),
-                  IF_UNSOLVED o EVERY' [
-                    K (Local_Defs.unfold0_tac ctxt @{thms notin_Un Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
-                    EVERY' (map (fn inner_prem => EVERY' (map (fn tac => DETERM o tac) [
-                      REPEAT_DETERM o rtac ctxt conjI,
-                      let val x = length (fst (Logic.strip_horn (Thm.prop_of inner_prem)));
-                      in REPEAT_DETERM_N x o rtac ctxt @{thm induct_impliesI} end,
-                      REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
-                      rtac ctxt inner_prem ORELSE'
-                      EVERY' [
-                        Method.insert_tac ctxt inner_prems,
-                        let
-                          val simpset = Simplifier.add_cong @{thm imp_cong} (
-                            (BNF_Util.ss_only @{thms
-                              split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
-                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single] conj_assoc
-                            } ctxt)
-                            addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
-                          )
-                        in Simplifier.asm_full_simp_tac simpset end
-                      ],
-                      REPEAT_DETERM o assume_tac ctxt
-                    ])) (map (fn thm => case try (fn () => repeat_spec thm RS @{thm induct_mp[OF _ induct_equal_refl]}) () of
-                      SOME thm' => thm'
-                      | NONE => thm
-                    ) inner_prems))
-                  ]
+                  (* discharge the remaining obligations by search rather than by pairing them
+                     positionally with the hypotheses (a bare atom in `avoiding:` splits one
+                     freshness goal into several, breaking the alignment): `close` tries an
+                     assumption, reflexivity, a structural intro, the freshness simp, or resolution
+                     with a hypothesis, recursing into the premises it introduces. Resolution
+                     backtracks, so when two hypotheses share a conclusion the wrong choice dead-ends
+                     on an unprovable premise and the other is found. REPEAT_DETERM runs it over all
+                     the siblings that resolving the IH left. *)
+                  IF_UNSOLVED o
+                  (let
+                    val facts = maps (fn thm =>
+                      the_list (try (fn () =>
+                        repeat_spec thm RS @{thm induct_mp[OF _ induct_equal_refl]}) ())
+                      @ [thm]) inner_prems;
+                    val fresh_simp =
+                      Method.insert_tac ctxt inner_prems THEN'
+                      Simplifier.asm_full_simp_tac (Simplifier.add_cong @{thm imp_cong} (
+                        (BNF_Util.ss_only @{thms
+                          notin_Un Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty
+                          split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
+                          disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single] conj_assoc
+                        } ctxt)
+                        |> fold Simplifier.add_proc [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]));
+                    fun close i st = FIRST' [
+                        assume_tac ctxt,
+                        rtac ctxt @{thm induct_equal_refl},
+                        resolve_tac ctxt @{thms induct_forallI induct_impliesI conjI} THEN_ALL_NEW close,
+                        SOLVED' fresh_simp,
+                        resolve_tac ctxt facts THEN_ALL_NEW close
+                      ] i st;
+                  in REPEAT_DETERM o close end)
                 ]) ctxt
               ]) (let val xs = drop (nmajor + length bound_prems) prems
                   in take (length xs - length other_assms) xs end)),

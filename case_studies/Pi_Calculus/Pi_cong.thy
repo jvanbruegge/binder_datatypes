@@ -13,16 +13,11 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | "Bang P \<equiv>\<^sub>\<pi> Par P (Bang P)"
 | "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
 
+declare Res_inject[refresh_simps] Inp_inject[refresh_simps] term.FVars_permute[refresh_simps]
+  bij_implies_inject[refresh_simps]
+declare Inp_eq_usub[refresh_intros]
+
 binder_inductive cong
-  subgoal premises prems for R B P Q
-    by (tactic \<open>refreshability_tac false
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [NONE, NONE, NONE, NONE, SOME [SOME 1, SOME 1, SOME 0], SOME [SOME 1], NONE, SOME [SOME 1, SOME 0, SOME 0]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite_UNIV}
-      @{thms Res_inject term.FVars_permute bij_implies_inject} @{thms term.permute_cong_id[symmetric]}
-      @{thms id_onD} @{context}\<close>)
   done
 
 thm cong.strong_induct
@@ -35,15 +30,6 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
 binder_inductive trans
-  subgoal premises prems for R B P Q
-    by (tactic \<open>refreshability_tac false
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [NONE, NONE, NONE, SOME 1, SOME 0], NONE, SOME [SOME 0, SOME 0, SOME 1], NONE]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite_UNIV}
-      @{thms Res_inject Inp_inject term.FVars_permute} @{thms Inp_eq_usub term.permute_cong_id[symmetric]}
-      @{thms } @{context}\<close>)
   done
 
 thm trans.strong_induct

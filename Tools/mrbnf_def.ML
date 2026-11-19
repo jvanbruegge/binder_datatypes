@@ -1642,6 +1642,15 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt class_opt map_b
 
     val Calpha_params_raw = map TVar (Term.add_tvarsT Calpha_raw []);
 
+    (* the shape analysis above works purely off the map function; make sure it agrees
+       with the type the user actually asked to register *)
+    val _ = (case (T_rhs, Calpha_raw) of
+        (Type (C, _), Type (C', _)) =>
+          if C = C' then ()
+          else error ("The type of the map function is an instance of " ^ quote C' ^
+            " but the type to be registered was given as an instance of " ^ quote C)
+      | _ => ());
+
     val mrbnf_T = Morphism.typ phi T_rhs;
     val bad_args = Term.add_tfreesT mrbnf_T [];
     val _ = null bad_args orelse error ("Locally fixed type arguments " ^

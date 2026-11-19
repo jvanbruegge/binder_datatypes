@@ -92,4 +92,52 @@ lemma
   shows "e = e"
   by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) auto
 
+(* #111: variable kind occurring only bound *)
+binder_datatype 'a foo1 = Foo1 | Bar1 x::'a y::"'a foo1" binds x in y
+
+(* #111: unused type parameter *)
+binder_datatype ('a, 'b) foo3 = Foo3 'a | Bar3 x::'a y::"('a, 'b) foo3" binds x in y
+
+(* #111: passive parameter as plain argument *)
+binder_datatype ('a, 'b) foo4 = Foo4 'a 'b | Bar4 x::'a y::"('a, 'b) foo4" binds x in y
+
+(* #111: bound-only variable kind, nullary constructor, passive under a functor *)
+binder_datatype ('a, 'b) foo7 = Foo7 | Bar7 x::'a y::"('a, 'b) foo7" binds x in y | Foobar7 "'b list"
+
+(* #111: original report *)
+binder_datatype ('ty, 'c, 'v) preterm =
+  PConst 'c "'ty list" "('ty, 'c, 'v) preterm list"
+| PVar 'v
+| PApp "('ty, 'c, 'v) preterm" "('ty, 'c, 'v) preterm"
+| PAbs x::'v 'ty t::"('ty, 'c, 'v) preterm" binds x in t
+
+(* high-level recursor for constructors with three or more recursive arguments *)
+binder_datatype 'a hlterm =
+  HVar 'a
+| HIf "'a hlterm" "'a hlterm" "'a hlterm"
+| HFix f::'a x::'a M::"'a hlterm" binds f x in M
+term HL_REC_hlterm
+
+(* #90: parameter occurring only in a dead position, detected automatically *)
+binder_datatype ('a, 'b::var) dtest = DV 'b | DB "'a set" | DC x::'b t::"('a, 'b) dtest" binds x in t
+
+(* #90: the same with an explicit dead annotation *)
+binder_datatype (dead 'a, 'b::var) dtest2 = DV2 'b | DB2 "'a set" | DC2 x::'b t::"('a, 'b) dtest2" binds x in t
+
+(* #117, #118: the strong rule of a constructor binding two atoms carries two
+   pointwise freshness premises with the same avoiding set, and binder_induction
+   handles them; #119: a union avoiding set supplied as one term *)
+binder_datatype 'a bi_t =
+  BVar 'a
+| BAp "'a bi_t" "'a bi_t"
+| BFix f::'a x::'a M::"'a bi_t" binds f x in M
+
+lemma "R (e :: 'a::var bi_t) \<Longrightarrow> e = e"
+  for x y :: "'a::var"
+  by (binder_induction e avoiding: x y rule: bi_t.strong_induct) auto
+
+lemma "R (e :: 'a::var bi_t) \<Longrightarrow> e = e"
+  for x y :: "'a::var"
+  by (binder_induction e avoiding: "{x} \<union> {y}" rule: bi_t.strong_induct) auto
+
 end

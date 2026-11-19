@@ -86,6 +86,16 @@ abbreviation "fvars \<equiv> fns"
 lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var set|"
   by (cases \<alpha>) auto
 
+fun rrename_bound_action where
+  "rrename_bound_action f (finp x y) = finp x y"
+| "rrename_bound_action f (fout x y) = fout x y"
+| "rrename_bound_action f (bout x y) = bout x (f y)"
+| "rrename_bound_action f (binp x y) = binp x (f y)"
+| "rrename_bound_action f tau = tau"
+
+lemma bvars_rrename_bound_action[simp]: "bns (rrename_bound_action f \<alpha>) = f ` bns \<alpha>"
+  by (cases \<alpha>) auto
+
 local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [
     (@{term Finp}, @{thm Finp_def}),
@@ -107,10 +117,21 @@ local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
     SOME @{term "\<lambda>x1 x2 x3. {x2}"},
     SOME @{term "\<lambda>x P. bns x"}
   ]],
+  permute_bounds = [
+    [NONE, NONE, NONE],
+    [NONE, NONE, NONE],
+    [NONE, SOME @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+      SOME @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+    [NONE],
+    [NONE, SOME @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+      SOME @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+    [SOME @{term "rrename_bound_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"},
+      SOME @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}]
+  ],
   bset_bounds = @{thms bns_bound},
   pset_ctors = [],
   strong_induct = NONE,
-  inject = @{thms commit.inject},
+  inject = #inject (the (Binder_Sugar.binder_sugar_of @{context} @{type_name commit})),
   mrbnf = #mrbnf (the (Binder_Sugar.binder_sugar_of @{context} @{type_name commit})),
   set_simpss = [],
   subst_simps = NONE,

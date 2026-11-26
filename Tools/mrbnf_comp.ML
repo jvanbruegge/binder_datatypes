@@ -203,7 +203,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         in (bd', SOME (Goal.prove_sorry lthy [] [] goal (BNF_Comp_Tactics.bd_ordIso_natLeq_tac o #context) |> Thm.close_derivation \<^here>))
         end
       else (bd, NONE);
-      
+
     val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
 
     fun try_unprefix prfx s = case try (unprefix prfx) s of
@@ -620,7 +620,7 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
     };
 
     val (mrbnf', lthy') =
-      mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME Ds) (mk_simple_class_opt mrbnf)
+      mrbnf_def Do_Inline (K Dont_Note) true qualify tacs (SOME Ds) (mk_simple_class_opt mrbnf)
         Binding.empty Binding.empty Binding.empty []
         (((((((b, T), mapx), var_type_sets), bd), wits), SOME rel), SOME pred) lthy;
   in

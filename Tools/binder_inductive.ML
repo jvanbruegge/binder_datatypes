@@ -16,7 +16,7 @@ fun long_name ctxt name =
 fun collapse (Inl x) = x
   | collapse (Inr x) = x
 
-datatype options = No_Equiv | Verbose
+datatype options = No_Equiv | No_Refresh | Verbose
 
 fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string list list) list option), perms_supps) no_defs_lthy =
   let
@@ -152,9 +152,9 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
     ) bind_ts_opt 0;
     val bind_ts_opt = map (Option.map (fn xs => xs @ replicate (num_vars - length xs) [])) bind_ts_opt;
 
-    val bind_Ts = map hd (foldl1 (uncurry (map2 (curry (op@))))
-      (map_filter (Option.map (map (map fastype_of))) bind_ts_opt)
-    );
+    val bind_Ts = (case map_filter (Option.map (map (map fastype_of))) bind_ts_opt of
+        [] => error "binder_inductive: no rule of the inductive predicate binds any variable"
+      | tss => map hd (foldl1 (uncurry (map2 (curry (op@)))) tss));
 
     val bind_ts = map (fn NONE => map (mk_bot o HOLogic.dest_setT) bind_Ts
       | SOME tss => map2 (fn xs => fn T => case xs of
@@ -362,7 +362,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
     val goals = map (single o rpair []) (
       keep_rights perm_id0_goals @ keep_rights perm_comp_goals @ maps keep_rights supp_seminat_goalss
       @ keep_rights perm_support_goals @ maps keep_rights supp_small_goalss @ flat (keep_rights B_small_goalss)
-      @ option No_Equiv [G_equiv_goal] [] @ [G_refresh_goal]
+      @ option No_Equiv [G_equiv_goal] [] @ option No_Refresh [G_refresh_goal] []
     );
     fun after_qed thmss lthy =
       let
@@ -379,7 +379,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             let val (xs, ys) = chop (length xs) thms;
             in (Inr xs, ys) end
           ) B_small_goalss
-          ||>> apsnd hd o chop (option No_Equiv 1 0)
+          ||>> chop (option No_Equiv 1 0)
 
         fun mk_mono t =
           let val (predT, predT') = dest_funT (fastype_of t);
@@ -444,7 +444,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
         ]));
         val perm_comps = prove_missing perm_comps (fn ctxt => fn mr_bnfs => K (EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id} @ maps map_comp_of_mr_bnf mr_bnfs)),
-          rtac ctxt refl
+          resolve_tac ctxt @{thms refl comp_apply[symmetric]}
         ]));
 
         fun set_map_of_mr_bnf (Inl mrbnf) = MRBNF_Def.set_map_of_mrbnf mrbnf
@@ -453,7 +453,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val supp_seminatss = transpose (map (fn thms => prove_missing thms (fn ctxt => fn mr_bnfs => K (EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
-            @{thms image_empty image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]}
+            @{thms image_empty image_insert image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]}
             @ maps set_map_of_mr_bnf mr_bnfs
           )),
           rtac ctxt @{thm subset_refl}
@@ -472,7 +472,11 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val perm_supports = prove_missing perm_supports (fn ctxt => fn mr_bnfs => fn i =>
           let val supps = nth suppss i;
-          in rtac ctxt @{thm id_apply} 1 ORELSE EVERY1 (map (fn j => REPEAT_DETERM o SELECT_GOAL (EVERY1 [
+          in rtac ctxt @{thm id_apply} 1
+            (* atom component: id_on {x} \<sigma> \<Longrightarrow> \<sigma> x = x *)
+            ORELSE SOLVED' (Subgoal.FOCUS_PREMS (fn {context=ctxt', prems, ...} =>
+              HEADGOAL (resolve_tac ctxt' prems THEN' resolve_tac ctxt' @{thms singletonI insertI1})) ctxt) 1
+            ORELSE EVERY1 (map (fn j => REPEAT_DETERM o SELECT_GOAL (EVERY1 [
             REPEAT_DETERM o EVERY' [
               resolve_tac ctxt (map map_cong_id_of_mr_bnf mr_bnfs),
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
@@ -526,12 +530,17 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = (case MRBNF_Def.mrbnf_of lthy (fst (dest_Type (#T sugar))) of
             SOME mrbnf => [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf] | NONE => [])
           | UNIV_cinfinite_of_mr_bnf _ = []
-        val infinite_UNIVs = map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs));
+        (* fallback appended after the MRBNF-derived facts (so those win): a `var`-sort type has
+           infinite UNIV by the class axiom alone, covering a bound-variable type the walk above
+           doesn't reach, e.g. one nested in a plain `set`/`prod` container *)
+        val infinite_UNIVs =
+          map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs))
+          @ [@{thm cinfinite_imp_infinite} OF [@{thm var_class.UNIV_cinfinite}]];
 
         val supp_smallss = transpose (map (fn supp_smalls => prove_missing supp_smalls
           (fn ctxt => fn mr_bnfs => K (EVERY1 [
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms emp_bound ordLeq_refl card_of_Card_order} @ [Un_bound, UN_bound, var_large]
+              @{thms emp_bound ordLeq_refl card_of_Card_order finite_ordLess_infinite2[OF finite_singleton]} @ [Un_bound, UN_bound, var_large]
               @ maps set_bd_UNIVs_of_mr_bnfs mr_bnfs @ infinite_UNIVs
             )
           ]))
@@ -777,6 +786,115 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             ],
             IF_UNSOLVED o K (print_tac ctxt "equivariance_tac failed")
           ] end);
+
+        val G_refresh = if not (null G_refresh) then hd G_refresh else
+          let
+            val thy = Proof_Context.theory_of lthy;
+
+            (* for every intro rule, find which of its variables occur in positions affected by
+               a binder, together with the permutation renaming exactly those occurrences *)
+            fun match_perm perm a =
+              let
+                val tyenv = Sign.typ_match thy
+                  (Term.body_type (fastype_of perm), fastype_of a) Vartab.empty;
+              in SOME (a, Envir.subst_term (tyenv, Vartab.empty) perm) end
+              handle Type.TYPE_MATCH => NONE;
+            fun full_perm T = fold_rev (Term.absfree o dest_Free) gs
+              (snd (MRBNF_Sugar.build_permute_for no_defs_lthy gs var_Ts T));
+            fun collect_permutes vars t = (case t of
+                Abs (_, _, t') => collect_permutes vars t'
+              | t1 $ t2 =>
+                let
+                  val (ctor, args) = Term.strip_comb t;
+                  val rec_result = collect_permutes vars t1 @ collect_permutes vars t2;
+                  val sugar_opt = try (dest_Type o Term.body_type o fastype_of) t
+                    |> Option.mapPartial (Binder_Sugar.binder_sugar_of no_defs_lthy o fst);
+                  val ctor_idx_opt = Option.mapPartial (fn sugar =>
+                    Option.map (pair sugar) (get_index (fn (t', _) =>
+                      if is_Const ctor andalso (op=) (apply2 (fst o dest_Const) (t', ctor))
+                      then SOME () else NONE) (#ctors sugar))) sugar_opt;
+                in case ctor_idx_opt of
+                  NONE => rec_result
+                  | SOME (sugar, (ctor_idx, _)) => (case try (nth (#permute_bounds sugar)) ctor_idx of
+                    NONE => rec_result
+                    | SOME pbounds =>
+                      maps (fn (NONE, _) => [] | (SOME perm, a) => (case a of
+                          Free v => if member (op=) vars v then the_list (match_perm perm a) else []
+                          (* a compound argument in a binder-affected position: every rule
+                             variable inside it is affected as well *)
+                          | _ => map_filter (fn v => if member (op=) vars v
+                              then SOME (Free v, full_perm (snd v)) else NONE)
+                              (rev (Term.add_frees a [])))
+                      ) (take (length args) (pbounds @ replicate (length args) NONE) ~~ args)
+                      @ rec_result)
+                end
+              | _ => []);
+
+            val intro_ts = map (unvarify_global o Term.subst_TVars subst o Thm.prop_of) intrs;
+
+            (* substitution operators of the involved binder types: the target of a substitution
+               that substitutes for a renamed variable must be renamed as well *)
+            fun add_type_names (Type (s, Ts)) = insert (op=) s #> fold add_type_names Ts
+              | add_type_names _ = I;
+            val sugars = map_filter (Binder_Sugar.binder_sugar_of lthy)
+              (fold add_type_names param_Ts []);
+            val subst_heads = distinct (op=) (maps (fn sugar =>
+              map_filter (try (fst o dest_Const o Term.head_of o fst o HOLogic.dest_eq
+                o HOLogic.dest_Trueprop o Logic.strip_imp_concl o Thm.prop_of))
+              (these (#subst_simps sugar))) sugars);
+            fun subst_pass vars marked t = case t of
+                Abs (_, _, t') => subst_pass vars marked t'
+              | _ $ _ =>
+                let
+                  val (h, args) = Term.strip_comb t;
+                  val rec_result = maps (subst_pass vars marked) args;
+                in case (h, args) of
+                  (Const (c, _), [rho, b as Free v]) =>
+                    if member (op=) subst_heads c andalso member (op=) vars v
+                      andalso not (member (op=) (map fst marked) b)
+                      andalso exists (fn (v', _) => Term.exists_subterm (curry (op=) v') rho) marked
+                    then (b, full_perm (fastype_of b)) :: rec_result
+                    else rec_result
+                  | _ => rec_result
+                end
+              | _ => [];
+
+            val matrix = map2 (fn vars => fn t =>
+              let
+                fun fixpoint marked =
+                  let val marked' = distinct ((op=) o apply2 fst)
+                    (marked @ subst_pass vars marked t);
+                  in if length marked' = length marked then marked else fixpoint marked' end;
+                val perms' = fixpoint (distinct ((op=) o apply2 fst) (collect_permutes vars t));
+                val inner = map (fn v => AList.lookup (op=) perms' (Free v)) vars;
+              in if forall is_none inner then NONE else SOME inner end
+            ) rule_varss intro_ts;
+            val _ = option Verbose (fn () => (@{print}
+              (map (Option.map (map (Option.map (Thm.cterm_of lthy)))) matrix); ())) (K ()) ();
+
+            val supss = transpose (map (map fst) suppss);
+
+            val small_thms = @{thms emp_bound finite_ordLess_infinite2[OF finite_singleton]
+                insert_bound_UNIV card_of_minus_bound var_class.large'}
+              @ infinite_UNIVs @ [Un_bound, UN_bound] @ bset_bounds
+              @ maps set_bd_UNIVs_of_mr_bnfs (flat mr_bnfs @ binder_mr_bnfs)
+              @ flat supp_smallss;
+            val simp_thms = maps #inject sugars @ maps #distinct sugars
+              @ maps (map snd) suppss
+              (* naturality of the sets of binder and nesting functors: without these the
+                 search cannot relate a renamed binder's bound set to its image *)
+              @ maps set_map_of_mr_bnf (flat mr_bnfs @ binder_mr_bnfs);
+            val cong_ids = distinct Thm.eq_thm_prop (map_filter
+              (fn Inr (Inr quot) => SOME (#permute_cong_id (#inner quot)) | _ => NONE)
+              (flat mr_bnfs @ binder_mr_bnfs));
+            val intro_thms = maps (fn thm => [thm, thm RS sym]) cong_ids;
+          in Goal.prove_sorry lthy [] [] G_refresh_goal (fn {context=ctxt, ...} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (snd G :: map snd perms)),
+            Subgoal.FOCUS (fn {context=ctxt, prems, ...} =>
+              refreshability_tac (member (op=) options Verbose) supss matrix
+                (nth prems 0) (nth prems 2) (nth prems 1)
+                [] small_thms simp_thms intro_thms [] ctxt) ctxt
+          ]) end;
 
         val II_equiv = Goal.prove_sorry lthy (names (gs @ xs)) g_prems (Logic.mk_implies (
           HOLogic.mk_Trueprop (Term.list_comb (fst II, xs)),
@@ -1142,6 +1260,7 @@ val parse_perm_supps =
 
 val options_parser = Parse.group (fn () => "option") (
   (Parse.reserved "no_auto_equiv" >> K No_Equiv)
+  || (Parse.reserved "no_auto_refresh" >> K No_Refresh)
   || (Parse.reserved "verbose" >> K Verbose)
 )
 

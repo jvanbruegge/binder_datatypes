@@ -51,7 +51,11 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
     val mrbnf' = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv);
 
-    val ((_, _, new_tys), _, (mrbnfs', (_, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
+    (* a variable that occurs in a dead position is dead overall: do not lift it in
+       as a phantom live, which would collide with its occurrence inside the dead types *)
+    val dead_tfrees = fold Term.add_tfreesT Ds [];
+    val Xs = filter_out (member (op=) dead_tfrees o fst) Xs;
+    val ((_, _, new_tys), _, (mrbnfs', ((_, lift_unfolds), lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
       [] Xs (K (map fst Xs)) NONE [mrbnf'] ((MRBNF_Comp.empty_comp_cache, mrbnf_unfolds), lthy);
     val mrbnf' = hd mrbnfs';
     val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf qualify mrbnf_unfolds name true Ds Ds mrbnf' info_opt lthy;
@@ -71,8 +75,10 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
 
     val T = MRBNF_Def.mk_T_of_mrbnf (map TFree (rev (fold_rev Term.add_tfreesT Ds []))) lives bounds frees mrbnf;
 
+    (* zip positionally: collecting tfrees deduplicates when a dead type's variable
+       coincides with a live/free/bound one and then the lists have different lengths *)
     val info = map_prod I (morph_info (MRBNF_Util.subst_typ_morphism (
-      (op~~) (apply2 (fn T => map TFree (Term.add_tfreesT T [])) (#abs_type (fst (snd info)), T))
+      (op~~) (apply2 (snd o dest_Type) (#abs_type (fst (snd info)), T))
     ))) info;
 
     val bmv =
@@ -88,10 +94,14 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
           (BMV_Monad_Def.leader BMV_Monad_Def.lives'_of_bmv_monad bmv);
       in BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism subst) bmv end;
 
-    val var_types' = map (fn MRBNF_Def.Free_Var => BMV_Monad_Def.Free_Var
-      | MRBNF_Def.Live_Var => BMV_Monad_Def.Live_Var
+    (* a live variable the bmv monad does not know about (e.g. a lifted-in unused type
+       parameter) plays no role for the substitution structure: treat it as dead there *)
+    val bmv_lives = BMV_Monad_Def.leader BMV_Monad_Def.lives_of_bmv_monad bmv;
+    val var_types' = map2 (fn T => fn MRBNF_Def.Free_Var => BMV_Monad_Def.Free_Var
+      | MRBNF_Def.Live_Var =>
+          if member (op=) bmv_lives T then BMV_Monad_Def.Live_Var else BMV_Monad_Def.Dead_Var
       | _ => BMV_Monad_Def.Dead_Var
-    ) var_types;
+    ) (map TFree new_tys) var_types;
 
     val ((bmv, _, bmv_defs, _), lthy) = BMV_Monad_Def.seal_bmv_monad qualify (
       bmv_unfolds @ #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds)
@@ -100,7 +110,8 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val mrbnfs = map_index (fn (i, x) => if i = BMV_Monad_Def.leader_of_bmv_monad bmv then mrbnf else x)
       (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
-    val mrbnf_defs = #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds);
+    val mrbnf_defs = #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds)
+      @ #map_unfolds lift_unfolds @ flat (#set_unfoldss lift_unfolds);
     val defs = mrbnf_defs @ bmv_defs @ [MRBNF_Def.map_def_of_mrbnf mrbnf] @ MRBNF_Def.set_defs_of_mrbnf mrbnf;
     val copy = #type_definition (snd (snd info));
 
@@ -169,11 +180,13 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
         set_Sb = map (fn _ => fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
           K (Local_Defs.unfold0_tac ctxt (comp_applys @ [#Abs_inverse (snd (snd info)) OF @{thms UNIV_I}])),
-          rtac ctxt trans,
-          resolve_tac ctxt (map unfold_defs (#set_Sb axioms)),
-          REPEAT_DETERM o assume_tac ctxt,
-          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
-          rtac ctxt refl
+          rtac ctxt refl ORELSE' EVERY' [
+            rtac ctxt trans,
+            resolve_tac ctxt (map unfold_defs (#set_Sb axioms)),
+            REPEAT_DETERM o assume_tac ctxt,
+            K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+            rtac ctxt refl
+          ]
         ]) (bounds @ lives),
         set_Vrs = map (K (fn ctxt => EVERY1 [
           K (Local_Defs.unfold_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),

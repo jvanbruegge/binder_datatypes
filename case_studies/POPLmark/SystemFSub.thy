@@ -257,16 +257,13 @@ lemma typ_inject: "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1
   by (smt (z3) Forall_rrename Swapping.bij_swap Swapping.supp_swap_bound id_on_def id_on_swap infinite_UNIV swap_simps(1) typ.inject(3))
 
 lemmas typ.inject(3)[simp del]
+
+declare ty_fresh_extend[refresh_extends]
+declare typ_inject[refresh_simps] image_iff[refresh_simps]
+declare typ.permute_cong_id[refresh_intros] context_map_cong_id[refresh_intros]
+  map_idI[refresh_intros]
+
 binder_inductive ty
-  subgoal premises prems for R B \<Gamma> T1 T2
-    by (tactic \<open>refreshability_tac false
-      [@{term "\<lambda>(\<Gamma>::('a::var \<times> 'a typ) list). dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: 'a typ \<Rightarrow> 'a::var set"}, @{term "FVars_typ :: 'a::var typ \<Rightarrow> 'a::var set"}]
-      [@{term "permute_typ :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a typ \<Rightarrow> 'a typ"}, @{term "(\<lambda>f x. f x) :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"}]
-      [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0], NONE]
-      @{thm prems(3)} @{thm prems(2)} @{thms prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound_UNIV ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
-      @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
-      @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done
 
 lemmas FVars_tvsubst_typ = typ.Vrs_Sb

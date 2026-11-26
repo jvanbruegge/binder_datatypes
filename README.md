@@ -10,14 +10,14 @@ Animating MRBNFs: Truly Modular Binding-Aware Datatypes in Isabelle/HOL
 
 The artifact contains the tool support for defining binding datatypes and proving strong rule
 induction principles we developed in Isabelle/HOL as well as the case studies we report on in the
-paper. It works with the latest released version Isabelle2025, which can be downloaded here:
+paper. It works with the latest released version Isabelle2026, which can be downloaded here:
 
-[https://isabelle.in.tum.de/website-Isabelle2025/](https://isabelle.in.tum.de/website-Isabelle2025/)
+[https://isabelle.in.tum.de/website-Isabelle2026/](https://isabelle.in.tum.de/website-Isabelle2026/)
 
 After downloading Isabelle, a good starting point is to issue the following command
 
 ```
-/<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta
+/<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim case_studies/Untyped_Lambda_Calculus/LC_Beta.thy
 ```
 
 in the folder of the artifact. This will open Isabelle/jEdit and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle.

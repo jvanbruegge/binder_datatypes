@@ -21,7 +21,7 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  \<Longrightarrow>
  affine (iApp e1 es2)"
 
-binder_inductive affine
+binder_inductive (no_auto_refresh) affine
   subgoal premises prems for R B t
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     apply (insert prems(3))

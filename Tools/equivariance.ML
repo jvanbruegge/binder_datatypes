@@ -88,7 +88,19 @@ val _ = Theory.local_setup (fn lthy =>
               open MRBNF_Util
               val lthy = Context.proof_of context;
               val prop = Logic.unvarify_global (Thm.full_prop_of thm);
-              val (f_prems, rhs) = split_last (Logic.strip_imp_prems prop);
+              (* the subject premise (the un-permuted statement) may come in any position;
+                 the remaining premises must be permutation side conditions *)
+              fun is_side t = (case try HOLogic.dest_Trueprop t of
+                  SOME (Const (@{const_name bij_betw}, _) $ _ $ _ $ _) => true
+                | SOME (Const (@{const_name Set.member}, _) $ _ $ Const (@{const_name ordLess}, _)) => true
+                | _ => false);
+              val prems = Logic.strip_imp_prems prop;
+              val subject_idx = find_index (not o is_side) prems;
+              val _ = subject_idx >= 0 andalso length (filter_out is_side prems) = 1 orelse
+                error "equiv attribute: expected exactly one premise besides bij/supp side conditions";
+              val f_prems = filter is_side prems;
+              val rhs = nth prems subject_idx;
+              val thm = Drule.rotate_prems subject_idx thm |> Drule.rotate_prems 1;
               val lhs = Logic.strip_imp_concl prop;
               val goal = fold_rev (curry Logic.mk_implies) f_prems (HOLogic.mk_Trueprop (HOLogic.mk_eq (
                 apply2 HOLogic.dest_Trueprop (lhs, rhs)
@@ -108,7 +120,12 @@ val _ = Theory.local_setup (fn lthy =>
                 | map_id0s_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.map_id0_of_bnf bnf
                 | map_id0s_of_mr_bnf (Inr (Inr quot)) = #permute_id0 quot
 
-              val thm' = Goal.prove_sorry lthy (map fst vars) [] goal (fn {context=ctxt, ...} => EVERY1 [
+              (* reflexive when the arguments carry no permutation action; the tactic below
+                 assumes a non-trivial one, so close this case directly *)
+              val thm' = Goal.prove_sorry lthy (map fst vars) [] goal (fn {context=ctxt, ...} =>
+                if HOLogic.dest_Trueprop lhs aconv HOLogic.dest_Trueprop rhs
+                then HEADGOAL (rtac ctxt refl)
+                else EVERY1 [
                 rtac ctxt iffI,
                 defer_tac,
                 etac ctxt (Drule.rotate_prems ~1 thm),
